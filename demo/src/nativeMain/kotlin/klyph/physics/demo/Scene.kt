@@ -1,5 +1,9 @@
 package klyph.physics.demo
 
+import klyph.math.Rect
+import klyph.physics.bridge.DebugDraw
+import klyph.render.Canvas
+
 /**
  * One scene of the sandbox: a name, a one-line blurb, and a way to start a fresh run of it. The
  * sandbox calls [create] when the scene is chosen and again on every reset, so a run never has to
@@ -20,6 +24,9 @@ interface Scene {
 interface SceneRun {
     /** Advances the run's physics by one fixed step of [dt] seconds. */
     fun step(dt: Float)
+
+    /** Draws the run on [canvas] with [debug]; [view] is the part of the world the camera shows. */
+    fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {}
 
     /** How many particles, bodies and contacts the run has now, for the HUD. */
     val particleCount: Int get() = 0
