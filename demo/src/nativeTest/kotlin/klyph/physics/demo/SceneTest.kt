@@ -1,11 +1,15 @@
 package klyph.physics.demo
 
+import klyph.physics.Outline
+import klyph.physics.SoftBody
+import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /** Runs the scenes made of blobs without a window and checks nothing breaks. */
 class SceneTest {
-    private val dt = 1f / 60f
+    /** The step the app takes, to the last bit: klyph's 1/60 s is 16 666 666 ns, a hair under `1f / 60f`. */
+    private val dt = 16_666_666 / 1e9f
     private val roomWidth = Scenes.COLS * Scenes.TILE
     private val roomHeight = Scenes.ROWS * Scenes.TILE
 
@@ -24,10 +28,12 @@ class SceneTest {
 
     /**
      * Steps [run] [steps] times. Every step, every blob must be finite and inside the room. A blob may
-     * snag on a corner and stretch for a moment, but not stay stretched: that is tearing.
+     * snag on a corner and stretch for a moment, but not stay stretched: that is tearing. Its core may
+     * lag outside its skin on a hard landing, but not stay out: then it went through a wall alone.
      */
     private fun check(name: String, run: BlobRun, steps: Int) {
         val stretchedFor = IntArray(run.blobs.size)
+        val coreOutFor = IntArray(run.blobs.size)
         repeat(steps) { step ->
             (run as SceneRun).step(dt)
             for ((i, blob) in run.blobs.withIndex()) {
@@ -38,15 +44,31 @@ class SceneTest {
                 val stretch = body.maxEdgeStretch()
                 stretchedFor[i] = if (stretch > MAX_STRETCH) stretchedFor[i] + 1 else 0
                 assertTrue(stretchedFor[i] <= MAX_STRETCHED_STEPS, "$where: torn, stretched $stretch times for ${stretchedFor[i]} steps")
+                coreOutFor[i] = if (coreDistanceOutside(body) > MAX_CORE_OUTSIDE) coreOutFor[i] + 1 else 0
+                assertTrue(coreOutFor[i] <= MAX_STRETCHED_STEPS, "$where: the core left its skin for ${coreOutFor[i]} steps")
             }
         }
     }
 
+    private val nearest = FloatArray(2)
+
+    /** How far the core of [body] is outside its outline, or 0 when it's inside. */
+    private fun coreDistanceOutside(body: SoftBody): Float {
+        val core = body.ringCount
+        val x = body.positionX(core)
+        val y = body.positionY(core)
+        if (Outline.contains(body, x, y)) return 0f
+        return sqrt(Outline.nearestPoint(body, x, y, nearest))
+    }
+
     private companion object {
+        /** A core this far outside its skin is no longer just lagging behind it. */
+        const val MAX_CORE_OUTSIDE = 3f
+
         /** An outline edge more than this many times its rest length is over-stretched. */
         const val MAX_STRETCH = 2.5f
 
-        /** Half a second: longer over-stretched than this and the body is not snagging, it is tearing. */
+        /** Half a second: longer than this over-stretched, or with its core out, and a body is broken, not just bumped. */
         const val MAX_STRETCHED_STEPS = 30
     }
 }

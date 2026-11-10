@@ -1,6 +1,7 @@
 package klyph.physics
 
 import kotlin.math.floor
+import kotlin.math.sqrt
 
 private const val DIAGONAL = 0.70710678f
 
@@ -140,6 +141,14 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
     /** Writes to [exit] the cheapest way out of the box for a point inside it. */
     private fun exitFromBox(solid: Solid, px: Float, py: Float, exit: Exit) {
         nearestExit(solid, px, py, respectBuried = true)
+        // Where a step meets a wall, both faces at the corner are buried, yet just past the corner is air.
+        // A point just inside leaves through that corner, not through the far side of the wall.
+        if (!solid.isMoving) {
+            tryCorner(solid, -1, -1, px - solid.left, py - solid.top, exit)
+            tryCorner(solid, 1, -1, solid.right - px, py - solid.top, exit)
+            tryCorner(solid, -1, 1, px - solid.left, solid.bottom - py, exit)
+            tryCorner(solid, 1, 1, solid.right - px, solid.bottom - py, exit)
+        }
         // Buried on every side, such as under the foot of a wall: step toward the nearest face
         // anyway, just past it, and the tile there pushes the particle the rest of the way out.
         if (exit.depth == Float.MAX_VALUE) {
@@ -161,6 +170,23 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
         // shorter there than up through the surface: on top of it is the wrong side.
         tryFace(solid, Side.BOTTOM, solid.bottom - py, 0f, 1f, exit)
         tryFace(solid, Side.RIGHT, solid.right - px, 1f, 0f, exit)
+    }
+
+    /**
+     * Takes the corner of a tile's [solid] toward ([dx], [dy]), each -1 or 1, as the way out if the cell
+     * diagonally across it is air inside the grid and the corner, [toX] and [toY] away along each axis,
+     * is closer than [exit]'s. A corner is never closer than an open face beside it, so it only wins
+     * where both of those faces are buried.
+     */
+    private fun tryCorner(solid: Solid, dx: Int, dy: Int, toX: Float, toY: Float, exit: Exit) {
+        val col = solid.col + dx
+        val row = solid.row + dy
+        if (col !in 0 until cols || row !in 0 until rows || at(col, row) != null) return
+        val depth = sqrt(toX * toX + toY * toY)
+        if (depth >= exit.depth || depth < 1e-6f) return
+        exit.depth = depth
+        exit.nx = dx * toX / depth
+        exit.ny = dy * toY / depth
     }
 
     /** Takes the [side] face as the way out, along ([nx], [ny]), if it is open and closer than [exit]'s. */
