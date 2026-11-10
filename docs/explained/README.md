@@ -7,15 +7,15 @@ Want more? Every page has the details further down.
 
 | | page | in one line |
 |---|---|---|
-| 🏃 | Verlet integration | velocity is just where you were |
-| 🔁 | Substeps | many tiny steps beat a few big ones |
-| 🧮 | XPBD and compliance | how soft, in real units |
-| 🍮 | Soft bodies | a ring of dots, some spokes and a heavy core |
-| 🧱 | Solids | tiles, slopes, and which way is out |
-| 🦶 | Contacts and tags | what am I standing on? |
-| 🌀 | Outline | inside or outside, and how to draw it filled |
+| 🏃 | [Verlet integration](verlet.md) | velocity is just where you were |
+| 🔁 | [Substeps](substeps.md) | many tiny steps beat a few big ones |
+| 🧮 | [XPBD and compliance](xpbd.md) | how soft, in real units |
+| 🍮 | [Soft bodies](soft-bodies.md) | a ring of dots, some spokes and a heavy core |
+| 🧱 | [Solids](solids.md) | tiles, slopes, and which way is out |
+| 🦶 | [Contacts and tags](contacts.md) | what am I standing on? |
+| 🌀 | [Outline](outline.md) | inside or outside, and how to draw it filled |
 
-🔜 The pages land in [#8](https://github.com/pererikbergman/klyph-physics/issues/8). New parts of the engine bring their own page with them.
+Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 
 ---
 
@@ -71,9 +71,10 @@ The longer version, for those who want it: the maths, the code, the why.
 ## 📸 Making the picture
 
 ```
-scripts/capture.sh <scene> <name> [--from S] [--to S] [--details] [--clean]
+scripts/capture.sh <scene> <name> [--from S] [--to S] [--details] [--clean] [--slow] [--crop X,Y,W,H]
 ```
 
 It runs the scene, records it, and writes `docs/img/<name>.gif` and `docs/img/<name>.png`.
 The physics steps once per frame while it records, so the same command always gives the same
-picture. 🎯 Use `--clean` for the docs (no stats on screen) and `--details` to show the particles.
+picture. 🎯 Use `--clean` for the docs (no stats on screen), `--details` to show the particles,
+`--slow` for half speed and `--crop` for a close-up. Every page ends with the 📸 command that made its GIF.
