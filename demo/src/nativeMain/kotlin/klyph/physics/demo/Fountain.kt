@@ -15,7 +15,7 @@ import kotlin.random.Random
 /**
  * A fountain of loose particles in a [PhysicsWorld]: a few hundred alive at once, each one added at
  * the nozzle and removed when it falls out of sight, so the world's handles are reused all the time.
- * Nothing collides yet; this is the world and its step on their own. With details on, it also shows
+ * Nothing collides; this is the world and its step on their own. With the broadphase on (`B`), it shows
  * what a [Broadphase] makes of the spray: the cells each particle is filed under, and every pair of
  * particles that might touch.
  */
@@ -71,7 +71,7 @@ object FountainScene : Scene {
         }
 
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
-            if (debug.showDetails) {
+            if (debug.showBroadphase) {
                 // Each particle's box, grown by how far it will move in the next step.
                 val ps = world.particles
                 broadphase.clear()

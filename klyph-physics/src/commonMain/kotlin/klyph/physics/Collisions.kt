@@ -24,7 +24,8 @@ import kotlin.math.sqrt
  * on a floor, so a blob resting on another can jump.
  */
 internal class Collisions(private val world: PhysicsWorld) {
-    private val broadphase = Broadphase(world.config.cellSize)
+    /** Every body and colliding particle of this step, by box: ids are `2·particle` and `2·body + 1`. */
+    val broadphase = Broadphase(world.config.cellSize)
     private val ps = world.particles
     private val bodies = world.softBodies
 

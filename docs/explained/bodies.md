@@ -79,7 +79,7 @@ half an edge away from the body's own other edges, for things that fold.
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `4` for **Blob Pile**, then `F1`. The yellow marks are dots standing
-on something: the floor, or a body underneath. `R` drops them all again.
+`./gradlew :demo:run`, press `4` for **Blob Pile**, then `F1` three times. The yellow marks are
+dots standing on something: the floor, or a body underneath. Cyan ones are pushed sideways. `R` drops them all again.
 
 📸 `scripts/capture.sh 4 bodies --from 2.5 --to 6 --details --clean --crop 0.25,0.15,0.5,0.85`

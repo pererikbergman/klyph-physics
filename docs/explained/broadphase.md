@@ -72,7 +72,7 @@ a tile.
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `2` for **Fountain**, then `F1`. Blue cells are where particles are
+`./gradlew :demo:run`, press `2` for **Fountain**, then `B`. Blue cells are where particles are
 filed: the brighter, the busier. Pink lines are the candidate pairs. 🩷
 
-📸 `scripts/capture.sh 2 broadphase --from 2 --to 3.5 --details --clean`
+📸 `scripts/capture.sh 2 broadphase --from 2 --to 3.5 --grid --clean`

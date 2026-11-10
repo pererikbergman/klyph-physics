@@ -78,6 +78,6 @@ surface is turned around and kept `restitution` of it, instead of being dropped.
 
 `./gradlew :demo:run`, scene `5` **Grip and Bounce**. On the left: 🧊 ice slides off at once, 🟧 the
 default slides, 🩷 grip holds. On the right the balls bounce with restitution 0, 0.5 and 0.9. Every
-five seconds it starts again. `F1` shows the yellow contact marks.
+five seconds it starts again. `F1` three times shows the contacts and their normals.
 
 📸 `scripts/capture.sh 5 friction --from 0 --to 2.6 --clean`

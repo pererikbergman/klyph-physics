@@ -187,6 +187,7 @@ class Particles internal constructor(initialCapacity: Int = 64) {
      */
     internal fun touch(p: Int, nx: Float, ny: Float, depth: Float, grip: Float, hold: Float, a: Int, b: Int, t: Float) {
         contactDepth[p] += depth
+        contact[p] = contact[p] or Events.TOUCHING
         contactNx[p] = nx
         contactNy[p] = ny
         contactGrip[p] = grip

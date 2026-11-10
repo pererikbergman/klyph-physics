@@ -21,6 +21,7 @@ Want more? Every page has the details further down.
 | 🧽 | [Friction and bounce](friction.md) | what grips, what slides, what bounces back |
 | 🪢 | [Ropes, chains and cloth](ropes.md) | one line for a rope, a chain or a sheet, and tearing |
 | 🖐️ | [Grab](grab.md) | drag anything with the mouse, and never break it |
+| 🔍 | [Debug views](debug-views.md) | see the solver work: stress, contacts, the grid |
 
 Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 
@@ -78,10 +79,12 @@ The longer version, for those who want it: the maths, the code, the why.
 ## 📸 Making the picture
 
 ```
-scripts/capture.sh <scene> <name> [--from S] [--to S] [--details] [--clean] [--slow] [--crop X,Y,W,H]
+scripts/capture.sh <scene> <name> [--from S] [--to S] [--details] [--view N] [--grid] [--clean]
+                   [--slow] [--crop X,Y,W,H] [--width W] [--drag X,Y]
 ```
 
 It runs the scene, records it, and writes `docs/img/<name>.gif` and `docs/img/<name>.png`.
 The physics steps once per frame while it records, so the same command always gives the same
-picture. 🎯 Use `--clean` for the docs (no stats on screen), `--details` to show the particles,
-`--slow` for half speed and `--crop` for a close-up. Every page ends with the 📸 command that made its GIF.
+picture. 🎯 Use `--clean` for the docs (no stats on screen), `--view 1` to `3` for the
+[🔍 debug views](debug-views.md) (`--details` is `--view 3`), `--grid` for the broadphase, `--slow` for
+half speed, `--crop` for a close-up and `--drag` for a scripted mouse. Every page ends with the 📸 command that made its GIF.

@@ -137,6 +137,11 @@ class Constraints internal constructor(private val particles: Particles) {
 
     fun pinnedParticle(pin: Int): Int = pinParticle[pin]
 
+    /** The point [pin] holds its particle at. */
+    fun pinX(pin: Int): Float = pinX[pin]
+
+    fun pinY(pin: Int): Float = pinY[pin]
+
     fun isPinAlive(pin: Int): Boolean = pins.isAlive(pin)
 
     fun removePin(pin: Int) = pins.remove(pin)
@@ -182,6 +187,12 @@ class Constraints internal constructor(private val particles: Particles) {
     val areaEnd: Int get() = areas.end
 
     /** Whether particle [p] is part of [area]'s ring. */
+    /** How many particles [area]'s ring has. */
+    fun ringSize(area: Int): Int = areaLength[area]
+
+    /** The [i]th particle of [area]'s ring, in the order it was given. */
+    fun ringParticle(area: Int, i: Int): Int = ringParticles[areaStart[area] + i]
+
     fun ringContains(area: Int, p: Int): Boolean {
         val start = areaStart[area]
         for (k in 0 until areaLength[area]) if (ringParticles[start + k] == p) return true
