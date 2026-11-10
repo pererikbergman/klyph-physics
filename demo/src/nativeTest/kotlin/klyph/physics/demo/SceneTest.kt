@@ -26,6 +26,18 @@ class SceneTest {
         check(BlobGardenScene.name, BlobGardenScene.create() as BlobRun, steps = 36_000)
     }
 
+    @Test
+    fun theFountainReusesItsHandlesSoItsStoreStopsGrowing() {
+        val run = FountainScene.create() as FountainScene.Run
+        repeat(600) { run.step(dt) }
+        val ps = run.world.particles
+        val end = ps.end
+        assertTrue(ps.count in 100..end, "about a second and a half of particles alive: ${ps.count}")
+        repeat(600) { run.step(dt) }
+        assertTrue(ps.end <= end + FountainScene.PER_STEP * 10, "the store stopped growing: ${ps.end} after $end")
+        for (p in 0 until ps.end) if (ps.isAlive(p)) assertTrue(ps.x(p).isFinite() && ps.y(p).isFinite())
+    }
+
     /**
      * Steps [run] [steps] times. Every step, every blob must be finite and inside the room. A blob may
      * snag on a corner and stretch for a moment, but not stay stretched: that is tearing. Its core may

@@ -7,6 +7,7 @@ Want more? Every page has the details further down.
 
 | | page | in one line |
 |---|---|---|
+| 🌍 | [The world and one step](world.md) | one world, one `step`, no garbage |
 | 🏃 | [Verlet integration](verlet.md) | velocity is just where you were |
 | 🔁 | [Substeps](substeps.md) | many tiny steps beat a few big ones |
 | 🧮 | [XPBD and compliance](xpbd.md) | how soft, in real units |

@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **62 tests**, all green
+- 🧪 **79 tests**, all green
 
 ## ▶️ Run it
 
@@ -52,6 +52,13 @@ ramps, stairs, a low ceiling, bounce pads 🟨 and a crusher 🟫. Watch how dif
 
 ☝️ That's `F1`. The white dots are the particles, the red dot is the heavy core, and the yellow
 feet are the particles standing on something.
+
+### 2 · ⛲ Fountain
+
+**One world, one step.** 360 particles a second shoot up and fall out of sight. Each one that leaves
+hands its handle to a new one, so the world's memory stops growing. ♻️
+
+<img src="docs/img/fountain.gif" alt="a fountain of particles" width="100%">
 
 More scenes land with every milestone. 🚀
 
