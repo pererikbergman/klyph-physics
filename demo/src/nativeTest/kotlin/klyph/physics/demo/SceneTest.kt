@@ -48,6 +48,47 @@ class SceneTest {
     }
 
     @Test
+    fun inGripAndBounceIceSlidesGripHoldsAndEachBallBouncesAsItsRestitutionSays() {
+        val run = GripAndBounceScene.create() as GripAndBounceScene.Run
+        val bodies = run.world.softBodies
+        val ps = run.world.particles
+        val start = run.blobs.map { bodies.centerX(it) }
+        val dropY = ps.y(run.balls[0])
+        val floor = (Scenes.ROWS - 2) * Scenes.TILE
+        val resting = floor - ps.radius(run.balls[0])
+        // the highest each ball gets after it first bounces
+        val landed = BooleanArray(3)
+        val apex = FloatArray(3) { Float.MAX_VALUE }
+        // a third of a second in, before either slider has reached the bottom of its ramp
+        var early = emptyList<Float>()
+        repeat(GripAndBounceScene.EVERY) { step ->
+            run.step(dt)
+            if (step == 19) early = run.blobs.indices.map { bodies.centerX(run.blobs[it]) - start[it] }
+            for (i in 0 until 3) {
+                val p = run.balls[i]
+                // landed once it's on its way up: at 900 units/s a step can skip right past the floor's level
+                if (run.world.velocityY(p) < -1f) landed[i] = true
+                if (landed[i]) apex[i] = minOf(apex[i], ps.y(p))
+            }
+        }
+        val slid = run.blobs.indices.map { bodies.centerX(run.blobs[it]) - start[it] }
+        assertTrue(abs(slid[2]) < 1f, "grip holds: ${slid[2]}")
+        assertTrue(slid[1] > 10f, "the default slides: ${slid[1]}")
+        assertTrue(early[0] > early[1] * 1.3f, "ice slides faster: ${early[0]} against ${early[1]} after a third of a second")
+        val drop = resting - dropY
+        val heights = apex.map { if (it == Float.MAX_VALUE) 0f else resting - it }
+        assertTrue(heights[0] < 0.05f * drop, "restitution 0 doesn't bounce: ${heights[0]}")
+        for (i in 1..2) {
+            val e = GripAndBounceScene.RESTITUTIONS[i]
+            // e² of the drop, less what the air (the world's damping) takes on the way down and up
+            assertTrue(heights[i] in e * e * drop * 0.65f..e * e * drop * 1.02f, "ball $i bounces ${heights[i]} of $drop, e² is ${e * e}")
+        }
+        // and back they go
+        run.step(dt)
+        assertTrue(abs(bodies.centerX(run.blobs[0]) - start[0]) < 1f, "put back after ${GripAndBounceScene.EVERY} steps")
+    }
+
+    @Test
     fun theFountainReusesItsHandlesSoItsStoreStopsGrowing() {
         val run = FountainScene.create() as FountainScene.Run
         repeat(600) { run.step(dt) }

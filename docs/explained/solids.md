@@ -36,7 +36,13 @@ beside it, so it only ever wins there.
 way out is worked out for the centre, then the radius is added, so it rests a radius off the floor.
 
 **Sliding** 🛝: the push moves the particle out along the normal, then keeps only the part of its
-velocity that isn't going into the surface. That's friction-free sliding, for free. (Friction is #15.)
+velocity that isn't going into the surface. Then [🧽 friction](friction.md) takes its share of what's
+left, by the tile's `material` and the particle's.
+
+**Ramp seams** 🪜: under a ramp, the full tile below each slope tile meets the next slope tile at a
+corner. A dot that dips under the surface right there is in that full tile, and its corner would
+throw it sideways, downhill. Where the slope runs on through the seam, it leaves along the slope's
+normal instead, as if it were still in the slope tile.
 
 ```kotlin
 val world = PhysicsWorld()

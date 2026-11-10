@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **126 tests**, all green
+- 🧪 **138 tests**, all green
 
 ## ▶️ Run it
 
@@ -73,6 +73,13 @@ soft pin, and a water balloon held round by its area. Same solver, different com
 of them goes through another. 🙅
 
 <img src="docs/img/bodies.gif" alt="soft domes, balls and boxes piling up in a bin" width="100%">
+
+### 5 · 🧽 Grip and Bounce
+
+**Friction and restitution, side by side.** Three boxes set down on three ramps: ice slides off,
+the default slides, grip holds. Three balls dropped from one height bounce back with 0, 0.5 and 0.9.
+
+<img src="docs/img/friction.gif" alt="boxes on ramps sliding or holding, and balls bouncing to three heights" width="100%">
 
 More scenes land with every milestone. 🚀
 

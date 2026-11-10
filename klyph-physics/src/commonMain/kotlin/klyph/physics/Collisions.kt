@@ -19,7 +19,9 @@ import kotlin.math.sqrt
  * - every body keeps its core inside its own skin: the core is the goo inside, and when another body
  *   presses a very soft skin past it, the two are pulled back together
  *
- * A push that lifts a particle counts as standing on a floor, so a blob resting on another can jump.
+ * Every push is also remembered with the two sides' grip, their [Material]s mixed, for
+ * [Particles.applyFriction] at the end of the substep. A push that lifts a particle counts as standing
+ * on a floor, so a blob resting on another can jump.
  */
 internal class Collisions(private val world: PhysicsWorld) {
     private val broadphase = Broadphase(world.config.cellSize)
@@ -192,7 +194,38 @@ internal class Collisions(private val world: PhysicsWorld) {
             ny = (y - nearY) / distance
             depth = radius - distance
         }
-        if (separate(p, body, nx, ny, depth)) recordFloors(p, a, b, ny)
+        if (!separate(p, body, nx, ny, depth)) return
+        recordFloors(p, a, b, ny)
+        touch(p, a, b, nearT, nx, ny, depth)
+    }
+
+    /** Remembers particle [p]'s push against the point at [t] of the edge from [a] to [b] ([b] -1: particle [a]), for its grip. */
+    private fun touch(p: Int, a: Int, b: Int, t: Float, nx: Float, ny: Float, depth: Float) {
+        val grip = Material.mixFriction(ps.friction[p], ps.friction[a])
+        val hold = Material.mixFriction(ps.staticFriction[p], ps.staticFriction[a])
+        ps.touch(p, nx, ny, depth, grip, hold, a, b, t)
+    }
+
+    /**
+     * Moves particle [p] and the point `s·a + t·b` apart by [amount] along the unit ([ux], [uy]): [p]
+     * one way, [a] and [b] the other, each by its share of the inverse mass. [b] may be -1.
+     */
+    private fun shift(p: Int, a: Int, b: Int, s: Float, t: Float, ux: Float, uy: Float, amount: Float): Boolean {
+        val wp = ps.invMass[p]
+        val wa = ps.invMass[a] * s
+        val wb = if (b < 0) 0f else ps.invMass[b] * t
+        val w = wp + wa * s + wb * t
+        if (w == 0f) return false
+        val push = amount / w
+        ps.x[p] += wp * push * ux
+        ps.y[p] += wp * push * uy
+        ps.x[a] -= wa * push * ux
+        ps.y[a] -= wa * push * uy
+        if (b >= 0) {
+            ps.x[b] -= wb * push * ux
+            ps.y[b] -= wb * push * uy
+        }
+        return true
     }
 
     /**
@@ -204,21 +237,7 @@ internal class Collisions(private val world: PhysicsWorld) {
         val n = bodies.ringCount(body)
         val a = bodies.particle(body, nearEdge)
         val b = bodies.particle(body, if (nearEdge + 1 == n) 0 else nearEdge + 1)
-        val wp = ps.invMass[p]
-        val s = 1f - nearT
-        val t = nearT
-        val wa = ps.invMass[a] * s
-        val wb = ps.invMass[b] * t
-        val w = wp + wa * s + wb * t
-        if (w == 0f) return false
-        val push = depth / w
-        ps.x[p] += wp * push * nx
-        ps.y[p] += wp * push * ny
-        ps.x[a] -= wa * push * nx
-        ps.y[a] -= wa * push * ny
-        ps.x[b] -= wb * push * nx
-        ps.y[b] -= wb * push * ny
-        return true
+        return shift(p, a, b, 1f - nearT, nearT, nx, ny, depth)
     }
 
     /** Two colliding particles closer than their radii, pushed apart along the line between them. */
@@ -242,6 +261,7 @@ internal class Collisions(private val world: PhysicsWorld) {
         ps.y[b] += wb * push * ny
         if (wb > 0f && ny < MIN_FLOOR_NORMAL_Y) world.events.recordFloor(b, 0)
         if (wa > 0f && -ny < MIN_FLOOR_NORMAL_Y) world.events.recordFloor(a, 0)
+        touch(b, a, -1, 0f, nx, ny, reach - distance)
     }
 
     /** Keeps each ring particle of [body] at least its self-thickness away from the edges it isn't on. */

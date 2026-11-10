@@ -1,7 +1,9 @@
 package klyph.physics
 
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -41,7 +43,14 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
      * returns its handle. Each ring particle weighs [particleMass]; the core is [SoftBodyShape.coreMass]
      * times that.
      */
-    fun add(shape: SoftBodyShape, centerX: Float, baseY: Float, tuning: SoftBodyTuning = SoftBodyTuning(), particleMass: Float = 1f): Int {
+    fun add(
+        shape: SoftBodyShape,
+        centerX: Float,
+        baseY: Float,
+        tuning: SoftBodyTuning = SoftBodyTuning(),
+        particleMass: Float = 1f,
+        material: Material = Material.DEFAULT,
+    ): Int {
         val n = shape.ringCount
         var minX = shape.ringX[0]
         var maxX = minX
@@ -65,7 +74,11 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
         for (i in 0 until n) particlePool[particleUsed + i] = ps.add(shape.ringX[i] + dx, shape.ringY[i] + dy, particleMass)
         val core = ps.add(shape.coreX + dx, shape.coreY + dy, particleMass * shape.coreMass)
         particlePool[particleUsed + n] = core
-        for (i in 0..n) ps.owner[particlePool[particleUsed + i]] = body
+        for (i in 0..n) {
+            val p = particlePool[particleUsed + i]
+            ps.owner[p] = body
+            ps.setMaterial(p, material)
+        }
         selfCollision[body] = false
         var shortest = Float.MAX_VALUE
         for (i in 0 until n) {
@@ -132,6 +145,30 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
             ps.moveTo(p, ps.x(p) + dx, ps.y(p) + dy)
             world.setVelocity(p, 0f, 0f)
         }
+    }
+
+    /**
+     * Turns [body], at rest, [radians] about its middle: clockwise on screen, where y grows down. A
+     * body is always made upright; this is how to set one down on a slope, or on its side.
+     */
+    fun rotate(body: Int, radians: Float) {
+        val cx = centerX(body)
+        val cy = centerY(body)
+        val c = cos(radians)
+        val s = sin(radians)
+        val ps = world.particles
+        for (i in 0..ringCounts[body]) {
+            val p = particle(body, i)
+            val dx = ps.x(p) - cx
+            val dy = ps.y(p) - cy
+            ps.moveTo(p, cx + dx * c - dy * s, cy + dx * s + dy * c)
+            world.setVelocity(p, 0f, 0f)
+        }
+    }
+
+    /** Makes every particle of [body] grip and bounce like [material]. */
+    fun setMaterial(body: Int, material: Material) {
+        for (i in 0..ringCounts[body]) world.particles.setMaterial(particle(body, i), material)
     }
 
     /** Adds ([vx], [vy]) units per second to every particle of [body]. */

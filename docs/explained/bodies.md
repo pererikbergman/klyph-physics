@@ -67,8 +67,8 @@ half an edge away from the body's own other edges, for things that fold.
 
 ## 💥 Gotchas
 
-- 💥 **No friction yet.** Drop a blob on another and it lands on it, wobbles, and slides off the side.
-  It doesn't sink in. Stable stacks come with [friction](https://github.com/pererikbergman/klyph-physics/issues/15).
+- 💥 **Without grip, stacks slide apart.** Drop a blob on another with `Material.ICE` and it lands,
+  wobbles and slides off the side. It doesn't sink in. With [🧽 friction](friction.md) it stays on top.
 - 💥 **The core lost its skin.** A very soft jelly pinned in a corner, with another blob landing on
   it, had its skin pushed away while the heavy core stayed put on the floor. Fixed by keeping every
   core inside its own skin.

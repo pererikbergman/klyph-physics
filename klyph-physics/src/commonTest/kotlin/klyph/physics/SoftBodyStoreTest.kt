@@ -46,6 +46,23 @@ class SoftBodyStoreTest {
     }
 
     @Test
+    fun turningABodyAQuarterTurnStandsItOnItsSideAboutItsMiddleAndAtRest() {
+        // a box 30 wide and 10 tall, turned clockwise: its top becomes its right side
+        val b = world.softBody(SoftBodies.box(30f, 10f, across = 6, down = 2, coreMass = 4f), 100f, 50f)
+        bodies.addVelocity(b, 50f, 50f)
+        val cx = bodies.centerX(b)
+        val cy = bodies.centerY(b)
+        bodies.rotate(b, kotlin.math.PI.toFloat() / 2f)
+        assertEquals(10f, bodies.maxX(b) - bodies.minX(b), 0.01f)
+        assertEquals(30f, bodies.maxY(b) - bodies.minY(b), 0.01f)
+        assertEquals(cx, bodies.centerX(b), 0.01f)
+        assertEquals(cy, bodies.centerY(b), 0.01f)
+        val topLeft = bodies.particle(b, 0)
+        assertTrue(world.particles.x(topLeft) > cx && world.particles.y(topLeft) < cy, "the top-left corner is now the top-right one")
+        assertEquals(0f, bodies.meanVelocityY(b), 0.001f)
+    }
+
+    @Test
     fun aSquashedBodyStaysFiniteAndSpringsBackToMostOfItsArea() {
         val b = world.softBody(dome(), 0f, 0f)
         val rest = bodies.area(b)

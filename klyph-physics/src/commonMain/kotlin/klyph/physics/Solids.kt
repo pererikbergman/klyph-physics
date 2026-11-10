@@ -38,6 +38,8 @@ class Solid internal constructor(
     val tag: Int = 0,
     val col: Int = -1,
     val row: Int = -1,
+    /** How it grips and bounces what touches it. */
+    var material: Material = Material.DEFAULT,
 ) {
     /** Whether this solid moves, such as a crusher, rather than filling a grid cell. It has no neighbours to bury its faces against. */
     val isMoving: Boolean get() = col < 0
@@ -72,8 +74,8 @@ class Solid internal constructor(
 
     companion object {
         /** A solid that is not tied to a grid cell, filling the given edges; its [top] and [bottom] may change. */
-        fun moving(left: Float, top: Float, right: Float, bottom: Float, tag: Int = 0): Solid =
-            Solid(SolidShape.BOX, left, top, right, bottom, tag)
+        fun moving(left: Float, top: Float, right: Float, bottom: Float, tag: Int = 0, material: Material = Material.DEFAULT): Solid =
+            Solid(SolidShape.BOX, left, top, right, bottom, tag, material = material)
     }
 }
 
@@ -93,15 +95,15 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
     fun at(col: Int, row: Int): Solid? = if (col in 0 until cols && row in 0 until rows) cells[row * cols + col] else null
 
     /** Fills cell ([col], [row]) with a solid of [shape] carrying [tag], and returns it. */
-    fun fill(col: Int, row: Int, shape: SolidShape = SolidShape.BOX, tag: Int = 0): Solid {
+    fun fill(col: Int, row: Int, shape: SolidShape = SolidShape.BOX, tag: Int = 0, material: Material = Material.DEFAULT): Solid {
         val t = tileSize
-        return put(Solid(shape, col * t, row * t, (col + 1) * t, (row + 1) * t, tag, col, row))
+        return put(Solid(shape, col * t, row * t, (col + 1) * t, (row + 1) * t, tag, col, row, material))
     }
 
     /** Fills only the top half of cell ([col], [row]), such as a stub hanging from a ceiling, and returns it. */
-    fun fillTopHalf(col: Int, row: Int, tag: Int = 0): Solid {
+    fun fillTopHalf(col: Int, row: Int, tag: Int = 0, material: Material = Material.DEFAULT): Solid {
         val t = tileSize
-        return put(Solid(SolidShape.BOX, col * t, row * t, (col + 1) * t, row * t + t / 2f, tag, col, row))
+        return put(Solid(SolidShape.BOX, col * t, row * t, (col + 1) * t, row * t + t / 2f, tag, col, row, material))
     }
 
     private fun put(solid: Solid): Solid {
@@ -129,7 +131,7 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
      * floors. Faces buried against a neighbouring solid are never exits, so a floor made of many
      * tiles has no seams.
      */
-    internal fun collide(particles: Particles, events: Events) {
+    internal fun collide(particles: Particles, events: Events, restingMove: Float = 0f) {
         val tile = tileSize
         val x = particles.x
         val y = particles.y
@@ -138,7 +140,7 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
             val r = particles.radius[p]
             if (r == 0f) {
                 val solid = at(floor(x[p] / tile).toInt(), floor(y[p] / tile).toInt())
-                if (solid != null) push(particles, p, solid, events)
+                if (solid != null) push(particles, p, solid, events, restingMove)
             } else {
                 // A round particle can reach into the tiles around the one its centre is in.
                 val col0 = floor((x[p] - r) / tile).toInt()
@@ -147,10 +149,10 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
                 val row1 = floor((y[p] + r) / tile).toInt()
                 for (row in row0..row1) for (col in col0..col1) {
                     val solid = at(col, row) ?: continue
-                    push(particles, p, solid, events)
+                    push(particles, p, solid, events, restingMove)
                 }
             }
-            for (k in 0 until dynamic.size) push(particles, p, dynamic[k], events)
+            for (k in 0 until dynamic.size) push(particles, p, dynamic[k], events, restingMove)
         }
     }
 
@@ -158,7 +160,7 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
      * Pushes particle [p] out of [solid] if it reaches into it. Every way out is worked out for the
      * particle's centre, then its radius is added, so it ends up a radius clear of the surface.
      */
-    private fun push(particles: Particles, p: Int, solid: Solid, events: Events) {
+    private fun push(particles: Particles, p: Int, solid: Solid, events: Events, restingMove: Float) {
         val px = particles.x[p]
         val py = particles.y[p]
         val r = particles.radius[p]
@@ -170,7 +172,14 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
             SolidShape.FALLING -> exitFromFalling(solid, px, py, exit)
         }
         if (exit.depth == Float.MAX_VALUE) return
-        particles.pushOut(p, exit.nx, exit.ny, exit.depth + r)
+        val m = solid.material
+        particles.pushOut(
+            p, exit.nx, exit.ny, exit.depth + r,
+            friction = Material.mixFriction(particles.friction[p], m.friction),
+            staticFriction = Material.mixFriction(particles.staticFriction[p], m.staticFriction),
+            restitution = Material.mixRestitution(particles.restitution[p], m.restitution),
+            restingMove = restingMove,
+        )
         if (exit.ny < MIN_FLOOR_NORMAL_Y) events.recordFloor(p, solid.tag)
     }
 
@@ -184,6 +193,7 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
             tryCorner(solid, 1, -1, solid.right - px, py - solid.top, exit)
             tryCorner(solid, -1, 1, px - solid.left, solid.bottom - py, exit)
             tryCorner(solid, 1, 1, solid.right - px, solid.bottom - py, exit)
+            trySlopeAbove(solid, px, py, exit)
         }
         // Buried on every side, such as under the foot of a wall: step toward the nearest face
         // anyway, just past it, and the tile there pushes the particle the rest of the way out.
@@ -225,6 +235,36 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
         exit.depth = depth
         exit.nx = dx * toX / depth
         exit.ny = dy * toY / depth
+    }
+
+    /**
+     * Under a ramp, the box below a slope tile meets the slope tile beside it at a seam, the box's top
+     * corner. A particle that dips just under the surface there is in the box, with every face buried,
+     * and the corner would push it out sideways, downhill, up to a tile's width from the real surface.
+     * Where the slope above carries on through the seam into the tile beside the box, the way out is
+     * along the slope's normal, to its line, as if the particle were still in the slope tile.
+     */
+    private fun trySlopeAbove(solid: Solid, px: Float, py: Float, exit: Exit) {
+        val above = at(solid.col, solid.row - 1) ?: return
+        val depth: Float
+        val nx: Float
+        when (above.shape) {
+            SolidShape.BOX -> return
+            SolidShape.RISING -> {
+                if (at(solid.col - 1, solid.row)?.shape != SolidShape.RISING) return
+                depth = ((px - above.left) - (above.bottom - py)) * DIAGONAL
+                nx = -DIAGONAL
+            }
+            SolidShape.FALLING -> {
+                if (at(solid.col + 1, solid.row)?.shape != SolidShape.FALLING) return
+                depth = ((above.right - px) - (above.bottom - py)) * DIAGONAL
+                nx = DIAGONAL
+            }
+        }
+        if (depth >= exit.depth) return
+        exit.depth = depth
+        exit.nx = nx
+        exit.ny = -DIAGONAL
     }
 
     /** Takes the [side] face as the way out, along ([nx], [ny]), if it is open and closer than [exit]'s. */
