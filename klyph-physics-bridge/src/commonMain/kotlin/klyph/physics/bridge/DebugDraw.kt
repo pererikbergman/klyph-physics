@@ -1,6 +1,7 @@
 package klyph.physics.bridge
 
 import klyph.math.Rect
+import klyph.physics.Broadphase
 import klyph.physics.Constraints
 import klyph.physics.Outline
 import klyph.physics.Particles
@@ -165,6 +166,27 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         }
     }
 
+    /**
+     * Shows what [broadphase] found: every cell a box was filed under, tinted once per box filed there so
+     * busy cells glow brighter, and a line between the two [particles] of every candidate pair. The
+     * boxes' ids must be particle handles.
+     */
+    fun broadphase(canvas: Canvas, broadphase: Broadphase, particles: Particles, cellColor: Color = CELL, pairColor: Color = PAIR) {
+        val size = broadphase.cellSize
+        for (e in 0 until broadphase.count) {
+            val col0 = floor(broadphase.left(e) / size).toInt()
+            val col1 = floor(broadphase.right(e) / size).toInt()
+            val row0 = floor(broadphase.top(e) / size).toInt()
+            val row1 = floor(broadphase.bottom(e) / size).toInt()
+            for (row in row0..row1) for (col in col0..col1) rect(canvas, col * size, row * size, size, size, cellColor, layer - 1)
+        }
+        for (i in 0 until broadphase.pairCount) {
+            val a = broadphase.pairA(i)
+            val b = broadphase.pairB(i)
+            line(canvas, particles.x(a), particles.y(a), particles.x(b), particles.y(b), EDGE, pairColor, layer + 1)
+        }
+    }
+
     /** Writes [text] centred on [x] with its top at [y], in world units, above everything else drawn here. */
     fun label(canvas: Canvas, text: CharSequence, x: Float, y: Float, color: Color = LABEL) {
         val font = font ?: return
@@ -213,6 +235,8 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         val CORE = Color(0xFF4040FFu)
         val FLOOR_CONTACT = Color(0xFFD36BFFu)
         val LABEL = Color(0xE8ECF4FFu)
+        val CELL = Color(0.36f, 0.55f, 0.94f, 0.12f)
+        val PAIR = Color(0xFF6BB5FFu)
 
         /** Half a world unit: at the sandbox's zoom, one screen point. */
         private val LABEL_SHADOW = TextShadow(offsetX = 0.5f, offsetY = 0.5f)

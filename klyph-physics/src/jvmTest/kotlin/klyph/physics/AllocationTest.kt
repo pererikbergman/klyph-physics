@@ -44,4 +44,20 @@ class AllocationTest {
         val bytes = measure { repeat(10_000) { world.step(1f / 60f) } }
         assertTrue(bytes < 1024, "10 000 steps allocated $bytes bytes")
     }
+
+    @Test
+    fun buildingTheBroadphaseAllocatesNothingOnceItHasGrown() {
+        val bp = Broadphase()
+        val random = kotlin.random.Random(1)
+        val xs = FloatArray(2000) { random.nextFloat() * 1000f }
+        val ys = FloatArray(2000) { random.nextFloat() * 1000f }
+        val bytes = measure {
+            repeat(1000) {
+                bp.clear()
+                for (i in xs.indices) bp.addMoving(i, xs[i], ys[i], 2f, 3f, 2f)
+                bp.build()
+            }
+        }
+        assertTrue(bytes < 1024, "1000 builds allocated $bytes bytes")
+    }
 }
