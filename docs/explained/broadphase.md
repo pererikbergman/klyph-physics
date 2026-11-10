@@ -43,7 +43,7 @@ them.
 
 **Fast, in numbers** ⏱️: 10 000 particles in a 1000 × 1000 room, each moving 4 units a step:
 19 000 filings, 7 000 pairs, built in **0.49 ms** on the JVM and **~0.65 ms** in a Kotlin/Native
-release build on an M-series Mac. `BroadphaseSpeedTest` checks it.
+release build on an M-series Mac. `BroadphaseSpeedTest` checks it (a looser 5 ms on shared CI runners).
 
 **Checked against brute force** ✅: 20 random scenes, up to 450 boxes, some 80 units wide, some at
 negative coordinates. Same pairs as comparing everything with everything, none twice.

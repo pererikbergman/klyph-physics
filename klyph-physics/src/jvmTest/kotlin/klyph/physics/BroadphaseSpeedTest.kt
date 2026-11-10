@@ -5,8 +5,9 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * How long a build of 10 000 particles takes. The goal is under a millisecond on an M-series Mac; other
- * machines, such as the CI's, only have to stay under a few, so a slow runner doesn't fail the build.
+ * How long a build of 10 000 particles takes. The goal is under a millisecond on an M-series Mac. Other
+ * machines, and shared CI runners (which set `CI`), only have to stay under a few: a busy virtual
+ * machine is no measure of the engine, and shouldn't fail the build.
  */
 class BroadphaseSpeedTest {
     @Test
@@ -33,7 +34,8 @@ class BroadphaseSpeedTest {
         times.sort()
         val median = times[times.size / 2] / 1e6
         val isAppleSilicon = System.getProperty("os.name").startsWith("Mac") && System.getProperty("os.arch") == "aarch64"
-        val limit = if (isAppleSilicon) 1.0 else 5.0
+        val isCi = System.getenv("CI") != null
+        val limit = if (isAppleSilicon && !isCi) 1.0 else 5.0
         println("broadphase: $n particles, ${bp.filedCount} filings, ${bp.pairCount} pairs, median build $median ms")
         assertTrue(median < limit, "median build took $median ms, over $limit ms")
     }
