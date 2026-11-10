@@ -6,7 +6,7 @@
 
 ## 🧠 How it works
 
-- 👉 a particle is a point, so it can only be in **one tile**. check that one, plus anything moving 🏎️
+- 👉 set `world.solids = grid` and **every particle** gets pushed out, every pass of every substep. a point is in **one tile**, a round particle checks the tiles its radius reaches, plus anything moving 🏎️
 - 👉 push it out through the **nearest face**, but never through a face that's **buried** against another tile, or the edge of the world
 - 👉 keep the speed **along** the surface, drop the speed **into** it, so things slide
 
@@ -32,8 +32,19 @@ both buried, but the cell diagonally across that corner is air. A point just ins
 through the corner, at the straight-line distance. A corner is never closer than an open face
 beside it, so it only ever wins there.
 
-**Sliding** 🛝: `SoftBody.pushOut` moves the particle out along the normal, then keeps only the
-part of its velocity that isn't going into the surface. That's friction-free sliding, for free.
+**Round particles** ⚪: a particle with a `radius` reaches into a solid before its centre does. The
+way out is worked out for the centre, then the radius is added, so it rests a radius off the floor.
+
+**Sliding** 🛝: the push moves the particle out along the normal, then keeps only the part of its
+velocity that isn't going into the surface. That's friction-free sliding, for free. (Friction is #15.)
+
+```kotlin
+val world = PhysicsWorld()
+world.solids = SolidGrid(cols = 40, rows = 23, tileSize = 16f).apply {
+    for (c in 0 until cols) fill(c, 21)                  // a floor
+    fill(10, 20, SolidShape.RISING)                      // a ramp ◢
+}
+```
 
 </details>
 
@@ -44,7 +55,7 @@ part of its velocity that isn't going into the surface. That's friction-free sli
 | `SolidGrid(cols, rows, tileSize)` | `16` units a tile in the demo | the grid. one solid per cell, max |
 | `fill(col, row, shape, tag)` | `BOX`, tag `0` | puts a solid in a cell |
 | `dynamic` | empty | solids that move. move them by setting `top` and `bottom` |
-| `SoftBodyTuning.maxStep` | `4` | keep it **under half the thinnest wall**, or a fast particle can pop out the far side |
+| `PhysicsConfig.maxStep` | `4` | keep it **under half the thinnest wall**, or a fast particle can pop out the far side |
 
 ## 💥 Gotchas
 

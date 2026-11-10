@@ -89,4 +89,33 @@ class ParticlesTest {
         assertEquals(0, particles.count)
         assertEquals(0, particles.add(0f, 0f))
     }
+
+    @Test
+    fun aParticleIsPlacedWithTheSpeedOfWhereItCameFrom() {
+        val p = particles.add(0f, 0f)
+        particles.set(p, 10f, 20f, previousX = 4f, previousY = 25f)
+        assertEquals(10f, particles.x(p))
+        assertEquals(6f, particles.movedX(p), 0.001f)
+        assertEquals(-5f, particles.movedY(p), 0.001f)
+    }
+
+    @Test
+    fun pushingAParticleOutMovesItAlongTheNormalAndDropsOnlyTheSpeedGoingIn() {
+        val p = particles.add(0f, 0f)
+        // arriving at (50, 82) from (45, 70): 5 across and 12 down, into a floor whose normal points up
+        particles.set(p, 50f, 82f, previousX = 45f, previousY = 70f)
+        particles.pushOut(p, nx = 0f, ny = -1f, depth = 2f)
+        assertEquals(50f, particles.x(p), 0.001f)
+        assertEquals(80f, particles.y(p), 0.001f)
+        assertEquals(5f, particles.movedX(p), 0.001f, "the sideways speed is kept")
+        assertEquals(0f, particles.movedY(p), 0.001f, "the speed into the floor is gone")
+    }
+
+    @Test
+    fun pushingOutAParticleThatIsAlreadyLeavingKeepsItsSpeed() {
+        val p = particles.add(0f, 0f)
+        particles.set(p, 50f, 82f, previousX = 50f, previousY = 90f)
+        particles.pushOut(p, nx = 0f, ny = -1f, depth = 2f)
+        assertEquals(-8f, particles.movedY(p), 0.001f)
+    }
 }

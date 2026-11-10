@@ -1,7 +1,9 @@
 package klyph.physics.demo
 
 import klyph.math.Rect
+import klyph.physics.PhysicsWorld
 import klyph.physics.Solid
+import klyph.physics.SoftBodies
 import klyph.physics.SoftBodyTuning
 import klyph.physics.SolidShape
 import klyph.physics.bridge.DebugDraw
@@ -24,7 +26,7 @@ object BlobGardenScene : Scene {
 
     val kinds = listOf(
         Kind("jelly", Color(0xF27BB6FFu), 34f, SoftBodyTuning(spokeCompliance = 0.004f, areaCompliance = 0.003f)),
-        Kind("rubber", Color(0xF2994AFFu), 34f, SoftBodyTuning(spokeCompliance = 0.0001f, areaCompliance = 0.0001f, damping = 0.9995f)),
+        Kind("rubber", Color(0xF2994AFFu), 34f, SoftBodyTuning(spokeCompliance = 0.0001f, areaCompliance = 0.0001f)),
         Kind("stiff", Color(0x8FA8C8FFu), 34f, SoftBodyTuning(edgeCompliance = 0f, spokeCompliance = 0.00001f, areaCompliance = 0.00001f)),
         Kind("heavy core", Color(0xA678E0FFu), 80f, SoftBodyTuning()),
         Kind("light core", Color(0xB8E05CFFu), 5f, SoftBodyTuning()),
@@ -61,10 +63,15 @@ object BlobGardenScene : Scene {
             fill(31, 12, SolidShape.RISING)
         }
         val crusher = Solid.moving(25 * t, 0f, 27 * t, 2 * t).also { grid.dynamic.add(it) }
+        override val world = PhysicsWorld().also { it.solids = grid }
 
-        override val blobs = kinds.mapIndexed { i, kind ->
-            Blob.dome(centerX = (6 + i * 6) * t, baseY = 6 * t, color = kind.color, coreMass = kind.coreMass, tuning = kind.tuning)
+        override val blobs = IntArray(kinds.size) { i ->
+            val kind = kinds[i]
+            // A slime-shaped dome: half a disc, 1.3 times taller, its core as heavy as the kind says.
+            val shape = SoftBodies.semiDisc(radius = 13.3f, arcSegments = 14, baseSegments = 8, coreMass = kind.coreMass, heightScale = 1.3f)
+            world.softBody(shape, centerX = (6 + i * 6) * t, baseY = 6 * t, tuning = kind.tuning)
         }
+        val bodies = world.softBodies
         val direction = IntArray(blobs.size) { if (it % 2 == 0) 1 else -1 }
         val hopTimer = FloatArray(blobs.size) { 0.6f + it * 0.3f }
         var seconds = 0f
@@ -76,16 +83,27 @@ object BlobGardenScene : Scene {
             crusher.top = top
             crusher.bottom = top + 2 * t
             for ((i, blob) in blobs.withIndex()) {
-                val x = blob.body.centerX()
+                val x = bodies.centerX(blob)
                 if (x < 3 * t) direction[i] = 1
                 if (x > (Scenes.COLS - 3) * t) direction[i] = -1
                 hopTimer[i] -= dt
-                if (hopTimer[i] <= 0f && blob.contacts.touchedFloor) {
-                    blob.launch(direction[i] * HOP_DRIFT, -HOP_SPEED, dt)
+                if (hopTimer[i] <= 0f && bodies.isOnFloor(blob)) {
+                    launch(blob, direction[i] * HOP_DRIFT, -HOP_SPEED)
                     hopTimer[i] = HOP_SECONDS
                 }
-                blob.step(grid, dt)
-                if (blob.contacts.touched(PAD)) blob.launch(0f, -BOUNCE_SPEED, dt)
+            }
+            world.step(dt)
+            for (blob in blobs) if (bodies.touched(blob, PAD)) launch(blob, 0f, -BOUNCE_SPEED)
+        }
+
+        /**
+         * Sends every particle of [blob] off at [vx] units per second sideways, on top of what it had,
+         * and [vy] up or down instead of what it had. y grows down, so a jump is a negative [vy].
+         */
+        fun launch(blob: Int, vx: Float, vy: Float) {
+            for (i in 0..bodies.ringCount(blob)) {
+                val p = bodies.particle(blob, i)
+                world.setVelocity(p, world.velocityX(p) + vx, vy)
             }
         }
 
@@ -93,15 +111,15 @@ object BlobGardenScene : Scene {
             debug.solids(canvas, grid, view)
             for (x in 28..30) debug.solid(canvas, grid.at(x, 20) ?: continue, PAD_COLOR)
             for ((i, blob) in blobs.withIndex()) {
-                debug.softBody(canvas, blob.body, blob.color)
-                debug.contacts(canvas, blob.body, blob.contacts)
-                debug.label(canvas, kinds[i].label, blob.body.centerX(), blob.body.minY() - 12f)
+                debug.softBody(canvas, world, blob, kinds[i].color)
+                debug.label(canvas, kinds[i].label, bodies.centerX(blob), bodies.minY(blob) - 12f)
             }
+            debug.contacts(canvas, world)
         }
 
-        override val particleCount get() = blobs.sumOf { it.body.size }
-        override val bodyCount get() = blobs.size
-        override val contactCount get() = blobs.sumOf { it.floorContactCount() }
+        override val particleCount get() = world.particles.count
+        override val bodyCount get() = bodies.count
+        override val contactCount get() = blobs.sumOf { bodies.floorContactCount(it) }
     }
 
     private val PAD_COLOR = Color(0xE0B040FFu)

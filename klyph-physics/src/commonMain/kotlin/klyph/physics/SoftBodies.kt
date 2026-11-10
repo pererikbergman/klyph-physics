@@ -76,3 +76,15 @@ object SoftBodies {
         return SoftBodyShape(xs, ys, 0f, 0f, coreMass)
     }
 }
+
+/**
+ * How soft a body is. The compliances say how far each kind of constraint gives per unit of force
+ * (0 is rigid): the ring's edges, the spokes from the ring to the core, and the area. Soft spokes let a
+ * body stretch and squash, a soft area lets it sag and be squeezed, and stiff edges keep the skin from
+ * tearing. How fast it moves, how damped and how often it's solved is the world's [PhysicsConfig].
+ */
+data class SoftBodyTuning(
+    val edgeCompliance: Float = 0.00002f,
+    val spokeCompliance: Float = 0.0005f,
+    val areaCompliance: Float = 0.0004f,
+)

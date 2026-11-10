@@ -13,11 +13,11 @@
 <details>
 <summary>🤓 the details</summary>
 
-One move, from `SoftBody.integrate`:
+One move, from `PhysicsWorld.integrate`:
 
 ```kotlin
-var dx = (x - prevX) * damping                    // the last move, a tiny bit weaker
-var dy = (y - prevY) * damping + gravity * h * h  // plus gravity, h = the substep's length
+var dx = (x - prevX) * keep                       // the last move, a tiny bit weaker
+var dy = (y - prevY) * keep + gravity * h * h     // plus gravity, h = the substep's length
 // cap the move at maxStep, then:
 prevX = x; prevY = y                              // now becomes before
 x += dx; y += dy                                  // and the particle moves on
@@ -31,11 +31,11 @@ The engine still edits velocity on purpose, by moving the *previous* position:
 
 | call | does |
 |---|---|
-| `addVelocity(i, vx, vy, h)` | `prev -= v * h`: now it looks like it moved faster |
-| `setVelocityY(i, vy, h)` | `prevY = y - vy * h`: a jump, whatever it was doing before |
-| `pushOut(i, nx, ny, depth)` | moves it out of a wall **and** keeps only the speed along the wall |
-| `movedX(i)` | `x - prevX`: the velocity, in units per **substep** |
-| `velocityX(i, h)` | `movedX(i) / h`: the same, in units per **second** |
+| `world.setVelocity(p, vx, vy)` | `prev = now - v * h`: a jump, whatever it was doing before |
+| `particles.moveTo(p, x, y)` | moves now **and** before, so it keeps its speed and doesn't launch |
+| walls (inside the step) | move it out of a wall **and** keep only the speed along the wall |
+| `particles.movedX(p)` | `x - prevX`: the velocity, in units per **substep** |
+| `world.velocityX(p)` | the same, in units per **second** |
 
 </details>
 
@@ -43,17 +43,18 @@ The engine still edits velocity on purpose, by moving the *previous* position:
 
 | knob | default | turn it up 🔼 | turn it down 🔽 |
 |---|---|---|---|
-| `SoftBodyTuning.damping` | `0.999` | `1` keeps all the speed: bouncy forever | slower, like moving through honey 🍯 |
-| `SoftBodyTuning.maxStep` | `4` units | faster things allowed, but they can tunnel 👻 | a speed limit: `maxStep / h` = 960 units/s at 240 substeps a second |
-| `gravity` | `1500` units/s² in the demo | heavier world | the moon 🌙 |
+| `PhysicsConfig.damping` | `0.24` per second | slower, like moving through honey 🍯 | `0` keeps all the speed: bouncy forever |
+| `PhysicsConfig.maxStep` | `4` units | faster things allowed, but they can tunnel 👻 | a speed limit: `maxStep / h` = 960 units/s at 240 substeps a second |
+| `PhysicsConfig.gravity` | `Vec(0, 1500)` | heavier world | the moon 🌙 |
 
 ## 💥 Gotchas
 
 - 💥 **Teleporting launches things.** Move a particle without moving its previous position and
-  the jump *is* its velocity: next substep it flies off. Use `placeAt` or `setParticle`, which
-  move both.
-- 💥 **Damping is per substep**, not per second. `0.999` with 240 substeps a second keeps
-  `0.999^240 ≈ 79%` of the speed each second. Double the substeps and things get *more* damped.
+  the jump *is* its velocity: next substep it flies off. Use `particles.moveTo` or
+  `softBodies.placeAt`, which move both.
+- 💥 **Damping is per second**, not per substep: `0.24` keeps `e^-0.24 ≈ 79%` of the speed each
+  second, however many substeps you take. (It used to be per substep, so more substeps meant more
+  damping. Not any more.)
 - 💥 **`movedX` isn't units per second.** It's units per substep. Divide by `h`, or use `velocityX`.
 
 ## 🧪 Try it

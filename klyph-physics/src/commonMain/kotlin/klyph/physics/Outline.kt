@@ -3,7 +3,7 @@ package klyph.physics
 import kotlin.math.sqrt
 
 /**
- * A closed outline of points, in order: what [Outline] works on. A [SoftBody] is one, and so is a body
+ * A closed outline of points, in order: what [Outline] works on. A soft body's ring is one, and so is a body
  * in a [PhysicsWorld], through [SoftBodyStore.ring].
  */
 interface Ring {

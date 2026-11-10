@@ -18,6 +18,12 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     internal var invMass = FloatArray(initialCapacity)
     internal var radius = FloatArray(initialCapacity)
     internal var flags = IntArray(initialCapacity)
+
+    /** Whether each particle stood on a floor this step ([Events.NOW]) and the step before ([Events.BEFORE]). */
+    internal var contact = IntArray(initialCapacity)
+
+    /** The [Solid.tag]s of the floors each particle stood on this step, or-ed together. */
+    internal var floorTag = IntArray(initialCapacity)
     private var free = IntArray(16)
     private var freeCount = 0
 
@@ -46,6 +52,8 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         invMass[p] = if (mass == STATIC) 0f else 1f / mass
         this.radius[p] = radius
         flags[p] = ALIVE
+        contact[p] = 0
+        floorTag[p] = 0
         return p
     }
 
@@ -95,6 +103,32 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         prevY[p] = y[p] - vy * h
     }
 
+    /** Sets where particle [p] is and where it was a substep ago, which gives it its velocity. */
+    internal fun set(p: Int, x: Float, y: Float, previousX: Float = x, previousY: Float = y) {
+        this.x[p] = x
+        this.y[p] = y
+        prevX[p] = previousX
+        prevY[p] = previousY
+    }
+
+    /**
+     * Moves particle [p] out of a surface: [depth] units along the unit normal ([nx], [ny]) pointing out
+     * of it, and drops the speed it had going into the surface while keeping the rest, so it slides.
+     */
+    internal fun pushOut(p: Int, nx: Float, ny: Float, depth: Float) {
+        var vx = x[p] - prevX[p]
+        var vy = y[p] - prevY[p]
+        x[p] += nx * depth
+        y[p] += ny * depth
+        val into = vx * nx + vy * ny
+        if (into < 0f) {
+            vx -= into * nx
+            vy -= into * ny
+        }
+        prevX[p] = x[p] - vx
+        prevY[p] = y[p] - vy
+    }
+
     private fun grow() {
         val size = x.size * 2
         x = x.copyOf(size)
@@ -104,6 +138,8 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         invMass = invMass.copyOf(size)
         radius = radius.copyOf(size)
         flags = flags.copyOf(size)
+        contact = contact.copyOf(size)
+        floorTag = floorTag.copyOf(size)
     }
 
     companion object {

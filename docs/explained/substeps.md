@@ -13,23 +13,18 @@
 <details>
 <summary>🤓 the details</summary>
 
-One fixed step of a blob, from the demo's `Blob.step`:
+One fixed step, from `PhysicsWorld.step`:
 
 ```kotlin
-contacts.beginStep()
-val h = dt / SUBSTEPS                       // 1/60 s / 4 = 1/240 s
-repeat(SUBSTEPS) {
-    body.substep(h, gravity) { grid.resolve(body, contacts) }
-}
-```
-
-and inside `SoftBody.substep`:
-
-```kotlin
-integrate(gravity, h)                       // 🏃 every particle moves once
-repeat(tuning.relaxIterations) {            // 6 times:
-    relax(h)                                //   🧮 pull every constraint toward rest
-    collide()                               //   🧱 push out of the solids: walls get the last word
+val h = dt / config.substeps                // 1/60 s / 4 = 1/240 s
+events.beginStep()                          // 🦶 last step's floors become "before"
+repeat(config.substeps) {
+    integrate(h, keep)                      // 🏃 every particle moves once
+    constraints.beginSubstep()              // forget last substep's pushes (λ)
+    repeat(config.iterations) {             // 6 times:
+        constraints.solve(h)                //   🧮 pull every constraint toward rest
+        solids?.collide(particles, events)  //   🧱 push out of the solids: walls get the last word
+    }
 }
 ```
 
@@ -48,16 +43,14 @@ That's `4 × 6 = 24` passes over every constraint per tick. Each one is cheap. �
 
 | knob | default | turn it up 🔼 | turn it down 🔽 |
 |---|---|---|---|
-| `Blob.SUBSTEPS` (demo) | `4` | stiffer, steadier, no tunnelling, costs more | cheaper, but bodies go soft and fast ones tunnel 👻 |
-| `SoftBodyTuning.relaxIterations` | `6` | stiff constraints get closer to rigid | cheaper, things sag a bit |
+| `PhysicsConfig.substeps` | `4` | stiffer, steadier, no tunnelling, costs more | cheaper, but bodies go soft and fast ones tunnel 👻 |
+| `PhysicsConfig.iterations` | `6` | stiff constraints get closer to rigid | cheaper, things sag a bit |
 | klyph's `fixedRate` | `60` | same as more substeps | same as fewer |
-
-🔜 Milestone 2 moves the substep count into `PhysicsConfig`, so a whole world shares one.
 
 ## 💥 Gotchas
 
-- 💥 **More substeps = more damping.** Damping is applied every substep. Change `SUBSTEPS` and
-  re-check `damping` (see [🏃 Verlet](verlet.md)).
+- 💥 **More substeps cost more.** Every substep runs every pass over every constraint and every
+  particle against the solids. Double them and the step takes twice as long.
 - 💥 **Iterations aren't free stiffness.** Past a handful, more passes barely help. If a body
   is too soft, add a substep or lower its compliance.
 - 💥 **`maxStep` must stay under half the thinnest wall.** Substeps make moves small, and
