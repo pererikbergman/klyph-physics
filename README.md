@@ -2,6 +2,8 @@
 
 a small, fast 2D physics engine for [klyph](https://github.com/inemtsev/klyph) 🟢
 
+[![CI](https://github.com/pererikbergman/klyph-physics/actions/workflows/ci.yml/badge.svg)](https://github.com/pererikbergman/klyph-physics/actions/workflows/ci.yml)
+
 ## ⚡ 10-second version
 
 - 🍮 **soft bodies**, 🪢 **ropes**, 🧣 **cloth**, 📦 **rigid bodies**, 🔩 **joints**
