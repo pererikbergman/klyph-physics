@@ -11,6 +11,9 @@ import klyph.platform.Color
 import klyph.render.Canvas
 import klyph.render.DrawSpace
 import klyph.render.TextureRegion
+import klyph.text.Font
+import klyph.text.TextAlign
+import klyph.text.TextShadow
 import kotlin.math.atan2
 import kotlin.math.floor
 import kotlin.math.max
@@ -24,9 +27,10 @@ import kotlin.math.sqrt
  * that work is done.
  *
  * klyph has no polygons, so shapes are filled one row of [ROW] world units at a time, and lines are
- * stretched, turned quads of [pixel] (`App.assets.whitePixel`).
+ * stretched, turned quads of [pixel] (`App.assets.whitePixel`). Labels need a [font], such as
+ * `App.assets.defaultFont`; without one they are not drawn.
  */
-class DebugDraw(private val pixel: TextureRegion) {
+class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null) {
     /** Whether to draw particles, tile edges and floor contacts on top of the plain view. */
     var showDetails: Boolean = false
 
@@ -120,6 +124,12 @@ class DebugDraw(private val pixel: TextureRegion) {
         }
     }
 
+    /** Writes [text] centred on [x] with its top at [y], in world units, above everything else drawn here. */
+    fun label(canvas: Canvas, text: CharSequence, x: Float, y: Float, color: Color = LABEL) {
+        val font = font ?: return
+        canvas.drawText(font, text, x, y, color, scale = 1f, align = TextAlign.CENTER, layer = layer + 5, space = DrawSpace.WORLD, shadow = LABEL_SHADOW)
+    }
+
     /** A line of [thickness] world units from (x0, y0) to (x1, y1). */
     fun line(canvas: Canvas, x0: Float, y0: Float, x1: Float, y1: Float, thickness: Float, color: Color, layer: Int) {
         val dx = x1 - x0
@@ -159,5 +169,9 @@ class DebugDraw(private val pixel: TextureRegion) {
         val PARTICLE = Color(0xFFFFFFFFu)
         val CORE = Color(0xFF4040FFu)
         val FLOOR_CONTACT = Color(0xFFD36BFFu)
+        val LABEL = Color(0xE8ECF4FFu)
+
+        /** Half a world unit: at the sandbox's zoom, one screen point. */
+        private val LABEL_SHADOW = TextShadow(offsetX = 0.5f, offsetY = 0.5f)
     }
 }

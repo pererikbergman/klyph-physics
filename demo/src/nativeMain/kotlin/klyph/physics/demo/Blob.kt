@@ -20,6 +20,19 @@ class Blob(val body: SoftBody, val color: Color) {
         repeat(SUBSTEPS) { body.substep(h, gravity) { grid.resolve(body, contacts) } }
     }
 
+    /**
+     * Sends every particle off at [vx] units per second sideways, on top of what it had, and [vy] up
+     * or down instead of what it had, for a fixed step of [dt] seconds. y grows down, so a jump is a
+     * negative [vy].
+     */
+    fun launch(vx: Float, vy: Float, dt: Float) {
+        val h = dt / SUBSTEPS
+        for (i in 0 until body.size) {
+            body.addVelocity(i, vx, 0f, h)
+            body.setVelocityY(i, vy, h)
+        }
+    }
+
     /** How many of its particles stand on a floor right now. */
     fun floorContactCount(): Int {
         var n = 0
