@@ -27,7 +27,13 @@ class AllocationTest {
     @Test
     fun aStepAllocatesNothing() {
         val world = PhysicsWorld()
-        repeat(500) { world.particles.add(it.toFloat(), 0f) }
+        val ps = world.particles
+        val cs = world.constraints
+        repeat(500) { ps.add(it.toFloat(), 0f) }
+        for (p in 1 until 300) cs.distance(p - 1, p, compliance = 0.001f)
+        for (p in 300 until 400) cs.rope(p - 1, p)
+        cs.pin(0)
+        cs.area(IntArray(50) { ps.add(400f + 10f * kotlin.math.cos(it * 0.1257f), 10f * kotlin.math.sin(it * 0.1257f)) })
         val bytes = measure { repeat(10_000) { world.step(1f / 60f) } }
         assertTrue(bytes < 1024, "10 000 steps allocated $bytes bytes")
     }

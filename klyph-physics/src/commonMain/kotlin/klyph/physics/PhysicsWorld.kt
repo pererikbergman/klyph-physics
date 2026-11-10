@@ -11,6 +11,9 @@ import kotlin.math.sqrt
 class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     val particles = Particles()
 
+    /** Distances, ropes, pins and areas between [particles]. */
+    val constraints = Constraints(particles)
+
     /** The length of the last substep, in seconds: what velocities in units per second are measured against. */
     var substepLength: Float = 1f / 60f / config.substeps
         private set
@@ -21,7 +24,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     /**
      * Advances the world by [dt] seconds, in [PhysicsConfig.substeps] substeps. Each one moves every
-     * particle, then [PhysicsConfig.iterations] times solves the constraints and collides.
+     * particle, then [PhysicsConfig.iterations] times solves the [constraints].
      */
     fun step(dt: Float) {
         require(dt > 0f && dt.isFinite()) { "dt is $dt: it must be a finite time more than 0" }
@@ -30,8 +33,22 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         val keep = exp(-config.damping * h)
         repeat(config.substeps) {
             integrate(h, keep)
+            constraints.beginSubstep()
+            repeat(config.iterations) { constraints.solve(h) }
         }
         stepCount++
+    }
+
+    /**
+     * Removes particle [p] and every constraint on it. Use this rather than `particles.remove`
+     * when [p] has constraints: its handle will be reused, and a new particle shouldn't inherit them.
+     */
+    fun removeParticle(p: Int) {
+        val c = constraints
+        for (link in 0 until c.linkEnd) if (c.isLinkAlive(link) && (c.linkA(link) == p || c.linkB(link) == p)) c.removeLink(link)
+        for (pin in 0 until c.pinEnd) if (c.isPinAlive(pin) && c.pinnedParticle(pin) == p) c.removePin(pin)
+        for (area in 0 until c.areaEnd) if (c.isAreaAlive(area) && c.ringContains(area, p)) c.removeArea(area)
+        particles.remove(p)
     }
 
     /** Velocity of particle [p] in units per second, over the last substep. */

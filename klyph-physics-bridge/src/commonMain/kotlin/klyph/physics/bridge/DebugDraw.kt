@@ -1,6 +1,7 @@
 package klyph.physics.bridge
 
 import klyph.math.Rect
+import klyph.physics.Constraints
 import klyph.physics.Contacts
 import klyph.physics.Outline
 import klyph.physics.Particles
@@ -75,6 +76,18 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
             if (!particles.isAlive(p)) continue
             val size = max(particles.radius(p) * 2f, DOT)
             square(canvas, particles.x(p), particles.y(p), size, colorOf(p))
+        }
+    }
+
+    /** Draws every live distance and rope in [constraints] as a line between its particles: ropes in [ropeColor]. */
+    fun links(canvas: Canvas, constraints: Constraints, particles: Particles, color: Color = LINK, ropeColor: Color = ROPE) {
+        for (c in 0 until constraints.linkEnd) {
+            if (!constraints.isLinkAlive(c)) continue
+            val a = constraints.linkA(c)
+            val b = constraints.linkB(c)
+            if (!particles.isAlive(a) || !particles.isAlive(b)) continue
+            val tint = if (constraints.isRope(c)) ropeColor else color
+            line(canvas, particles.x(a), particles.y(a), particles.x(b), particles.y(b), OUTLINE, tint, layer)
         }
     }
 
@@ -185,6 +198,8 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         val SOLID = Color(0x3A4A66FFu)
         val MOVING = Color(0x7A5A3AFFu)
         val PARTICLE = Color(0xFFFFFFFFu)
+        val LINK = Color(0x9FB3D9FFu)
+        val ROPE = Color(0xC9A26BFFu)
         val CORE = Color(0xFF4040FFu)
         val FLOOR_CONTACT = Color(0xFFD36BFFu)
         val LABEL = Color(0xE8ECF4FFu)

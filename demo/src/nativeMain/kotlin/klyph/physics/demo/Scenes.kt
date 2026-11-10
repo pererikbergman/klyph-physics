@@ -4,7 +4,7 @@ import klyph.physics.SolidGrid
 
 /** Every scene of the sandbox, in the order the number keys choose them. */
 object Scenes {
-    val all: List<Scene> = listOf(BlobGardenScene, FountainScene)
+    val all: List<Scene> = listOf(BlobGardenScene, FountainScene, SpringsScene)
 
     /** Every scene is laid out on a grid of these tiles, [COLS] by [ROWS]: 640 by 368 units. */
     const val TILE = 16f
