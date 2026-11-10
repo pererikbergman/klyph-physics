@@ -21,8 +21,10 @@ events.beginStep()                          // 🦶 last step's floors become "b
 repeat(config.substeps) {
     integrate(h, keep)                      // 🏃 every particle moves once
     constraints.beginSubstep()              // forget last substep's pushes (λ)
-    repeat(config.iterations) {             // 6 times:
+    repeat(config.iterations) { pass ->     // 6 times:
         constraints.solve(h)                //   🧮 pull every constraint toward rest
+        if (pass == last) particles.applyFriction()   // 🧽 grip, once, before the last pass
+        collisions.solve()                  //   💥 push bodies out of each other
         solids?.collide(particles, events)  //   🧱 push out of the solids: walls get the last word
     }
 }

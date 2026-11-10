@@ -137,6 +137,24 @@ class SolidsTest {
     }
 
     @Test
+    fun aParticleJustUnderARampSeamIsPushedAlongTheSlopeNotSidewaysThroughTheCorner() {
+        // two rising tiles, (2, 3) and (3, 2), meeting at a seam at (48, 48), with ground under and beside
+        val grid = TestBodies.grid().apply {
+            fill(2, 3, SolidShape.RISING)
+            fill(3, 2, SolidShape.RISING)
+            for (c in 2..4) fill(c, 4)
+            fill(3, 3)
+            fill(4, 3)
+            fill(4, 2)
+        }
+        // a hair under the surface, just right of the seam: inside the full tile (3, 3) under the slope
+        particle(49f, 48.2f)
+        resolve(grid)
+        assertEquals(49f - particles.x(p), 48.2f - particles.y(p), 0.001f, "up and left alike: along the slope's normal")
+        assertEquals(1.2f * 0.70710677f, (49f - particles.x(p)) * 1.4142135f, 0.001f, "onto the slope's line, 0.85 away")
+    }
+
+    @Test
     fun aHalfTileStubOnlyFillsTheTopHalfOfItsTile() {
         val grid = TestBodies.grid().apply { fillTopHalf(4, 4) }
         particle(70f, 74f)

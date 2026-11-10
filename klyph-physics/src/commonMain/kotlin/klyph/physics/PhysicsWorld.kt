@@ -43,15 +43,18 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         val h = dt / config.substeps
         substepLength = h
         val keep = exp(-config.damping * h)
+        val restingMove = config.bounceSpeed * h
         events.beginStep()
         collisions.beginStep(dt)
         repeat(config.substeps) {
             integrate(h, keep)
             constraints.beginSubstep()
-            repeat(config.iterations) {
+            repeat(config.iterations) { pass ->
                 constraints.solve(h)
+                // Grip just before the last pass, so collisions still have the last word over it.
+                if (pass == config.iterations - 1) particles.applyFriction()
                 collisions.solve()
-                solids?.collide(particles, events)
+                solids?.collide(particles, events, restingMove)
             }
         }
         stepCount++
@@ -73,8 +76,13 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * Adds a soft body of [shape] with its middle at [centerX] and its bottom on [baseY], and returns
      * its handle in [softBodies].
      */
-    fun softBody(shape: SoftBodyShape, centerX: Float, baseY: Float, tuning: SoftBodyTuning = SoftBodyTuning()): Int =
-        softBodies.add(shape, centerX, baseY, tuning)
+    fun softBody(
+        shape: SoftBodyShape,
+        centerX: Float,
+        baseY: Float,
+        tuning: SoftBodyTuning = SoftBodyTuning(),
+        material: Material = Material.DEFAULT,
+    ): Int = softBodies.add(shape, centerX, baseY, tuning, material = material)
 
     /** Velocity of particle [p] in units per second, over the last substep. */
     fun velocityX(p: Int): Float = particles.movedX(p) / substepLength

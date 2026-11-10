@@ -18,6 +18,7 @@ Want more? Every page has the details further down.
 | 🌀 | [Outline](outline.md) | inside or outside, and how to draw it filled |
 | 🗂️ | [Broadphase](broadphase.md) | who might touch whom, without checking everyone |
 | 💥 | [Bodies hitting bodies](bodies.md) | blobs, balls and sand that don't go through each other |
+| 🧽 | [Friction and bounce](friction.md) | what grips, what slides, what bounces back |
 
 Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 

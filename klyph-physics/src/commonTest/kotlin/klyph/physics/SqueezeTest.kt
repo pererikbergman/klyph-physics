@@ -6,7 +6,8 @@ import kotlin.test.assertTrue
 
 /**
  * The squeezes the slime of slimy-the-blob had to pass, as world tests: a dome with a heavy core, in a
- * world of 16-unit tiles, through shafts and tunnels narrower than itself.
+ * world of 16-unit tiles, through shafts and tunnels narrower than itself. Slimy's walls had no grip,
+ * it braked itself on the ground instead, so these levels are made of [Material.ICE].
  */
 class SqueezeTest {
     private val dt = TestBodies.DT
@@ -56,7 +57,7 @@ class SqueezeTest {
     }
 
     private fun solidEverywhere(cols: Int, rows: Int) = SolidGrid(cols, rows, tile).apply {
-        for (c in 0 until cols) for (r in 0 until rows) fill(c, r)
+        for (c in 0 until cols) for (r in 0 until rows) fill(c, r, material = Material.ICE)
     }
 
     private fun SolidGrid.carve(cols: IntRange, rows: IntRange) {
@@ -64,7 +65,7 @@ class SqueezeTest {
     }
 
     private fun flatFloor(cols: Int, rows: Int, firstRow: Int) = SolidGrid(cols, rows, tile).apply {
-        for (c in 0 until cols) for (r in firstRow until firstRow + 2) fill(c, r)
+        for (c in 0 until cols) for (r in firstRow until firstRow + 2) fill(c, r, material = Material.ICE)
     }
 
     /** A big solid block with a one-tile-wide slot (col 11) from row 5 down to [slotBottom], and a chamber under it. */
@@ -103,8 +104,8 @@ class SqueezeTest {
     fun theBlobPushesThroughALowTunnelAndRecovers() {
         // A floor at row 16 (top 256), and a tunnel from col 10 to 15 whose ceiling leaves 8 units: 60% of the blob's height.
         world.solids = flatFloor(40, 20, firstRow = 16).apply {
-            for (c in 10..15) { fill(c, 14); fillTopHalf(c, 15) }
-            for (r in 0..15) { fill(0, r); fill(39, r) }
+            for (c in 10..15) { fill(c, 14, material = Material.ICE); fillTopHalf(c, 15, material = Material.ICE) }
+            for (r in 0..15) { fill(0, r, material = Material.ICE); fill(39, r, material = Material.ICE) }
         }
         val b = blob(6 * tile, 16 * tile)
         run(b, 60)
@@ -131,7 +132,7 @@ class SqueezeTest {
 
     @Test
     fun landingOnTheCornerOfABlockNeverLeavesAParticleInsideIt() {
-        val grid = flatFloor(40, 50, firstRow = 40).apply { for (c in 20..25) for (r in 37..39) fill(c, r) }
+        val grid = flatFloor(40, 50, firstRow = 40).apply { for (c in 20..25) for (r in 37..39) fill(c, r, material = Material.ICE) }
         world.solids = grid
         // Centred on the block's left edge, so half the blob lands on it and half beside it.
         val b = blob(20 * tile, 30 * tile - 300f)

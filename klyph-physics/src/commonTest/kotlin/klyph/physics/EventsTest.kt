@@ -53,7 +53,8 @@ class EventsTest {
         world.solids = SolidGrid(20, 10, TestBodies.TILE).apply { for (c in 0 until cols) fill(c, 8, tag = TestBodies.PAD) }
         val blob = world.softBody(TestBodies.dome(), centerX = 160f, baseY = 60f)
         assertFalse(world.softBodies.isOnFloor(blob))
-        repeat(120) { world.step(TestBodies.DT) }
+        // With its base gripping the floor, it sloshes for a few seconds before it's still.
+        repeat(240) { world.step(TestBodies.DT) }
         val floor = 8 * TestBodies.TILE
         assertTrue(world.softBodies.isOnFloor(blob))
         assertTrue(world.softBodies.touched(blob, TestBodies.PAD))

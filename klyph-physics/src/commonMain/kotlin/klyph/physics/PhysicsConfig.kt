@@ -28,6 +28,11 @@ data class PhysicsConfig(
      * size of a body works best; see the broadphase page.
      */
     val cellSize: Float = 32f,
+    /**
+     * Slower than this into a surface, in units per second, nothing bounces, whatever its restitution:
+     * resting things settle instead of buzzing. Gravity alone reaches it in a fall of under a unit.
+     */
+    val bounceSpeed: Float = 40f,
 ) {
     init {
         require(substeps >= 1) { "substeps is $substeps: there must be at least one" }
@@ -35,5 +40,6 @@ data class PhysicsConfig(
         require(damping >= 0f && damping.isFinite()) { "damping is $damping: it must be finite and not negative" }
         require(maxStep > 0f) { "maxStep is $maxStep: it must be more than 0" }
         require(cellSize > 0f) { "cellSize is $cellSize: it must be more than 0" }
+        require(bounceSpeed >= 0f) { "bounceSpeed is $bounceSpeed: it must not be negative" }
     }
 }
