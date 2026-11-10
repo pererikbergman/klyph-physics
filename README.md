@@ -11,11 +11,11 @@
 
 ## ⚡ 10-second version
 
-- 🍮 **soft bodies** today. 🪢 ropes, 🧣 cloth, 📦 rigid bodies and 🔩 joints are on the way
+- 🍮 **soft bodies**, 🪢 **ropes** and 🧣 **cloth** today. 📦 rigid bodies and 🔩 joints are on the way
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **149 tests**, all green
+- 🧪 **160 tests**, all green
 
 ## ▶️ Run it
 
@@ -81,6 +81,20 @@ of them goes through another. 🙅
 the default slides, grip holds. Three balls dropped from one height bounce back with 0, 0.5 and 0.9.
 
 <img src="docs/img/friction.gif" alt="boxes on ramps sliding or holding, and balls bouncing to three heights" width="100%">
+
+### 6 · 🪢 Rope Swing
+
+**Ropes and chains.** A rope goes slack, a chain swings smooth, a stiff rope sticks out, and a chain
+bridge sags under a blob.
+
+<img src="docs/img/ropes.gif" alt="a rope and a chain swinging weights, a stiff rope, and a bridge carrying a blob" width="100%">
+
+### 7 · 🧣 Cloth
+
+**Sheets that hang, flap and tear.** A flag in gusts of wind, a curtain, and a heavy ball that tears
+through a net.
+
+<img src="docs/img/cloth.gif" alt="a flag flapping, a curtain, and a ball tearing through a net" width="100%">
 
 More scenes land with every milestone. 🚀
 
