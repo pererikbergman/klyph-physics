@@ -23,11 +23,17 @@ data class PhysicsConfig(
      * get thicker when you add substeps.
      */
     val maxStep: Float = 4f,
+    /**
+     * The side of a cell of the broadphase that finds which bodies might touch, in units. About the
+     * size of a body works best; see the broadphase page.
+     */
+    val cellSize: Float = 32f,
 ) {
     init {
         require(substeps >= 1) { "substeps is $substeps: there must be at least one" }
         require(iterations >= 1) { "iterations is $iterations: there must be at least one" }
         require(damping >= 0f && damping.isFinite()) { "damping is $damping: it must be finite and not negative" }
         require(maxStep > 0f) { "maxStep is $maxStep: it must be more than 0" }
+        require(cellSize > 0f) { "cellSize is $cellSize: it must be more than 0" }
     }
 }

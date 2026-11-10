@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **117 tests**, all green
+- 🧪 **126 tests**, all green
 
 ## ▶️ Run it
 
@@ -66,6 +66,13 @@ hands its handle to a new one, so the world's memory stops growing. ♻️
 soft pin, and a water balloon held round by its area. Same solver, different compliance.
 
 <img src="docs/img/springs.gif" alt="a rod, a spring, a rope, a soft pin and a water balloon" width="100%">
+
+### 4 · 🧺 Blob Pile
+
+**Twenty bodies in a bin.** Domes, balls and boxes drop in one after another and pile up. None
+of them goes through another. 🙅
+
+<img src="docs/img/bodies.gif" alt="soft domes, balls and boxes piling up in a bin" width="100%">
 
 More scenes land with every milestone. 🚀
 

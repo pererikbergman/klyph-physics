@@ -2,6 +2,7 @@ package klyph.physics
 
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * The soft bodies in a [PhysicsWorld]. A body is an `Int` handle for a group of the world's particles,
@@ -20,6 +21,8 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     private var areaOf = IntArray(8)
     private var tunings = arrayOfNulls<SoftBodyTuning>(8)
     private var rings = arrayOfNulls<BodyRing>(8)
+    private var selfCollision = BooleanArray(8)
+    private var thickness = FloatArray(8)
     private var particlePool = IntArray(64)
     private var particleUsed = 0
     private var linkPool = IntArray(64)
@@ -62,6 +65,16 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
         for (i in 0 until n) particlePool[particleUsed + i] = ps.add(shape.ringX[i] + dx, shape.ringY[i] + dy, particleMass)
         val core = ps.add(shape.coreX + dx, shape.coreY + dy, particleMass * shape.coreMass)
         particlePool[particleUsed + n] = core
+        for (i in 0..n) ps.owner[particlePool[particleUsed + i]] = body
+        selfCollision[body] = false
+        var shortest = Float.MAX_VALUE
+        for (i in 0 until n) {
+            val j = (i + 1) % n
+            val ex = shape.ringX[j] - shape.ringX[i]
+            val ey = shape.ringY[j] - shape.ringY[i]
+            shortest = min(shortest, sqrt(ex * ex + ey * ey))
+        }
+        thickness[body] = shortest / 2f
         val cs = world.constraints
         for (i in 0 until n) {
             val a = particlePool[particleUsed + i]
@@ -81,6 +94,20 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
         for (i in 0..ringCounts[body]) world.removeParticle(particle(body, i))
         slots.remove(body)
     }
+
+    /**
+     * Whether [body]'s skin is kept from passing through itself, as when it folds over. Off by default:
+     * a body that doesn't fold doesn't need it, and it costs a check of every ring particle against
+     * every edge.
+     */
+    fun hasSelfCollision(body: Int): Boolean = selfCollision[body]
+
+    fun setSelfCollision(body: Int, on: Boolean) {
+        selfCollision[body] = on
+    }
+
+    /** How close [body]'s skin may come to itself with [hasSelfCollision] on: half its shortest edge at rest. */
+    internal fun selfThickness(body: Int): Float = thickness[body]
 
     /** How many ring particles [body] has. Particle `ringCount` is its core. */
     fun ringCount(body: Int): Int = ringCounts[body]
@@ -207,6 +234,8 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
         areaOf = areaOf.copyOf(size)
         tunings = tunings.copyOf(size)
         rings = rings.copyOf(size)
+        selfCollision = selfCollision.copyOf(size)
+        thickness = thickness.copyOf(size)
     }
 
     private inner class BodyRing(private val body: Int) : Ring {
