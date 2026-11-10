@@ -82,4 +82,4 @@ and nearest points work on world bodies too.
 `./gradlew :demo:run`, scene `1` **Blob Garden**, `F1` for the dots. The red dot is the core. Compare
 the 💜 heavy core and the 💚 light core when they land.
 
-📸 `scripts/capture.sh 1 soft-bodies --from 0.3 --to 1.5 --details --clean --slow --crop 0.45,0.45,0.3,0.55`
+📸 `scripts/capture.sh 1 soft-bodies --from 0.3 --to 1.5 --view 1 --clean --slow --crop 0.45,0.45,0.3,0.55`

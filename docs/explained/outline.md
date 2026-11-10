@@ -54,4 +54,4 @@ that goes exactly through a dot counts it once, never twice.
 `./gradlew :demo:run`, scene `1` **Blob Garden**. Every blob is filled with `Outline.spans`. Watch
 the 🩷 jelly flop and stay solid.
 
-📸 `scripts/capture.sh 1 outline --from 9 --to 10.5 --details --clean --slow --crop 0,0.4,0.3,0.6`
+📸 `scripts/capture.sh 1 outline --from 9 --to 10.5 --view 1 --clean --slow --crop 0,0.4,0.3,0.6`

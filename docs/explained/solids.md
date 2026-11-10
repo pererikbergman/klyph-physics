@@ -85,4 +85,4 @@ These all bit us. 🫠
 `./gradlew :demo:run`, scene `1` **Blob Garden**, `F1` for details. Ramps and stairs on the left,
 the floating ledge with its slope on the right, and the 🟫 crusher in the middle.
 
-📸 `scripts/capture.sh 1 solids --from 3.5 --to 7.5 --details --clean --crop 0.35,0.1,0.65,0.9`
+📸 `scripts/capture.sh 1 solids --from 3.5 --to 7.5 --view 1 --clean --crop 0.35,0.1,0.65,0.9`

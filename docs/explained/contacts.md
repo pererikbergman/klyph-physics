@@ -67,4 +67,4 @@ for "the step before", and the tags. A reused particle handle starts with nothin
 `./gradlew :demo:run`, scene `1` **Blob Garden**, `F1` three times. The yellow lines are particles
 on a floor this step, pointing the way they were pushed; cyan ones touched a wall or another body. Watch a blob hit the 🟨 pads.
 
-📸 `scripts/capture.sh 1 contacts --from 7.2 --to 8.4 --details --clean --slow --crop 0.5,0.15,0.5,0.85`
+📸 `scripts/capture.sh 1 contacts --from 7.2 --to 8.4 --view 3 --clean --slow --crop 0.5,0.15,0.5,0.85`
