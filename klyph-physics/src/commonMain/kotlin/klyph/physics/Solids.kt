@@ -157,6 +157,19 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
         exit.depth = (u - v) * DIAGONAL
         exit.nx = -DIAGONAL
         exit.ny = -DIAGONAL
+        // A slope in mid-air can be hit from below or from its tall side, and the way back out is
+        // shorter there than up through the surface: on top of it is the wrong side.
+        tryFace(solid, Side.BOTTOM, solid.bottom - py, 0f, 1f, exit)
+        tryFace(solid, Side.RIGHT, solid.right - px, 1f, 0f, exit)
+    }
+
+    /** Takes the [side] face as the way out, along ([nx], [ny]), if it is open and closer than [exit]'s. */
+    private fun tryFace(solid: Solid, side: Side, depth: Float, nx: Float, ny: Float, exit: Exit) {
+        if (depth < exit.depth && isExit(solid, side, respectBuried = true)) {
+            exit.depth = depth
+            exit.nx = nx
+            exit.ny = ny
+        }
     }
 
     /** Writes to [exit] the way out, along the surface's normal, for a point under a surface that falls to the right. */
@@ -167,6 +180,8 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
         exit.depth = (side - u - v) * DIAGONAL
         exit.nx = DIAGONAL
         exit.ny = -DIAGONAL
+        tryFace(solid, Side.BOTTOM, solid.bottom - py, 0f, 1f, exit)
+        tryFace(solid, Side.LEFT, px - solid.left, -1f, 0f, exit)
     }
 
     /** The way out of a box that costs the least movement, reused between calls so nothing allocates. */
