@@ -2,7 +2,7 @@
 
 ⚡ **A dot that ends up inside another blob gets shoved back out through the nearest bit of skin, and the skin gets shoved back.**
 
-<img src="../img/bodies.gif" alt="soft domes, balls and boxes piling up in a bin without passing through each other" width="100%">
+<img src="../img/bodies.gif" alt="soft domes, balls and boxes pouring through a funnel and piling up in a bin without passing through each other" width="100%">
 
 ## 🧠 How it works
 
@@ -74,12 +74,14 @@ half an edge away from the body's own other edges, for things that fold.
   core inside its own skin.
 - 💥 **Dots exactly on an edge.** Two bodies on one floor slide their dots onto each other's edges,
   where there's no "in" or "out". The 0.5-unit skin and the edge's normal sort it out.
-- 💥 **A pile gives a little.** Deep in a pile of 20, a dot can sit up to a unit inside its neighbour
+- 💥 **A pile gives a little.** Deep in a pile of 30, a dot can sit up to a unit inside its neighbour
   while the passes catch up. More iterations make it tighter.
 
 ## 🧪 Try it
 
 `./gradlew :demo:run`, press `4` for **Blob Pile**, then `F1` three times. The yellow marks are
 dots standing on something: the floor, or a body underneath. Cyan ones are pushed sideways. `R` drops them all again.
+Scene `8` **Sand** is grains alone: 3 000 of them through an hourglass.
 
-📸 `scripts/capture.sh 4 bodies --from 2.5 --to 6 --details --clean --crop 0.25,0.15,0.5,0.85`
+📸 `scripts/capture.sh 4 bodies --from 1 --to 7 --clean --crop 0.18,0,0.64,1 --width 520` and
+`scripts/capture.sh 8 sand --from 0 --to 7 --clean --crop 0.26,0,0.48,1 --width 360`

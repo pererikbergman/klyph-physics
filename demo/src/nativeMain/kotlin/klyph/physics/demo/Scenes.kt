@@ -8,7 +8,7 @@ import kotlin.math.floor
 
 /** Every scene of the sandbox, in the order the number keys choose them. */
 object Scenes {
-    val all: List<Scene> = listOf(BlobGardenScene, FountainScene, SpringsScene, PileScene, GripAndBounceScene, RopeSwingScene, ClothScene)
+    val all: List<Scene> = listOf(BlobGardenScene, FountainScene, SpringsScene, PileScene, GripAndBounceScene, RopeSwingScene, ClothScene, SandScene)
 
     /** Every scene is laid out on a grid of these tiles, [COLS] by [ROWS]: 640 by 368 units. */
     const val TILE = 16f
