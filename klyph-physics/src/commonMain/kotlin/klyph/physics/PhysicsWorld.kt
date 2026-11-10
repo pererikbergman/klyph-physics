@@ -14,6 +14,9 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     /** Distances, ropes, pins and areas between [particles]. */
     val constraints = Constraints(particles)
 
+    /** Soft bodies: groups of [particles] held together by [constraints]. */
+    val softBodies = SoftBodyStore(this)
+
     /** The length of the last substep, in seconds: what velocities in units per second are measured against. */
     var substepLength: Float = 1f / 60f / config.substeps
         private set
@@ -50,6 +53,13 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         for (area in 0 until c.areaEnd) if (c.isAreaAlive(area) && c.ringContains(area, p)) c.removeArea(area)
         particles.remove(p)
     }
+
+    /**
+     * Adds a soft body of [shape] with its middle at [centerX] and its bottom on [baseY], and returns
+     * its handle in [softBodies].
+     */
+    fun softBody(shape: SoftBodyShape, centerX: Float, baseY: Float, tuning: SoftBodyTuning = SoftBodyTuning()): Int =
+        softBodies.add(shape, centerX, baseY, tuning)
 
     /** Velocity of particle [p] in units per second, over the last substep. */
     fun velocityX(p: Int): Float = particles.movedX(p) / substepLength

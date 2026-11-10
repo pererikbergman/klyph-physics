@@ -22,13 +22,13 @@ import kotlin.math.sqrt
  */
 class SoftBody private constructor(
     /** Number of outline particles; the core comes after them. */
-    val ringCount: Int,
+    override val ringCount: Int,
     private val restX: FloatArray,
     private val restY: FloatArray,
     coreMass: Float,
     /** How stiff, damped and fast the body is. */
     val tuning: SoftBodyTuning,
-) {
+) : Ring {
     /** Outline particles plus the core. */
     val size: Int = ringCount + 1
     private val x = FloatArray(size)
@@ -194,6 +194,10 @@ class SoftBody private constructor(
     fun positionX(i: Int): Float = x[i]
 
     fun positionY(i: Int): Float = y[i]
+
+    override fun ringX(i: Int): Float = x[i]
+
+    override fun ringY(i: Int): Float = y[i]
 
     /** How far particle [i] moved in x during the last substep: its velocity, in units per substep. */
     fun movedX(i: Int): Float = x[i] - prevX[i]

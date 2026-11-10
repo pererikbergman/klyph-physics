@@ -5,6 +5,8 @@ import klyph.physics.Constraints
 import klyph.physics.Contacts
 import klyph.physics.Outline
 import klyph.physics.Particles
+import klyph.physics.PhysicsWorld
+import klyph.physics.Ring
 import klyph.physics.SoftBody
 import klyph.physics.Solid
 import klyph.physics.SolidGrid
@@ -44,22 +46,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
 
     /** Fills [body] in [color] and outlines it; with details, also marks every particle. */
     fun softBody(canvas: Canvas, body: SoftBody, color: Color) {
-        if (spanLeft.size < body.ringCount) {
-            spanLeft = FloatArray(body.ringCount)
-            spanRight = FloatArray(body.ringCount)
-        }
-        var y = floor(body.minY() / ROW) * ROW
-        val bottom = body.maxY()
-        while (y < bottom) {
-            val count = Outline.spans(body, y + ROW / 2f, spanLeft, spanRight)
-            for (k in 0 until count) rect(canvas, spanLeft[k], y, spanRight[k] - spanLeft[k], ROW, color, layer)
-            y += ROW
-        }
-        val edge = color.darker()
-        for (i in 0 until body.ringCount) {
-            val j = body.next(i)
-            line(canvas, body.positionX(i), body.positionY(i), body.positionX(j), body.positionY(j), OUTLINE, edge, layer + 1)
-        }
+        ring(canvas, body, body.minY(), body.maxY(), color)
         if (!showDetails) return
         for (i in 0 until body.size) {
             val dot = if (body.isCore(i)) CORE_DOT else DOT
@@ -94,6 +81,40 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     /** Draws a square [size] wide centred on ([x], [y]) in [color], in the plain view's layer. */
     fun square(canvas: Canvas, x: Float, y: Float, size: Float, color: Color) {
         rect(canvas, x - size / 2f, y - size / 2f, size, size, color, layer)
+    }
+
+    /** Fills soft body [body] of [world] in [color] and outlines it; with details, also marks every particle. */
+    fun softBody(canvas: Canvas, world: PhysicsWorld, body: Int, color: Color) {
+        val bodies = world.softBodies
+        ring(canvas, bodies.ring(body), bodies.minY(body), bodies.maxY(body), color)
+        if (!showDetails) return
+        val ps = world.particles
+        for (i in 0..bodies.ringCount(body)) {
+            val p = bodies.particle(body, i)
+            val isCore = i == bodies.ringCount(body)
+            val dot = if (isCore) CORE_DOT else DOT
+            rect(canvas, ps.x(p) - dot / 2f, ps.y(p) - dot / 2f, dot, dot, if (isCore) CORE else PARTICLE, layer + 3)
+        }
+    }
+
+    /** Fills the outline [ring], which spans [top] to [bottom], row by row in [color], and draws its edge. */
+    private fun ring(canvas: Canvas, ring: Ring, top: Float, bottom: Float, color: Color) {
+        if (spanLeft.size < ring.ringCount) {
+            spanLeft = FloatArray(ring.ringCount)
+            spanRight = FloatArray(ring.ringCount)
+        }
+        var y = floor(top / ROW) * ROW
+        while (y < bottom) {
+            val count = Outline.spans(ring, y + ROW / 2f, spanLeft, spanRight)
+            for (k in 0 until count) rect(canvas, spanLeft[k], y, spanRight[k] - spanLeft[k], ROW, color, layer)
+            y += ROW
+        }
+        val edge = color.darker()
+        val n = ring.ringCount
+        for (i in 0 until n) {
+            val j = if (i + 1 == n) 0 else i + 1
+            line(canvas, ring.ringX(i), ring.ringY(i), ring.ringX(j), ring.ringY(j), OUTLINE, edge, layer + 1)
+        }
     }
 
     /** With details, marks every particle of [body] that [contacts] says is standing on a floor. */

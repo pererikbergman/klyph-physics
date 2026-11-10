@@ -20,27 +20,39 @@
      ●───●───●───●───●       ◉ the core, 34× heavier
 ```
 
-The blobs in the demo are made by `SoftBody.semiDisc`: a dome over a flat base, like a slime.
+A body lives in a `PhysicsWorld`. Pick a shape from `SoftBodies`, drop it in, get an `Int` back:
 
 ```kotlin
-SoftBody.semiDisc(
+val shape = SoftBodies.semiDisc(
     radius = 13.3f,
     arcSegments = 14,      // dots over the dome
     baseSegments = 8,      // dots along the flat bottom
     coreMass = 34f,        // the core is 34× a skin dot
     heightScale = 1.3f,    // a bit taller than a half circle
 )
+val blob = world.softBody(shape, centerX = 100f, baseY = 200f)   // 👈 an Int
+
+world.softBodies.centerX(blob)          // where is it?
+world.softBodies.addVelocity(blob, 0f, -600f)   // 🦘 hop
 ```
 
-That's **22 skin dots + 1 core = 23 particles**. Five blobs = the 115 in the HUD. ✅
+Also in the box: `SoftBodies.circle(radius, segments, coreMass)` 🏀 and
+`SoftBodies.box(width, height, across, down, coreMass)` 📦.
+
+That dome is **22 skin dots + 1 core = 23 particles**. Five blobs = the 115 in the HUD. ✅
+
+A body isn't a special object: it's **ordinary world particles and ordinary constraints**. An
+edge and a spoke are [🔗 distance constraints](constraints.md), the volume is an area constraint.
+`world.softBodies.particle(blob, i)` gives you the particle, `edge(blob, i)` and `spoke(blob, i)`
+the links, so you can pin a blob's top to the ceiling or tie a rope to its core. 🪢
 
 🪨 **Why a heavy core?** It *is* the goo inside. When the skin gets stuck on an edge, say the
 rim of a gap, the core's weight drags the whole body through. That's how the slime in
 [slimy-the-blob](https://github.com/pererikbergman/slimy-the-blob) squeezes through gaps narrower
 than itself.
 
-The particles are stored as plain `FloatArray`s inside `SoftBody`. You read them with
-`positionX(i)` / `positionY(i)`: `0 until ringCount` is the skin, in order, and `ringCount` is the core.
+`Outline` works on any `Ring`, and `world.softBodies.ring(blob)` is one, so filling, hit tests
+and nearest points work on world bodies too.
 
 </details>
 
