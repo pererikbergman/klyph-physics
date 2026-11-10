@@ -181,7 +181,32 @@ class SolidsTest {
         val grid = TestBodies.grid().apply { fill(0, 4); fill(0, 5); fill(1, 5); fill(0, 6) }
         particle(2f, 88f)
         resolve(grid)
-        assertEquals(2f, body.positionX(0), 0.001f, "never toward the world's edge, even as a last resort")
+        assertTrue(body.positionX(0) >= 2f, "never toward the world's edge, even as a last resort: x = ${body.positionX(0)}")
+        assertEquals(16f, body.positionX(0), 0.001f, "out to the corner where the floor meets the wall, the nearest air")
+        assertEquals(80f, body.positionY(0), 0.001f)
+    }
+
+    @Test
+    fun aParticleJustInsideAnInnerCornerLeavesThroughTheCornerNotThroughTheWall() {
+        // a step, (4, 5), against the foot of a wall, (5, 4) and (5, 5): tile (5, 5)'s top and left faces
+        // are both buried, but the cell diagonally across its top-left corner, (4, 4), is air
+        val grid = TestBodies.grid().apply { fill(5, 4); fill(5, 5); fill(4, 5) }
+        // half a unit into the wall, right where the step's top meets it, having come from the step
+        particle(80.5f, 80.01f, fromX = 79.5f)
+        resolve(grid)
+        assertEquals(80f, body.positionX(0), 0.001f, "back out to the corner, not shoved 15.5 units through the wall")
+        assertEquals(80f, body.positionY(0), 0.001f)
+        assertFalse(grid.isSolidAt(body.positionX(0), body.positionY(0)))
+    }
+
+    @Test
+    fun aCornerIsNeverAWayOutWhenAnOpenFaceIsCloser() {
+        val grid = floorGrid()
+        // near a seam between floor tiles, the open top is closer than the corner above the seam
+        particle(95.9f, 80.5f)
+        resolve(grid)
+        assertEquals(95.9f, body.positionX(0), 0.001f)
+        assertEquals(80f, body.positionY(0), 0.001f)
     }
 
     @Test
