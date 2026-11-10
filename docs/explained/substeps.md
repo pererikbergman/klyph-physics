@@ -63,4 +63,4 @@ That's `4 × 6 = 24` passes over every constraint per tick. Each one is cheap. �
 `./gradlew :demo:run`, scene `1` **Blob Garden**. Watch the blob that lands on the yellow pads
 🟨: it goes up at 680 units/s and never ends up inside the ceiling. `S` slows it to ¼ speed.
 
-📸 `scripts/capture.sh 1 substeps --from 7 --to 9 --details --clean --crop 0.45,0,0.55,1`
+📸 `scripts/capture.sh 1 substeps --from 7 --to 9 --view 1 --clean --crop 0.45,0,0.55,1`

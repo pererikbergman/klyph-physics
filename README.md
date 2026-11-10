@@ -51,11 +51,12 @@ SDL3 3.4+ yourself.
 **Same shape, five tunings.** Jelly, rubber, stiff, a heavy core and a light core hop around
 ramps, stairs, a low ceiling, bounce pads 🟨 and a crusher 🟫. Watch how differently they squash.
 
-<img src="docs/img/blob-garden-details.png" alt="the Blob Garden with details on: every particle, core and floor contact" width="100%">
+<img src="docs/img/blob-garden-details.png" alt="the Blob Garden with every debug view on: particles, cores, constraints coloured by stress, and contacts" width="100%">
 
-☝️ That's `F1`. The white dots are the particles, the red dot is the heavy core, and the yellow
-feet are the particles standing on something. Press it again for the constraints, coloured by stress,
-and again for every contact. [🔍 More](docs/explained/debug-views.md)
+☝️ That's `F1` three times. The white dots are the particles and the red dot the heavy core; the
+spokes go red where they stretch and blue where they squeeze; the yellow lines are particles standing
+on something, pointing the way they were pushed. Once shows just the dots, twice adds the
+constraints, a fourth time turns it off. [🔍 More](docs/explained/debug-views.md)
 
 ### 2 · ⛲ Fountain
 
@@ -134,11 +135,13 @@ what breaks it. 👉 [**docs/explained**](docs/explained/README.md)
 ./gradlew allTests                                  # the engine's tests
 ./gradlew :demo:macosArm64Test                      # the sandbox's tests (a 10-minute garden run included)
 scripts/capture.sh 1 blob-garden --from 1 --to 7    # re-record the GIF above
+SANDBOX_BENCH=600 ./gradlew :demo:runRelease        # time every scene's step
 ```
 
 ## 🚧 Status
 
-Milestone 2 of 5. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
+Milestones 1 and 2 of 5 are done: the sandbox, and the particle world with its soft bodies, ropes,
+cloth and sand. Next up: 📦 rigid bodies. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
 the work is tracked in the [milestones](../../milestones).
 
 It grew out of the slime in [slimy-the-blob](https://github.com/pererikbergman/slimy-the-blob). 🟢

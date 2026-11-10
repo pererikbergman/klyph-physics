@@ -62,4 +62,4 @@ The engine still edits velocity on purpose, by moving the *previous* position:
 `./gradlew :demo:run`, scene `1` **Blob Garden**, press `F1` to see the particles and `S` for
 slow motion. Then `Space` and `.` to step through a hop one step at a time. 🐢
 
-📸 `scripts/capture.sh 1 verlet --from 2.8 --to 4.2 --details --clean --slow --crop 0,0.35,0.4,0.65`
+📸 `scripts/capture.sh 1 verlet --from 2.8 --to 4.2 --view 1 --clean --slow --crop 0,0.35,0.4,0.65`
