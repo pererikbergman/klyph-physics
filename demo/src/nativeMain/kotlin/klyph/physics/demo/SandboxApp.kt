@@ -6,6 +6,7 @@ import klyph.app.deltaSeconds
 import klyph.math.Rect
 import klyph.physics.bridge.DebugDraw
 import klyph.platform.Color
+import klyph.platform.MouseButton
 import klyph.platform.Scancode
 import klyph.render.lookAt
 import klyph.render.visibleHeight
@@ -40,9 +41,16 @@ private val BADGE = Color(0xFFD36BFFu)
  * details on from the start when [details] says so, and a HUD tells what is going on.
  *
  * For pictures: with a [recording] the physics steps once per frame, not on the clock, and saves
- * the frames the recording names. [clean] keeps only the scene's title and blurb on screen.
+ * the frames the recording names. [clean] keeps only the scene's title and blurb on screen, and a
+ * [hand] grabs and drags something with no one at the mouse.
  */
-fun App.installSandbox(sandbox: Sandbox, details: Boolean = false, recording: Recording? = null, clean: Boolean = false) {
+fun App.installSandbox(
+    sandbox: Sandbox,
+    details: Boolean = false,
+    recording: Recording? = null,
+    clean: Boolean = false,
+    hand: ScriptedHand? = null,
+) {
     val debug = DebugDraw(assets.whitePixel, assets.defaultFont).apply { showDetails = details }
     // Two points per world unit: the 640 x 368 units of a scene fill a 1280 x 720 window.
     camera.zoom = ZOOM
@@ -64,10 +72,18 @@ fun App.installSandbox(sandbox: Sandbox, details: Boolean = false, recording: Re
         if (keys.isJustPressed(Scancode.SPACE)) sandbox.togglePause()
         if (keys.isJustPressed(Scancode.S)) sandbox.toggleSlowMotion()
         if (keys.isJustPressed(PERIOD)) sandbox.stepOnce(app.time.fixedDelta.inWholeNanoseconds / 1e9f)
+
+        val mouse = app.input.mouse
+        val at = mouse.worldPosition
+        if (mouse.isJustPressed(MouseButton.LEFT)) sandbox.grab(at.x, at.y)
+        if (mouse.isDown(MouseButton.LEFT)) sandbox.moveGrab(at.x, at.y)
+        if (mouse.isJustReleased(MouseButton.LEFT)) sandbox.release()
+        if (mouse.isJustPressed(MouseButton.RIGHT)) sandbox.spawn(at.x, at.y)
     }
 
     if (recording != null) {
         addSystem(Phase.UPDATE) { app ->
+            hand?.drive(sandbox)
             sandbox.fixedStep(app.time.fixedDelta.inWholeNanoseconds / 1e9f)
             recording.fileAfter(sandbox.stepCount)?.let { app.window.capture(it) }
         }
@@ -76,6 +92,7 @@ fun App.installSandbox(sandbox: Sandbox, details: Boolean = false, recording: Re
     addSystem(Phase.FIXED_UPDATE) { app ->
         if (recording != null) return@addSystem
         val start = TimeSource.Monotonic.markNow()
+        hand?.drive(sandbox)
         if (sandbox.fixedStep(app.time.deltaSeconds)) {
             val millis = start.elapsedNow().inWholeNanoseconds / 1e6f
             stepMillis += (millis - stepMillis) * SMOOTHING
@@ -93,6 +110,7 @@ fun App.installSandbox(sandbox: Sandbox, details: Boolean = false, recording: Re
         val viewWidth = camera.visibleWidth
         val viewHeight = camera.visibleHeight
         run.draw(canvas, debug, Rect(camera.x - viewWidth / 2f, camera.y - viewHeight / 2f, viewWidth, viewHeight))
+        run.world?.let { world -> drawHand(canvas, debug, world) }
 
         title.clear()
         title.append(sandbox.index + 1).append('/').append(sandbox.sceneCount).append("  ").append(sandbox.scene.name)
@@ -127,6 +145,16 @@ fun App.installSandbox(sandbox: Sandbox, details: Boolean = false, recording: Re
 
         canvas.drawText(
             font,
+            "left mouse grab and drag  right mouse spawn",
+            MARGIN,
+            height - MARGIN - 16f - LINE,
+            color = DIM,
+            scale = 2f,
+            layer = HUD_LAYER,
+            shadow = shadow,
+        )
+        canvas.drawText(
+            font,
             "1-9 [ ] scene  R reset  Space pause  . step  S slow  F1 details  F3 stats",
             MARGIN,
             height - MARGIN - 16f,
@@ -139,6 +167,19 @@ fun App.installSandbox(sandbox: Sandbox, details: Boolean = false, recording: Re
 }
 
 private const val HUD_LAYER = 100
+
+private val HAND = Color(0xFFD36BFFu)
+
+/** The line from the grabbed particle to the mouse, and a dot on the particle. */
+private fun drawHand(canvas: klyph.render.Canvas, debug: DebugDraw, world: klyph.physics.PhysicsWorld) {
+    val p = world.grabbed
+    if (p < 0) return
+    val hand = world.hand
+    val x = world.particles.x(p)
+    val y = world.particles.y(p)
+    debug.line(canvas, x, y, hand.targetX, hand.targetY, 1f, HAND, debug.layer + 10)
+    debug.square(canvas, x, y, 4f, HAND)
+}
 
 private const val ZOOM = 2f
 

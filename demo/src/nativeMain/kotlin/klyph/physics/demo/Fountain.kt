@@ -37,7 +37,7 @@ object FountainScene : Scene {
     override fun create(): SceneRun = Run()
 
     internal class Run : SceneRun {
-        val world = PhysicsWorld()
+        override val world = PhysicsWorld()
         val random = Random(7)
         val nozzleX = Scenes.COLS * Scenes.TILE / 2f
         val nozzleY = Scenes.ROWS * Scenes.TILE - 8f
@@ -57,6 +57,17 @@ object FountainScene : Scene {
                 world.setVelocity(p, cos(angle) * speed, sin(angle) * speed)
             }
             world.step(dt)
+        }
+
+        /** A burst of grains flying out every way from ([x], [y]). */
+        override fun spawn(x: Float, y: Float) {
+            val ps = world.particles
+            repeat(BURST) {
+                val angle = 2f * PI.toFloat() * it / BURST
+                val speed = 200f + random.nextFloat() * 300f
+                val p = ps.add(x, y, radius = 1f)
+                world.setVelocity(p, cos(angle) * speed, sin(angle) * speed)
+            }
         }
 
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
@@ -80,6 +91,9 @@ object FountainScene : Scene {
     }
 
     private val NOZZLE = Color(0x3A4A66FFu)
+
+    /** Grains in a right click's burst. */
+    private const val BURST = 80
 
     /** One fixed step of the app, for how far a particle moves in one. */
     private const val STEP = 1f / 60f

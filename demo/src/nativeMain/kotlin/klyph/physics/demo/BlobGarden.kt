@@ -3,7 +3,6 @@ package klyph.physics.demo
 import klyph.math.Rect
 import klyph.physics.PhysicsWorld
 import klyph.physics.Solid
-import klyph.physics.SoftBodies
 import klyph.physics.SoftBodyTuning
 import klyph.physics.SolidShape
 import klyph.physics.bridge.DebugDraw
@@ -67,11 +66,12 @@ object BlobGardenScene : Scene {
 
         override val blobs = IntArray(kinds.size) { i ->
             val kind = kinds[i]
-            // A slime-shaped dome: half a disc, 1.3 times taller, its core as heavy as the kind says.
-            val shape = SoftBodies.semiDisc(radius = 13.3f, arcSegments = 14, baseSegments = 8, coreMass = kind.coreMass, heightScale = 1.3f)
-            world.softBody(shape, centerX = (6 + i * 6) * t, baseY = 6 * t, tuning = kind.tuning)
+            world.softBody(Scenes.dome(kind.coreMass), centerX = (6 + i * 6) * t, baseY = 6 * t, tuning = kind.tuning)
         }
         val bodies = world.softBodies
+
+        /** Blobs added with a right click, each the next kind in turn: they don't hop, they just sit. */
+        val spawned = ArrayList<Int>()
         val direction = IntArray(blobs.size) { if (it % 2 == 0) 1 else -1 }
         val hopTimer = FloatArray(blobs.size) { 0.6f + it * 0.3f }
         var seconds = 0f
@@ -107,8 +107,15 @@ object BlobGardenScene : Scene {
             }
         }
 
+        override fun spawn(x: Float, y: Float) {
+            if (spawned.size >= Scenes.MAX_SPAWNED || !Scenes.isOpen(world, x, y)) return
+            val kind = kinds[spawned.size % kinds.size]
+            spawned += world.softBody(Scenes.dome(kind.coreMass), x, y + Scenes.DOME_HALF_HEIGHT, tuning = kind.tuning)
+        }
+
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
             debug.solids(canvas, grid, view)
+            for ((i, blob) in spawned.withIndex()) debug.softBody(canvas, world, blob, kinds[i % kinds.size].color)
             for (x in 28..30) debug.solid(canvas, grid.at(x, 20) ?: continue, PAD_COLOR)
             for ((i, blob) in blobs.withIndex()) {
                 debug.softBody(canvas, world, blob, kinds[i].color)

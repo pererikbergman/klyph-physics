@@ -35,7 +35,7 @@ object ClothScene : Scene {
     override fun create(): SceneRun = Run()
 
     internal class Run : SceneRun {
-        var world = PhysicsWorld().apply { solids = Scenes.room() }
+        override var world = PhysicsWorld().apply { solids = Scenes.room() }
             private set
         lateinit var flag: Cloth
             private set
@@ -45,6 +45,9 @@ object ClothScene : Scene {
             private set
         var ball = 0
             private set
+
+        /** Balls dropped with a right click, gone when the scene is hung back up. */
+        private val spawned = ArrayList<Int>()
         private var steps = 0
         private var seconds = 0f
 
@@ -55,6 +58,7 @@ object ClothScene : Scene {
         /** Makes everything afresh: a world with the flag, the curtain, the whole sheet and the ball up high. */
         private fun build() {
             world = PhysicsWorld().apply { solids = Scenes.room() }
+            spawned.clear()
             val w = world
             // a flag held along its left edge, on a pole
             flag = w.cloth(56f, 100f, cols = 16, rows = 10, spacing = SPACING, bendCompliance = 0.001f, pinned = { col, _ -> col == 0 })
@@ -83,12 +87,18 @@ object ClothScene : Scene {
             world.step(dt)
         }
 
+        override fun spawn(x: Float, y: Float) {
+            if (spawned.size >= Scenes.MAX_SPAWNED || !Scenes.isOpen(world, x, y)) return
+            spawned += world.particles.add(x, y, mass = BALL_MASS, radius = BALL_RADIUS, collides = true)
+        }
+
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
             debug.solids(canvas, world.solids!!, view)
             val ps = world.particles
             canvas.drawRect(52f, 96f, 3f, 240f, POLE, debug.layer, DrawSpace.WORLD)
             for ((cloth, color) in listOf(flag to FLAG, curtain to CURTAIN, sheet to SHEET)) mesh(canvas, debug, cloth, color)
             debug.square(canvas, ps.x(ball), ps.y(ball), 2f * BALL_RADIUS, BALL)
+            for (b in spawned) debug.square(canvas, ps.x(b), ps.y(b), 2f * BALL_RADIUS, BALL)
         }
 
         /** The cloth's rows and columns that are still there, in its colour; the shear links aren't drawn. */

@@ -2,7 +2,7 @@
 # 📸 Records a sandbox scene into docs/img/: a GIF of it moving and a PNG of its last frame.
 #
 #   scripts/capture.sh <scene> <name> [--from S] [--to S] [--details] [--clean] [--slow]
-#                      [--crop X,Y,W,H] [--width W]
+#                      [--crop X,Y,W,H] [--width W] [--drag X,Y]
 #
 #   <scene>     the scene's number, as the 1-9 keys pick it
 #   <name>      the file name: docs/img/<name>.gif and docs/img/<name>.png
@@ -13,15 +13,17 @@
 #   --slow      every step becomes a GIF frame: half speed, for fast moments
 #   --crop      a close-up: X,Y,W,H as parts of the screen, so 0.5,0,0.5,1 is its right half
 #   --width W   the GIF's width in pixels (default 800); the PNG keeps full resolution
+#   --drag X,Y  a scripted mouse grabs what's nearest X,Y (world units) half a second in,
+#               lifts and swings it, and lets go at 3.5 s
 #
 # The physics steps once per frame while recording, so the same command makes the same pictures.
 # Needs ffmpeg.
 set -euo pipefail
 
-usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 [[ $# -ge 2 ]] || usage
 scene=$1 name=$2; shift 2
-from=0 to=4 width=800 details=0 clean=0 every=2 crop=
+from=0 to=4 width=800 details=0 clean=0 every=2 crop= drag=
 while [[ $# -gt 0 ]]; do
   case $1 in
     --from) from=$2; shift 2 ;;
@@ -31,6 +33,7 @@ while [[ $# -gt 0 ]]; do
     --clean) clean=1; shift ;;
     --slow) every=1; shift ;;
     --crop) crop=$2; shift 2 ;;
+    --drag) drag=$2; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -55,7 +58,7 @@ fi
 # frames into that capture's long-gone folder.
 echo "📸 scene $scene, ${from}s to ${to}s -> docs/img/$name.{gif,png}"
 cd "$root"
-SANDBOX_SCENE=$scene SANDBOX_DETAILS=$details SANDBOX_CLEAN=$clean SANDBOX_RECORD="$every:$frames" \
+SANDBOX_SCENE=$scene SANDBOX_DETAILS=$details SANDBOX_CLEAN=$clean SANDBOX_RECORD="$every:$frames" SANDBOX_DRAG="$drag" \
   KLYPH_FRAMES=$steps KLYPH_OFFSCREEN=1 \
   ./gradlew -q --no-configuration-cache :demo:run -Pklyph.frames="$steps" 2>&1 | grep -v "stdlib-per-file-cache\|^ld: warning\|^warning:" || true
 

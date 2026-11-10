@@ -1,9 +1,9 @@
 package klyph.physics.demo
 
 /**
- * The sandbox's rules with no engine code: which scene is on, whether time runs, stops, crawls or
- * moves one step at a time. The app turns keys into these calls and calls [fixedStep] once per
- * fixed step; a test drives exactly the same code.
+ * The sandbox's rules with no drawing or input code: which scene is on, whether time runs, stops,
+ * crawls or moves one step at a time, and what the mouse holds. The app turns keys and the mouse into
+ * these calls and calls [fixedStep] once per fixed step; a test drives exactly the same code.
  *
  * Slow motion steps the physics on one fixed step in [SLOW_MOTION_FACTOR] rather than with a
  * smaller step, so a scene behaves the same at any speed.
@@ -64,6 +64,25 @@ class Sandbox(private val scenes: List<Scene>) {
         isSlowMotion = !isSlowMotion
         slowTicks = 0
     }
+
+    /**
+     * Takes hold of the particle nearest ([x], [y]) in the current run's world, if one is near enough,
+     * and returns whether it did. The left mouse button.
+     */
+    fun grab(x: Float, y: Float): Boolean = (run.world?.grab(x, y) ?: -1) >= 0
+
+    /** Moves the hand to ([x], [y]): the grabbed particle follows. The mouse, while the button is down. */
+    fun moveGrab(x: Float, y: Float) {
+        run.world?.moveGrab(x, y)
+    }
+
+    /** Lets go. The left mouse button coming up. */
+    fun release() {
+        run.world?.release()
+    }
+
+    /** Adds the current scene's kind of thing at ([x], [y]). The right mouse button. */
+    fun spawn(x: Float, y: Float) = run.spawn(x, y)
 
     /** Pauses, if it was not, and moves the physics on by exactly one step of [dt] seconds. */
     fun stepOnce(dt: Float) {

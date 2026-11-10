@@ -20,6 +20,7 @@ Want more? Every page has the details further down.
 | 💥 | [Bodies hitting bodies](bodies.md) | blobs, balls and sand that don't go through each other |
 | 🧽 | [Friction and bounce](friction.md) | what grips, what slides, what bounces back |
 | 🪢 | [Ropes, chains and cloth](ropes.md) | one line for a rope, a chain or a sheet, and tearing |
+| 🖐️ | [Grab](grab.md) | drag anything with the mouse, and never break it |
 
 Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 
