@@ -38,6 +38,15 @@ class SceneTest {
         for (p in 0 until ps.end) if (ps.isAlive(p)) assertTrue(ps.x(p).isFinite() && ps.y(p).isFinite())
     }
 
+    @Test
+    fun theSpringsSwingForAMinuteWithoutBlowingUp() {
+        val run = SpringsScene.create() as SpringsScene.Run
+        repeat(3600) { run.step(dt) }
+        val ps = run.world.particles
+        for (p in 0 until ps.end) assertTrue(ps.x(p).isFinite() && ps.y(p).isFinite(), "particle $p")
+        for (p in 0 until ps.end) assertTrue(ps.y(p) in 0f..roomHeight, "particle $p is still in the room: y = ${ps.y(p)}")
+    }
+
     /**
      * Steps [run] [steps] times. Every step, every blob must be finite and inside the room. A blob may
      * snag on a corner and stretch for a moment, but not stay stretched: that is tearing. Its core may
