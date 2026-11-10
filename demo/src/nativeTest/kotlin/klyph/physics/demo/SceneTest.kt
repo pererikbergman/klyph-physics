@@ -2,6 +2,7 @@ package klyph.physics.demo
 
 import klyph.physics.Outline
 import klyph.physics.PhysicsWorld
+import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -24,6 +25,26 @@ class SceneTest {
     @Test
     fun theBlobGardenRunsForTenMinutesWithNothingLostOrTorn() {
         check(BlobGardenScene.name, BlobGardenScene.create() as BlobRun, steps = 36_000)
+    }
+
+    @Test
+    fun theBlobPileSettlesWithNoBodyInsideAnother() {
+        val run = PileScene.create() as PileScene.Run
+        repeat(1200) { run.step(dt) }
+        val bodies = run.world.softBodies
+        val ps = run.world.particles
+        assertTrue(bodies.count == PileScene.COUNT, "all of them fell: ${bodies.count}")
+        for (a in run.blobs) for (b in run.blobs) {
+            if (a == b) continue
+            val ring = bodies.ring(b)
+            for (i in 0..bodies.ringCount(a)) {
+                val p = bodies.particle(a, i)
+                if (!Outline.contains(ring, ps.x(p), ps.y(p))) continue
+                val depth = sqrt(Outline.nearestPoint(ring, ps.x(p), ps.y(p), nearest))
+                assertTrue(depth < 1.5f, "particle $i of body $a is $depth inside body $b")
+            }
+        }
+        for (b in run.blobs) assertTrue(abs(bodies.meanVelocityY(b)) < 30f, "body $b has settled: ${bodies.meanVelocityY(b)}")
     }
 
     @Test
@@ -53,8 +74,9 @@ class SceneTest {
      * lag outside its skin on a hard landing, but not stay out: then it went through a wall alone.
      */
     private fun check(name: String, run: BlobRun, steps: Int) {
-        val stretchedFor = IntArray(run.blobs.size)
-        val coreOutFor = IntArray(run.blobs.size)
+        // Room for every body a run may add while it runs, as the pile does.
+        val stretchedFor = IntArray(MAX_BODIES)
+        val coreOutFor = IntArray(MAX_BODIES)
         repeat(steps) { step ->
             (run as SceneRun).step(dt)
             val bodies = run.world.softBodies
@@ -85,6 +107,8 @@ class SceneTest {
     }
 
     private companion object {
+        const val MAX_BODIES = 64
+
         /** A core this far outside its skin is no longer just lagging behind it. */
         const val MAX_CORE_OUTSIDE = 3f
 

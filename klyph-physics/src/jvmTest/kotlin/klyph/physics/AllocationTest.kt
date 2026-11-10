@@ -41,6 +41,9 @@ class AllocationTest {
             dynamic.add(Solid.moving(100f, 100f, 140f, 120f))
         }
         repeat(50) { ps.add(200f + it, 50f, radius = 2f) }
+        // blobs and colliding grains, so the broadphase and body collisions run too
+        repeat(6) { world.softBody(SoftBodies.semiDisc(13f, 14, 8, 34f), 150f + it * 30f, 100f) }
+        repeat(60) { ps.add(160f + it % 20 * 5f, 20f + it / 20 * 5f, radius = 2f, collides = true) }
         val bytes = measure { repeat(10_000) { world.step(1f / 60f) } }
         assertTrue(bytes < 1024, "10 000 steps allocated $bytes bytes")
     }

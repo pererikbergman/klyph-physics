@@ -23,6 +23,8 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     /** The level's walls, floors, slopes and moving solids, or `null` for none. Every particle is pushed out of them. */
     var solids: SolidGrid? = null
 
+    private val collisions = Collisions(this)
+
     /** The length of the last substep, in seconds: what velocities in units per second are measured against. */
     var substepLength: Float = 1f / 60f / config.substeps
         private set
@@ -33,8 +35,8 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     /**
      * Advances the world by [dt] seconds, in [PhysicsConfig.substeps] substeps. Each one moves every
-     * particle, then [PhysicsConfig.iterations] times solves the [constraints] and pushes everything out
-     * of the [solids], so walls have the last word.
+     * particle, then [PhysicsConfig.iterations] times solves the [constraints], keeps bodies out of each
+     * other, and pushes everything out of the [solids], so walls have the last word.
      */
     fun step(dt: Float) {
         require(dt > 0f && dt.isFinite()) { "dt is $dt: it must be a finite time more than 0" }
@@ -42,11 +44,13 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         substepLength = h
         val keep = exp(-config.damping * h)
         events.beginStep()
+        collisions.beginStep(dt)
         repeat(config.substeps) {
             integrate(h, keep)
             constraints.beginSubstep()
             repeat(config.iterations) {
                 constraints.solve(h)
+                collisions.solve()
                 solids?.collide(particles, events)
             }
         }
