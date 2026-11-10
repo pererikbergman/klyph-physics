@@ -11,11 +11,11 @@
 
 ## ⚡ 10-second version
 
-- 🍮 **soft bodies**, 🪢 **ropes** and 🧣 **cloth** today. 📦 rigid bodies and 🔩 joints are on the way
+- 🍮 **soft bodies**, 🪢 **ropes**, 🧣 **cloth** and ⏳ **sand** today. 📦 rigid bodies and 🔩 joints are on the way
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **178 tests**, all green
+- 🧪 **181 tests**, all green
 
 ## ▶️ Run it
 
@@ -74,10 +74,10 @@ stiff bends stick out, soft ones droop, none hang. Same solver, different compli
 
 ### 4 · 🧺 Blob Pile
 
-**Twenty bodies in a bin.** Domes, balls and boxes drop in one after another and pile up. None
-of them goes through another. 🙅
+**Thirty bodies through a funnel.** Domes, balls and boxes pour in one after another, slide down
+an icy funnel and pile up in a bin. None of them goes through another. 🙅
 
-<img src="docs/img/bodies.gif" alt="soft domes, balls and boxes piling up in a bin" width="100%">
+<img src="docs/img/bodies.gif" alt="soft domes, balls and boxes pouring through a funnel and piling up in a bin" width="100%">
 
 ### 5 · 🧽 Grip and Bounce
 
@@ -99,6 +99,17 @@ bridge sags under a blob.
 through a net.
 
 <img src="docs/img/cloth.gif" alt="a flag flapping, a curtain, and a ball tearing through a net" width="100%">
+
+### 8 · ⏳ Sand
+
+**3 000 grains in an hourglass.** Each one a round particle on its own: no bodies, no constraints,
+just contacts and grip. They pour through the neck and heap up at the slope their friction holds,
+at 60 FPS and then some. 🏖️
+
+<img src="docs/img/sand.gif" alt="sand in bands of colour pouring through an hourglass and heaping up below" width="60%">
+
+Every scene's step, timed without a window on the release build:
+`SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.
 
 More scenes land with every milestone. 🚀
 
