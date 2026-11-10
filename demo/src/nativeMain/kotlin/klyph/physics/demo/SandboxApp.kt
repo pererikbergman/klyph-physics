@@ -3,8 +3,13 @@ package klyph.physics.demo
 import klyph.app.App
 import klyph.app.Phase
 import klyph.app.deltaSeconds
+import klyph.math.Rect
+import klyph.physics.bridge.DebugDraw
 import klyph.platform.Color
 import klyph.platform.Scancode
+import klyph.render.lookAt
+import klyph.render.visibleHeight
+import klyph.render.visibleWidth
 import klyph.text.TextAlign
 import klyph.text.TextShadow
 import kotlin.time.TimeSource
@@ -30,8 +35,15 @@ private const val LINE = 22f
 private val DIM = Color(0xAAB4C8FFu)
 private val BADGE = Color(0xFFD36BFFu)
 
-/** Runs [sandbox] in this app: keys drive it, fixed steps move it, and a HUD tells what is going on. */
-fun App.installSandbox(sandbox: Sandbox) {
+/**
+ * Runs [sandbox] in this app: keys drive it, fixed steps move it, a [DebugDraw] shows it, with its
+ * details on from the start when [details] says so, and a HUD tells what is going on.
+ */
+fun App.installSandbox(sandbox: Sandbox, details: Boolean = false) {
+    val debug = DebugDraw(assets.whitePixel).apply { showDetails = details }
+    // Two points per world unit: the 640 x 368 units of a scene fill a 1280 x 720 window.
+    camera.zoom = ZOOM
+    camera.lookAt(Scenes.COLS * Scenes.TILE / 2f, Scenes.ROWS * Scenes.TILE / 2f)
     var stepMillis = 0f
     var frameSeconds = 1f / 60f
     val shadow = TextShadow()
@@ -41,6 +53,7 @@ fun App.installSandbox(sandbox: Sandbox) {
     addSystem(Phase.INPUT) { app ->
         val keys = app.input.keyboard
         if (keys.isJustPressed(Scancode.ESCAPE)) app.quit()
+        if (keys.isJustPressed(Scancode.F1)) debug.showDetails = !debug.showDetails
         for ((i, key) in SCENE_KEYS.withIndex()) if (keys.isJustPressed(key)) sandbox.select(i)
         if (keys.isJustPressed(LEFT_BRACKET)) sandbox.previous()
         if (keys.isJustPressed(RIGHT_BRACKET)) sandbox.next()
@@ -65,6 +78,10 @@ fun App.installSandbox(sandbox: Sandbox) {
         val height = app.window.height.toFloat()
         frameSeconds += (app.time.deltaSeconds - frameSeconds) * SMOOTHING
         val run = sandbox.run
+        val camera = app.camera
+        val viewWidth = camera.visibleWidth
+        val viewHeight = camera.visibleHeight
+        run.draw(canvas, debug, Rect(camera.x - viewWidth / 2f, camera.y - viewHeight / 2f, viewWidth, viewHeight))
 
         title.clear()
         title.append(sandbox.index + 1).append('/').append(sandbox.sceneCount).append("  ").append(sandbox.scene.name)
@@ -98,7 +115,7 @@ fun App.installSandbox(sandbox: Sandbox) {
 
         canvas.drawText(
             font,
-            "1-9 [ ] scene   R reset   Space pause   . step   S slow   F3 stats   Esc quit",
+            "1-9 [ ] scene  R reset  Space pause  . step  S slow  F1 details  F3 stats",
             MARGIN,
             height - MARGIN - 16f,
             color = DIM,
@@ -110,6 +127,8 @@ fun App.installSandbox(sandbox: Sandbox) {
 }
 
 private const val HUD_LAYER = 100
+
+private const val ZOOM = 2f
 
 /** Appends [value] with [decimals] digits after the point, rounded, without making a new string. */
 internal fun StringBuilder.appendFixed(value: Float, decimals: Int): StringBuilder {
