@@ -84,7 +84,8 @@ class SolidsTest {
 
     @Test
     fun aRisingSlopePushesAlongItsSurfaceNormal() {
-        val grid = TestBodies.grid().apply { fill(2, 2, SolidShape.RISING) }
+        // a ramp in the ground: a tile below it and one beside its tall (right) side
+        val grid = TestBodies.grid().apply { fill(2, 2, SolidShape.RISING); fill(2, 3); fill(3, 2) }
         particle(44f, 44f)
         resolve(grid)
         assertEquals(40f, body.positionX(0), 0.001f)
@@ -94,11 +95,43 @@ class SolidsTest {
 
     @Test
     fun aFallingSlopeMirrorsIt() {
-        val grid = TestBodies.grid().apply { fill(2, 2, SolidShape.FALLING) }
+        val grid = TestBodies.grid().apply { fill(2, 2, SolidShape.FALLING); fill(2, 3); fill(1, 2) }
         particle(36f, 44f)
         resolve(grid)
         assertEquals(40f, body.positionX(0), 0.001f)
         assertEquals(40f, body.positionY(0), 0.001f)
+    }
+
+    @Test
+    fun aParticleThatHitsAFloatingSlopeFromBelowGoesBackDownNotOnTop() {
+        // a rising slope in mid-air, cell (2, 2): x 32..48, y 32..48; hit from below, near its bottom
+        val grid = TestBodies.grid().apply { fill(2, 2, SolidShape.RISING) }
+        particle(44f, 46f, fromY = 50f)
+        resolve(grid)
+        assertEquals(44f, body.positionX(0), 0.001f)
+        assertEquals(48f, body.positionY(0), 0.001f, "out through the open bottom, two units away, not onto the surface")
+        assertFalse(contacts.isOnFloor(0), "a ceiling is not a floor")
+    }
+
+    @Test
+    fun aParticleNearTheTallSideOfAFloatingSlopeLeavesThroughThatSide() {
+        val grid = TestBodies.grid().apply { fill(2, 2, SolidShape.FALLING) }
+        // a falling slope's tall side is its left one, at x = 32
+        particle(33f, 44f, fromX = 30f)
+        resolve(grid)
+        assertEquals(32f, body.positionX(0), 0.001f)
+        assertEquals(44f, body.positionY(0), 0.001f)
+    }
+
+    @Test
+    fun aSlopeBuriedBelowAndBesideStillPushesUpItsSurfaceFromDeepInside() {
+        // a ramp in the ground: tiles below it and beside its tall side, so its surface is the only way out
+        val grid = TestBodies.grid().apply { fill(2, 2, SolidShape.RISING); fill(2, 3); fill(3, 2) }
+        // one unit above the bottom, where the bottom face would be the nearest if it were open
+        particle(44f, 47f)
+        resolve(grid)
+        assertTrue(body.positionY(0) < 47f, "pushed up, y = ${body.positionY(0)}")
+        assertEquals(44f - body.positionX(0), 47f - body.positionY(0), 0.001f, "up and left alike: along the surface's normal")
     }
 
     @Test
