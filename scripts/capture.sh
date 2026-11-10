@@ -51,11 +51,13 @@ if [[ -n "$crop" ]]; then
   filter="crop=iw*$cw:ih*$ch:iw*$cx:ih*$cy,$filter"
 fi
 
+# No configuration cache: a cached run task would keep the last capture's environment, and save its
+# frames into that capture's long-gone folder.
 echo "📸 scene $scene, ${from}s to ${to}s -> docs/img/$name.{gif,png}"
 cd "$root"
 SANDBOX_SCENE=$scene SANDBOX_DETAILS=$details SANDBOX_CLEAN=$clean SANDBOX_RECORD="$every:$frames" \
   KLYPH_FRAMES=$steps KLYPH_OFFSCREEN=1 \
-  ./gradlew -q :demo:run -Pklyph.frames="$steps" 2>&1 | grep -v "stdlib-per-file-cache\|^ld: warning\|^warning:" || true
+  ./gradlew -q --no-configuration-cache :demo:run -Pklyph.frames="$steps" 2>&1 | grep -v "stdlib-per-file-cache\|^ld: warning\|^warning:" || true
 
 last=$(ls "$frames" | sort | tail -1)
 [[ -n "$last" ]] || { echo "📸 no frames were saved"; exit 1; }

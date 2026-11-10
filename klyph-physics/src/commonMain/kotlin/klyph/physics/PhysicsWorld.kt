@@ -57,6 +57,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
                 solids?.collide(particles, events, restingMove)
             }
         }
+        constraints.tear()
         stepCount++
     }
 

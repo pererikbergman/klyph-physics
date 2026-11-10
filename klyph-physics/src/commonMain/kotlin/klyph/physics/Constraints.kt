@@ -27,6 +27,7 @@ class Constraints internal constructor(private val particles: Particles) {
     private var linkCompliance = FloatArray(16)
     private var linkLambda = FloatArray(16)
     private var linkFlags = IntArray(16)
+    private var linkTear = FloatArray(16)
     private val links = Slots()
 
     // Pins.
@@ -58,6 +59,10 @@ class Constraints internal constructor(private val particles: Particles) {
     private var bendCompliance = FloatArray(16)
     private var bendLambda = FloatArray(16)
     private val bends = Slots()
+
+    /** How many links have torn since the world began: see [setTear]. */
+    var tornCount: Int = 0
+        private set
 
     /** How many distance and rope constraints are alive. */
     val linkCount: Int get() = links.count
@@ -96,6 +101,19 @@ class Constraints internal constructor(private val particles: Particles) {
     val linkEnd: Int get() = links.end
 
     fun removeLink(link: Int) = links.remove(link)
+
+    /**
+     * Makes [link] break once it's stretched past [stretch] times its rest length, at the end of a
+     * step; 0 never breaks it. A bend across the two particles it joined breaks with it, so a torn
+     * rope or cloth comes apart cleanly instead of hanging on by its bends.
+     */
+    fun setTear(link: Int, stretch: Float) {
+        require(stretch == 0f || stretch > 1f) { "tear stretch is $stretch: it must be over 1, or 0 for never" }
+        linkTear[link] = stretch
+    }
+
+    /** The stretch [link] breaks at, or 0 when it never does. */
+    fun tearAt(link: Int): Float = linkTear[link]
 
     /** Holds particle [p] at ([x], [y]), by default where it is now, and returns its handle. */
     fun pin(p: Int, x: Float = particles.x(p), y: Float = particles.y(p), compliance: Float = 0f): Int {
@@ -229,6 +247,25 @@ class Constraints internal constructor(private val particles: Particles) {
         pinLambda.fill(0f, 0, pins.end)
         areaLambda.fill(0f, 0, areas.end)
         bendLambda.fill(0f, 0, bends.end)
+    }
+
+    /** Breaks every link stretched past its tear limit, and the bends across it. Once a step. */
+    internal fun tear() {
+        for (link in 0 until links.end) {
+            val limit = linkTear[link]
+            if (limit == 0f || !links.isAlive(link)) continue
+            val a = linkA[link]
+            val b = linkB[link]
+            if (!particles.isAlive(a) || !particles.isAlive(b)) continue
+            if (currentDistance(a, b) <= limit * linkRest[link]) continue
+            links.remove(link)
+            tornCount++
+            for (bend in 0 until bends.end) {
+                if (!bends.isAlive(bend)) continue
+                val m = bendB[bend]
+                if ((m == a || m == b) && (bendA[bend] == a || bendA[bend] == b || bendC[bend] == a || bendC[bend] == b)) bends.remove(bend)
+            }
+        }
     }
 
     /** One pass over every constraint, for a substep of [h] seconds. */
@@ -404,6 +441,7 @@ class Constraints internal constructor(private val particles: Particles) {
         linkCompliance[link] = compliance
         linkLambda[link] = 0f
         linkFlags[link] = flags
+        linkTear[link] = 0f
         return link
     }
 
@@ -420,6 +458,7 @@ class Constraints internal constructor(private val particles: Particles) {
         linkCompliance = linkCompliance.copyOf(size)
         linkLambda = linkLambda.copyOf(size)
         linkFlags = linkFlags.copyOf(size)
+        linkTear = linkTear.copyOf(size)
     }
 
     private fun growPins() {

@@ -89,6 +89,36 @@ class SceneTest {
     }
 
     @Test
+    fun theRopeBridgeCarriesItsBlobAndTheRopesKeepTheirLength() {
+        val run = RopeSwingScene.create() as RopeSwingScene.Run
+        repeat(600) { run.step(dt) }
+        val world = run.world
+        val bodies = world.softBodies
+        val blob = run.blobs[0]
+        val lowest = run.bridge.particles.maxOf { world.particles.y(it) }
+        assertTrue(bodies.maxY(blob) < lowest + 4f, "the blob is on the bridge, not under it: ${bodies.maxY(blob)} against $lowest")
+        // The bridge carries a blob almost 30 times as heavy as one of its links, and stretches a little
+        // under it; the 1% a rope keeps at rest is checked in the engine's tests.
+        for ((name, strand, most) in listOf(Triple("rope", run.rope, 0.02f), Triple("chain", run.chain, 0.02f), Triple("bridge", run.bridge, 0.04f))) {
+            val stretch = strand.length(world) / strand.restLength(world) - 1f
+            assertTrue(stretch < most, "the $name stretched ${stretch * 100}%")
+        }
+    }
+
+    @Test
+    fun inTheClothTheBallTearsThroughTheNetAndTheNetIsHungBackUp() {
+        val run = ClothScene.create() as ClothScene.Run
+        repeat(ClothScene.EVERY) { run.step(dt) }
+        val ps = run.world.particles
+        for (p in 0 until ps.end) assertTrue(ps.x(p).isFinite() && ps.y(p).isFinite(), "particle $p")
+        assertTrue(run.world.constraints.tornCount > 0, "the net tore")
+        val floor = (Scenes.ROWS - 2) * Scenes.TILE
+        assertTrue(ps.y(run.ball) > floor - 12f, "and the ball went through it, down to the floor: ${ps.y(run.ball)}")
+        run.step(dt)
+        assertTrue(run.world.constraints.tornCount == 0, "a fresh net, whole again")
+    }
+
+    @Test
     fun theFountainReusesItsHandlesSoItsStoreStopsGrowing() {
         val run = FountainScene.create() as FountainScene.Run
         repeat(600) { run.step(dt) }
