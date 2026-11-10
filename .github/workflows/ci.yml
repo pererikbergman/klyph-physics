@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  # The engine's tests on each host Kotlin/Native can run them on, plus the klyph glue's compile.
+  # The demo links on macOS only, where the klyph plugin can fetch SDL3 by itself.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            tasks: ":klyph-physics:allTests :klyph-physics-bridge:compileKotlinMacosArm64 :demo:linkDebugExecutableMacosArm64"
+          - os: ubuntu-latest
+            tasks: ":klyph-physics:allTests :klyph-physics-bridge:compileKotlinLinuxX64"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Cache the Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts') }}
+      - run: ./gradlew ${{ matrix.tasks }} --console=plain
+      - name: Test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: "**/build/test-results/**/*.xml"
+          if-no-files-found: ignore
