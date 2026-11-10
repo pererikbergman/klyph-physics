@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **170 tests**, all green
+- 🧪 **178 tests**, all green
 
 ## ▶️ Run it
 
@@ -35,7 +35,8 @@ SDL3 3.4+ yourself.
 | `Space` | pause |
 | `.` | one step at a time 🐢 |
 | `S` | slow motion, ¼ speed |
-| `F1` | show what the physics sees 👀 |
+| `F1` | show what the physics sees 👀: bodies, then constraints, then contacts, then off |
+| `B` | show the broadphase's grid |
 | `F3` | klyph's frame stats |
 | 🖱️ left mouse | grab something and drag it 🖐️ |
 | 🖱️ right mouse | add the scene's own thing: a blob, a ball, a spring, a burst of grains |
@@ -53,7 +54,8 @@ ramps, stairs, a low ceiling, bounce pads 🟨 and a crusher 🟫. Watch how dif
 <img src="docs/img/blob-garden-details.png" alt="the Blob Garden with details on: every particle, core and floor contact" width="100%">
 
 ☝️ That's `F1`. The white dots are the particles, the red dot is the heavy core, and the yellow
-feet are the particles standing on something.
+feet are the particles standing on something. Press it again for the constraints, coloured by stress,
+and again for every contact. [🔍 More](docs/explained/debug-views.md)
 
 ### 2 · ⛲ Fountain
 

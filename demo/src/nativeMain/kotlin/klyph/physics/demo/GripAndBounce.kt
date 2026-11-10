@@ -120,7 +120,6 @@ object GripAndBounceScene : Scene {
             for (w in 0 until 3) debug.softBody(canvas, world, blobs[w], BOX_COLORS[w])
             for (i in 0 until 3) disc(canvas, ps.x(balls[i]), ps.y(balls[i]), BALL_RADIUS, BALL_COLORS[i], debug.layer)
             for ((i, ball) in spawned.withIndex()) disc(canvas, ps.x(ball), ps.y(ball), BALL_RADIUS, BALL_COLORS[i % 3], debug.layer)
-            debug.contacts(canvas, world)
         }
 
         /** A filled circle, one unit-tall strip at a time. */

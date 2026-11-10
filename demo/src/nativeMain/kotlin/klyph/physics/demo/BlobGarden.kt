@@ -121,7 +121,6 @@ object BlobGardenScene : Scene {
                 debug.softBody(canvas, world, blob, kinds[i].color)
                 debug.label(canvas, kinds[i].label, bodies.centerX(blob), bodies.minY(blob) - 12f)
             }
-            debug.contacts(canvas, world)
         }
 
         override val particleCount get() = world.particles.count

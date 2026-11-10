@@ -5,6 +5,7 @@ import klyph.app.Phase
 import klyph.app.deltaSeconds
 import klyph.math.Rect
 import klyph.physics.bridge.DebugDraw
+import klyph.physics.bridge.DebugView
 import klyph.platform.Color
 import klyph.platform.MouseButton
 import klyph.platform.Scancode
@@ -37,8 +38,8 @@ private val DIM = Color(0xAAB4C8FFu)
 private val BADGE = Color(0xFFD36BFFu)
 
 /**
- * Runs [sandbox] in this app: keys drive it, fixed steps move it, a [DebugDraw] shows it, with its
- * details on from the start when [details] says so, and a HUD tells what is going on.
+ * Runs [sandbox] in this app: keys drive it, fixed steps move it, a [DebugDraw] shows it, starting at
+ * the [DebugView] [view], and a HUD tells what is going on.
  *
  * For pictures: with a [recording] the physics steps once per frame, not on the clock, and saves
  * the frames the recording names. [clean] keeps only the scene's title and blurb on screen, and a
@@ -46,12 +47,16 @@ private val BADGE = Color(0xFFD36BFFu)
  */
 fun App.installSandbox(
     sandbox: Sandbox,
-    details: Boolean = false,
+    view: DebugView = DebugView.OFF,
+    grid: Boolean = false,
     recording: Recording? = null,
     clean: Boolean = false,
     hand: ScriptedHand? = null,
 ) {
-    val debug = DebugDraw(assets.whitePixel, assets.defaultFont).apply { showDetails = details }
+    val debug = DebugDraw(assets.whitePixel, assets.defaultFont).apply {
+        this.view = view
+        showBroadphase = grid
+    }
     // Two points per world unit: the 640 x 368 units of a scene fill a 1280 x 720 window.
     camera.zoom = ZOOM
     camera.lookAt(Scenes.COLS * Scenes.TILE / 2f, Scenes.ROWS * Scenes.TILE / 2f)
@@ -64,7 +69,8 @@ fun App.installSandbox(
     addSystem(Phase.INPUT) { app ->
         val keys = app.input.keyboard
         if (keys.isJustPressed(Scancode.ESCAPE)) app.quit()
-        if (keys.isJustPressed(Scancode.F1)) debug.showDetails = !debug.showDetails
+        if (keys.isJustPressed(Scancode.F1)) debug.view = debug.view.next()
+        if (keys.isJustPressed(Scancode.B)) debug.showBroadphase = !debug.showBroadphase
         for ((i, key) in SCENE_KEYS.withIndex()) if (keys.isJustPressed(key)) sandbox.select(i)
         if (keys.isJustPressed(LEFT_BRACKET)) sandbox.previous()
         if (keys.isJustPressed(RIGHT_BRACKET)) sandbox.next()
@@ -110,7 +116,10 @@ fun App.installSandbox(
         val viewWidth = camera.visibleWidth
         val viewHeight = camera.visibleHeight
         run.draw(canvas, debug, Rect(camera.x - viewWidth / 2f, camera.y - viewHeight / 2f, viewWidth, viewHeight))
-        run.world?.let { world -> drawHand(canvas, debug, world) }
+        run.world?.let { world ->
+            debug.overlay(canvas, world)
+            drawHand(canvas, debug, world)
+        }
 
         title.clear()
         title.append(sandbox.index + 1).append('/').append(sandbox.sceneCount).append("  ").append(sandbox.scene.name)
@@ -135,6 +144,8 @@ fun App.installSandbox(
         stat(numbers.append("contacts ").append(run.contactCount))
         numbers.clear()
         stat(numbers.append("step #").append(sandbox.stepCount))
+        if (debug.view != DebugView.OFF) stat(VIEW_NAMES[debug.view.ordinal])
+        if (debug.showBroadphase) stat(GRID_NAME)
 
         val badge = when {
             sandbox.isPaused -> "PAUSED"
@@ -155,7 +166,7 @@ fun App.installSandbox(
         )
         canvas.drawText(
             font,
-            "1-9 [ ] scene  R reset  Space pause  . step  S slow  F1 details  F3 stats",
+            "1-9 [ ] scene  R reset  Space pause  . step  S slow  F1 view  B grid  F3 stats",
             MARGIN,
             height - MARGIN - 16f,
             color = DIM,
@@ -167,6 +178,12 @@ fun App.installSandbox(
 }
 
 private const val HUD_LAYER = 100
+
+/** What the HUD calls each [DebugView], made once so the HUD makes no strings. */
+private val VIEW_NAMES = listOf(
+    StringBuilder("view off"), StringBuilder("view bodies"), StringBuilder("view constraints"), StringBuilder("view everything"),
+)
+private val GRID_NAME = StringBuilder("broadphase on")
 
 private val HAND = Color(0xFFD36BFFu)
 

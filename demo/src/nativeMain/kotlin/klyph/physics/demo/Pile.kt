@@ -12,8 +12,8 @@ import kotlin.random.Random
 
 /**
  * Twenty soft bodies, domes, balls and boxes, dropped one after another into a bin, where they pile up
- * without passing through each other. With details on, the yellow marks are particles standing on
- * something, a floor or another body.
+ * without passing through each other. With the view on everything (`F1` three times), the yellow marks
+ * are particles standing on something, a floor or another body, and the cyan ones are pushed sideways.
  */
 object PileScene : Scene {
     override val name = "Blob Pile"
@@ -76,7 +76,6 @@ object PileScene : Scene {
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
             debug.solids(canvas, world.solids!!, view)
             for (body in 0 until bodies.end) debug.softBody(canvas, world, body, colors[body])
-            debug.contacts(canvas, world)
         }
 
         override val particleCount get() = world.particles.count

@@ -10,6 +10,8 @@ import klyph.physics.Ring
 import klyph.physics.Solid
 import klyph.physics.SolidGrid
 import klyph.physics.SolidShape
+import kotlin.math.PI
+import kotlin.math.abs
 import klyph.platform.Color
 import klyph.render.Canvas
 import klyph.render.DrawSpace
@@ -25,17 +27,23 @@ import kotlin.math.sqrt
 
 /**
  * Draws what the physics sees, in world space, on a klyph [Canvas]: soft bodies filled from their
- * outlines, and the solids they collide with. With [showDetails] it also draws every particle (the
- * core in red), the edge of every tile and every particle standing on a floor; with it off, none of
- * that work is done.
+ * outlines, and the solids they collide with. Its [view] adds more, a level at a time: every particle
+ * and tile edge, then every constraint coloured by its stress, then every contact and its normal (see
+ * [DebugView]). [showBroadphase] adds the broadphase's cells on top. What isn't shown costs nothing.
  *
  * klyph has no polygons, so shapes are filled one row of [ROW] world units at a time, and lines are
  * stretched, turned quads of [pixel] (`App.assets.whitePixel`). Labels need a [font], such as
  * `App.assets.defaultFont`; without one they are not drawn.
  */
 class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null) {
-    /** Whether to draw particles, tile edges and floor contacts on top of the plain view. */
-    var showDetails: Boolean = false
+    /** How much to draw on top of the plain view. */
+    var view: DebugView = DebugView.OFF
+
+    /** Whether particles and tile edges are drawn: any [view] but [DebugView.OFF]. */
+    val showDetails: Boolean get() = view.shows(DebugView.BODIES)
+
+    /** Whether [overlay] also shades the broadphase's cells and outlines its boxes. */
+    var showBroadphase: Boolean = false
 
     /** The canvas layer the plain view is drawn in; details go in the layers just above it. */
     var layer: Int = 0
@@ -106,14 +114,112 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         }
     }
 
-    /** With details, marks every particle of [world] that stood on a floor during the last step. */
-    fun contacts(canvas: Canvas, world: PhysicsWorld) {
-        if (!showDetails) return
+    /**
+     * Everything [view] and [showBroadphase] ask for that a scene doesn't draw itself: [constraints],
+     * [contacts] and [broadphase]. Call it after the scene, every frame.
+     */
+    fun overlay(canvas: Canvas, world: PhysicsWorld) {
+        constraints(canvas, world)
+        contacts(canvas, world)
+        if (showBroadphase) broadphase(canvas, world)
+    }
+
+    /**
+     * From [DebugView.CONSTRAINTS] up, draws every constraint of [world] coloured by its stress, from
+     * blue squeezed through grey at rest to red stretched: a link along its length, a pin as a line to
+     * the point it holds, a bend as a dot on its middle particle, an area as a dot in its middle.
+     */
+    fun constraints(canvas: Canvas, world: PhysicsWorld) {
+        if (!view.shows(DebugView.CONSTRAINTS)) return
         val ps = world.particles
-        for (p in 0 until ps.end) {
-            if (!ps.isAlive(p) || !world.events.isOnFloor(p)) continue
-            rect(canvas, ps.x(p) - FOOT / 2f, ps.y(p) + ps.radius(p) + 1f, FOOT, 1.5f, FLOOR_CONTACT, layer + 4)
+        val cs = world.constraints
+        val top = layer + 6
+        for (c in 0 until cs.linkEnd) {
+            if (!cs.isLinkAlive(c)) continue
+            val a = cs.linkA(c)
+            val b = cs.linkB(c)
+            if (!ps.isAlive(a) || !ps.isAlive(b)) continue
+            val strain = cs.strain(c)
+            val tint = if (cs.isRope(c) && strain < 0f) SLACK else stressColor(strain / FULL_STRAIN)
+            line(canvas, ps.x(a), ps.y(a), ps.x(b), ps.y(b), EDGE, tint, top)
         }
+        for (c in 0 until cs.pinEnd) {
+            if (!cs.isPinAlive(c)) continue
+            val p = cs.pinnedParticle(c)
+            if (!ps.isAlive(p)) continue
+            val dx = cs.pinX(c) - ps.x(p)
+            val dy = cs.pinY(c) - ps.y(p)
+            val tint = stressColor(sqrt(dx * dx + dy * dy) / FULL_PIN)
+            line(canvas, ps.x(p), ps.y(p), cs.pinX(c), cs.pinY(c), EDGE, tint, top)
+            rect(canvas, cs.pinX(c) - 1f, cs.pinY(c) - 1f, 2f, 2f, tint, top)
+        }
+        for (c in 0 until cs.bendEnd) {
+            if (!cs.isBendAlive(c)) continue
+            val p = cs.bendB(c)
+            if (!ps.isAlive(p)) continue
+            var off = cs.bendAngle(c) - cs.restAngle(c)
+            if (off > PI_F) off -= 2f * PI_F
+            if (off < -PI_F) off += 2f * PI_F
+            rect(canvas, ps.x(p) - 1f, ps.y(p) - 1f, 2f, 2f, stressColor(abs(off) / FULL_BEND), top + 1)
+        }
+        for (c in 0 until cs.areaEnd) {
+            if (!cs.isAreaAlive(c)) continue
+            val n = cs.ringSize(c)
+            var x = 0f
+            var y = 0f
+            for (i in 0 until n) {
+                x += ps.x(cs.ringParticle(c, i))
+                y += ps.y(cs.ringParticle(c, i))
+            }
+            val change = cs.currentArea(c) / cs.restArea(c) - 1f
+            rect(canvas, x / n - 2f, y / n - 2f, 4f, 4f, stressColor(change / FULL_AREA), top + 1)
+        }
+    }
+
+    /**
+     * From [DebugView.EVERYTHING] up, marks every particle of [world] that touched something during the
+     * last step: a dot where it touched, and a short line along the normal it was pushed out by, in
+     * yellow on a floor and cyan on anything else.
+     */
+    fun contacts(canvas: Canvas, world: PhysicsWorld) {
+        if (!view.shows(DebugView.EVERYTHING)) return
+        val ps = world.particles
+        val events = world.events
+        for (p in 0 until ps.end) {
+            if (!ps.isAlive(p) || !events.isTouching(p)) continue
+            val nx = events.contactNormalX(p)
+            val ny = events.contactNormalY(p)
+            val r = ps.radius(p)
+            val x = ps.x(p) - nx * r
+            val y = ps.y(p) - ny * r
+            val tint = if (events.isOnFloor(p)) FLOOR_CONTACT else CONTACT
+            line(canvas, x, y, x + nx * NORMAL, y + ny * NORMAL, EDGE, tint, layer + 7)
+            rect(canvas, x - 0.75f, y - 0.75f, 1.5f, 1.5f, tint, layer + 7)
+        }
+    }
+
+    /**
+     * Shades every cell of [world]'s broadphase once per box filed there, so busy cells glow brighter,
+     * and outlines each box: one per soft body and one per colliding particle.
+     */
+    fun broadphase(canvas: Canvas, world: PhysicsWorld) {
+        val bp = world.broadphase
+        val size = bp.cellSize
+        for (e in 0 until bp.count) {
+            val col0 = floor(bp.left(e) / size).toInt()
+            val col1 = floor(bp.right(e) / size).toInt()
+            val row0 = floor(bp.top(e) / size).toInt()
+            val row1 = floor(bp.bottom(e) / size).toInt()
+            for (row in row0..row1) for (col in col0..col1) rect(canvas, col * size, row * size, size, size, CELL, layer - 1)
+            box(canvas, bp.left(e), bp.top(e), bp.right(e), bp.bottom(e), BOX, layer + 6)
+        }
+    }
+
+    private fun box(canvas: Canvas, left: Float, top: Float, right: Float, bottom: Float, color: Color, layer: Int) {
+        line(canvas, left, top, right, top, EDGE, color, layer)
+        line(canvas, right, top, right, bottom, EDGE, color, layer)
+        line(canvas, right, bottom, left, bottom, EDGE, color, layer)
+        line(canvas, left, bottom, left, top, EDGE, color, layer)
     }
 
     /**
@@ -235,6 +341,41 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         val CORE = Color(0xFF4040FFu)
         val FLOOR_CONTACT = Color(0xFFD36BFFu)
         val LABEL = Color(0xE8ECF4FFu)
+        val CONTACT = Color(0x5BE0E0FFu)
+        val SLACK = Color(0.55f, 0.6f, 0.7f, 0.35f)
+        val BOX = Color(0.36f, 0.55f, 0.94f, 0.6f)
+
+        /** How far along a contact's normal its line reaches, in world units. */
+        const val NORMAL = 6f
+
+        /** What counts as full stress, drawn fully blue or red: a link 10% off its length... */
+        const val FULL_STRAIN = 0.1f
+
+        /** ...a pinned particle 8 units from its point, a bend half a radian off, an area 20% off. */
+        const val FULL_PIN = 8f
+        const val FULL_BEND = 0.5f
+        const val FULL_AREA = 0.2f
+
+        private val SQUEEZED = Color(0x4D7CFFFFu)
+        private val RESTING = Color(0xB8C2D6FFu)
+        private val STRETCHED = Color(0xFF4D4DFFu)
+        private const val PI_F = PI.toFloat()
+
+        /**
+         * The colour of a stress of [amount]: -1 or less is fully squeezed (blue), 0 at rest (grey),
+         * 1 or more fully stretched (red).
+         */
+        fun stressColor(amount: Float): Color {
+            val k = if (amount.isNaN()) 0f else amount.coerceIn(-1f, 1f)
+            val to = if (k < 0f) SQUEEZED else STRETCHED
+            val t = abs(k)
+            return Color(
+                RESTING.red + (to.red - RESTING.red) * t,
+                RESTING.green + (to.green - RESTING.green) * t,
+                RESTING.blue + (to.blue - RESTING.blue) * t,
+                1f,
+            )
+        }
         val CELL = Color(0.36f, 0.55f, 0.94f, 0.12f)
         val PAIR = Color(0xFF6BB5FFu)
 

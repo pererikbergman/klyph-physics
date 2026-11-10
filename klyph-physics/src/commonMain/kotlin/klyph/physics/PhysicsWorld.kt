@@ -28,6 +28,13 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     private val collisions = Collisions(this)
 
+    /**
+     * The boxes this step's collisions were found from, for drawing: one per soft body and one per
+     * colliding particle that isn't part of a body. A box's id is `2·particle` for a particle and
+     * `2·body + 1` for a body. Read it; don't change it.
+     */
+    val broadphase: Broadphase get() = collisions.broadphase
+
     /** The length of the last substep, in seconds: what velocities in units per second are measured against. */
     var substepLength: Float = 1f / 60f / config.substeps
         private set

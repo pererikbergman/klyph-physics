@@ -18,6 +18,23 @@ class Events internal constructor(private val particles: Particles) {
     /** The tags of every floor particle [p] stood on during the last step, or-ed together; 0 for none. */
     fun floorTags(p: Int): Int = particles.floorTag[p]
 
+    /**
+     * Whether particle [p] was pushed out of anything during the last step: a solid, a body or another
+     * particle, floor or not.
+     */
+    fun isTouching(p: Int): Boolean = particles.contact[p] and TOUCHING != 0
+
+    /**
+     * The unit normal of particle [p]'s last contact, pointing away from what it touched: (0, -1) on a
+     * flat floor. Only meaningful while [isTouching].
+     */
+    fun contactNormalX(p: Int): Float = particles.contactNx[p]
+
+    fun contactNormalY(p: Int): Float = particles.contactNy[p]
+
+    /** What particle [p] last touched: another particle, an edge's first particle, or -1 for a solid. */
+    fun touchedParticle(p: Int): Int = particles.contactA[p]
+
     /** Starts a step: this step's touches become the last step's, and nothing has been touched yet. */
     internal fun beginStep() {
         val contact = particles.contact
@@ -37,5 +54,6 @@ class Events internal constructor(private val particles: Particles) {
     internal companion object {
         const val NOW = 1
         const val BEFORE = 2
+        const val TOUCHING = 4
     }
 }
