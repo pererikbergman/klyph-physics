@@ -133,6 +133,25 @@ class SolidsTest {
     }
 
     @Test
+    fun aTileIsNeverLeftThroughTheEdgeOfTheGridEvenWhenThatIsTheNearestFace() {
+        // a wall tile at the grid's left edge with the floor beside it; outside the grid there is nothing to land on
+        val grid = TestBodies.grid().apply { fill(0, 5); fill(1, 5) }
+        particle(2f, 84f)
+        resolve(grid)
+        assertEquals(2f, body.positionX(0), 0.001f, "not pushed out of the world, two units to the left")
+        assertEquals(80f, body.positionY(0), 0.001f, "out through the open top instead")
+    }
+
+    @Test
+    fun aTileBuriedOnEveryOtherSideStillDoesNotPushOutOfTheGrid() {
+        // the corner where a wall meets the floor: the top and right faces are buried, the left one is the world's edge
+        val grid = TestBodies.grid().apply { fill(0, 4); fill(0, 5); fill(1, 5); fill(0, 6) }
+        particle(2f, 88f)
+        resolve(grid)
+        assertEquals(2f, body.positionX(0), 0.001f, "never toward the world's edge, even as a last resort")
+    }
+
+    @Test
     fun aBoxBesideTheLowEdgeOfAFallingSlopeCanBeLeftThroughThatFace() {
         val grid = TestBodies.grid().apply { fill(4, 5, SolidShape.FALLING); fill(5, 5) }
         // a falling slope meets the box only at its bottom corner, so that face is open air above it

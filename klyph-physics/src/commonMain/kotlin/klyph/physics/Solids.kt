@@ -146,6 +146,8 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
             nearestExit(solid, px, py, respectBuried = false)
             exit.depth += 0.01f
         }
+        // A tile with nowhere to go at all, such as the only cell of a one-cell grid: leave it be.
+        if (exit.depth == Float.MAX_VALUE) exit.depth = 0f
     }
 
     /** Writes to [exit] the way out, along the surface's normal, for a point under a surface that rises to the right. */
@@ -183,13 +185,32 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
         exit.nx = 0f
         exit.ny = 0f
         val toLeft = px - solid.left
-        if (toLeft < exit.depth && !(respectBuried && isBuried(solid, Side.LEFT))) { exit.depth = toLeft; exit.nx = -1f; exit.ny = 0f }
+        if (toLeft < exit.depth && isExit(solid, Side.LEFT, respectBuried)) { exit.depth = toLeft; exit.nx = -1f; exit.ny = 0f }
         val toRight = solid.right - px
-        if (toRight < exit.depth && !(respectBuried && isBuried(solid, Side.RIGHT))) { exit.depth = toRight; exit.nx = 1f; exit.ny = 0f }
+        if (toRight < exit.depth && isExit(solid, Side.RIGHT, respectBuried)) { exit.depth = toRight; exit.nx = 1f; exit.ny = 0f }
         val toTop = py - solid.top
-        if (toTop < exit.depth && !(respectBuried && isBuried(solid, Side.TOP))) { exit.depth = toTop; exit.nx = 0f; exit.ny = -1f }
+        if (toTop < exit.depth && isExit(solid, Side.TOP, respectBuried)) { exit.depth = toTop; exit.nx = 0f; exit.ny = -1f }
         val toBottom = solid.bottom - py
-        if (toBottom < exit.depth && !(respectBuried && isBuried(solid, Side.BOTTOM))) { exit.depth = toBottom; exit.nx = 0f; exit.ny = 1f }
+        if (toBottom < exit.depth && isExit(solid, Side.BOTTOM, respectBuried)) { exit.depth = toBottom; exit.nx = 0f; exit.ny = 1f }
+    }
+
+    /**
+     * Whether a particle may leave [solid] through its [side]: never through the edge of the grid,
+     * where there is nothing to land on and nothing to push it back, and, when [respectBuried], not
+     * through a face buried against a neighbour.
+     */
+    private fun isExit(solid: Solid, side: Side, respectBuried: Boolean): Boolean =
+        !isOnGridEdge(solid, side) && !(respectBuried && isBuried(solid, side))
+
+    /** Whether the [side] face of a tile's [solid] lies on the edge of the grid. A moving solid's never does. */
+    private fun isOnGridEdge(solid: Solid, side: Side): Boolean {
+        if (solid.isMoving) return false
+        return when (side) {
+            Side.LEFT -> solid.col == 0
+            Side.RIGHT -> solid.col == cols - 1
+            Side.TOP -> solid.row == 0
+            Side.BOTTOM -> solid.row == rows - 1
+        }
     }
 
     private enum class Side { LEFT, RIGHT, TOP, BOTTOM }
