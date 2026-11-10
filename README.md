@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **160 tests**, all green
+- 🧪 **170 tests**, all green
 
 ## ▶️ Run it
 
@@ -37,6 +37,8 @@ SDL3 3.4+ yourself.
 | `S` | slow motion, ¼ speed |
 | `F1` | show what the physics sees 👀 |
 | `F3` | klyph's frame stats |
+| 🖱️ left mouse | grab something and drag it 🖐️ |
+| 🖱️ right mouse | add the scene's own thing: a blob, a ball, a spring, a burst of grains |
 | `Esc` | quit |
 
 ---
@@ -123,7 +125,7 @@ scripts/capture.sh 1 blob-garden --from 1 --to 7    # re-record the GIF above
 
 ## 🚧 Status
 
-Milestone 1 of 5. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
+Milestone 2 of 5. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
 the work is tracked in the [milestones](../../milestones).
 
 It grew out of the slime in [slimy-the-blob](https://github.com/pererikbergman/slimy-the-blob). 🟢

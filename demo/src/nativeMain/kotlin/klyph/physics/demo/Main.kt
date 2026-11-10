@@ -12,7 +12,8 @@ import klyph.platform.Sdl
  * stops after 60 frames and `-Pklyph.screenshot=30:shot.png` saves frame 30. `SANDBOX_SCENE=3`
  * starts on the third scene and `SANDBOX_DETAILS=1` with the details on, for pictures taken without
  * a keyboard. `SANDBOX_RECORD=2:/tmp/frames` saves every second step as a numbered PNG (see
- * [Recording]), and `SANDBOX_CLEAN=1` leaves only the title on screen. `scripts/capture.sh` uses them.
+ * [Recording]), `SANDBOX_CLEAN=1` leaves only the title on screen, and `SANDBOX_DRAG=320,200` grabs
+ * what is there and drags it about (see [ScriptedHand]). `scripts/capture.sh` uses them.
  */
 fun main() {
     val config = AppConfig.fromEnvironment(AppConfig(title = "klyph-physics sandbox", width = 1280, height = 720, fixedRate = 60))
@@ -21,5 +22,6 @@ fun main() {
     val details = Sdl.environmentVariable("SANDBOX_DETAILS") == "1"
     val recording = Recording.parse(Sdl.environmentVariable("SANDBOX_RECORD"))
     val clean = Sdl.environmentVariable("SANDBOX_CLEAN") == "1"
-    runApp(config) { installSandbox(sandbox, details, recording, clean) }
+    val hand = ScriptedHand.parse(Sdl.environmentVariable("SANDBOX_DRAG"))
+    runApp(config) { installSandbox(sandbox, details, recording, clean, hand) }
 }

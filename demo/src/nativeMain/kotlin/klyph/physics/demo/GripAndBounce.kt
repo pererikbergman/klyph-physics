@@ -69,6 +69,9 @@ object GripAndBounceScene : Scene {
             ps.add((26 + i * 5) * t, DROP_ROW * t, radius = BALL_RADIUS, collides = true, material = Material(restitution = RESTITUTIONS[i]))
         }
 
+        /** Balls added with a right click, each bouncing like the next of the three in turn. */
+        private val spawned = ArrayList<Int>()
+
         /** Where every particle starts, to go back to. */
         private val homeX = FloatArray(ps.end) { ps.x(it) }
         private val homeY = FloatArray(ps.end) { ps.y(it) }
@@ -106,10 +109,17 @@ object GripAndBounceScene : Scene {
             world.step(dt)
         }
 
+        override fun spawn(x: Float, y: Float) {
+            if (spawned.size >= Scenes.MAX_SPAWNED || !Scenes.isOpen(world, x, y)) return
+            val i = spawned.size % 3
+            spawned += ps.add(x, y, radius = BALL_RADIUS, collides = true, material = Material(restitution = RESTITUTIONS[i]))
+        }
+
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
             debug.solids(canvas, world.solids!!, view)
             for (w in 0 until 3) debug.softBody(canvas, world, blobs[w], BOX_COLORS[w])
             for (i in 0 until 3) disc(canvas, ps.x(balls[i]), ps.y(balls[i]), BALL_RADIUS, BALL_COLORS[i], debug.layer)
+            for ((i, ball) in spawned.withIndex()) disc(canvas, ps.x(ball), ps.y(ball), BALL_RADIUS, BALL_COLORS[i % 3], debug.layer)
             debug.contacts(canvas, world)
         }
 

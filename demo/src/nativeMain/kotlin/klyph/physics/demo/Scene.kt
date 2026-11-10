@@ -1,6 +1,7 @@
 package klyph.physics.demo
 
 import klyph.math.Rect
+import klyph.physics.PhysicsWorld
 import klyph.physics.bridge.DebugDraw
 import klyph.render.Canvas
 
@@ -24,6 +25,12 @@ interface Scene {
 interface SceneRun {
     /** Advances the run's physics by one fixed step of [dt] seconds. */
     fun step(dt: Float)
+
+    /** The world the mouse grabs things in, or `null` for a run with none. */
+    val world: PhysicsWorld? get() = null
+
+    /** Adds this scene's own kind of thing at ([x], [y]), such as a blob or a ball: what a right click does. */
+    fun spawn(x: Float, y: Float) {}
 
     /** Draws the run on [canvas] with [debug]; [view] is the part of the world the camera shows. */
     fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {}

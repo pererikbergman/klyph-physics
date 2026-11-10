@@ -41,7 +41,7 @@ object SpringsScene : Scene {
     override fun create(): SceneRun = Run()
 
     internal class Run : SceneRun {
-        val world = PhysicsWorld()
+        override val world = PhysicsWorld()
         private val ps = world.particles
         private val cs = world.constraints
         private val anchors = IntArray(3)
@@ -52,6 +52,10 @@ object SpringsScene : Scene {
         private val chainX = floatArrayOf(64f, 264f, 464f)
         private var seconds = 0f
         private val pinCenterX = 448f
+
+        /** Springs hung with a right click: an anchor where the mouse was, and a weight on a spring under it. */
+        private val spawnedAnchors = ArrayList<Int>()
+        private val spawnedWeights = ArrayList<Int>()
 
         init {
             // 1. a rigid rod, starting level so it swings.
@@ -97,8 +101,19 @@ object SpringsScene : Scene {
             world.step(dt)
         }
 
+        override fun spawn(x: Float, y: Float) {
+            if (spawnedAnchors.size >= Scenes.MAX_SPAWNED) return
+            val anchor = ps.add(x, y, mass = Particles.STATIC)
+            val weight = ps.add(x, y + 50f, mass = 2f, radius = 4f)
+            cs.distance(anchor, weight, compliance = SPRING_COMPLIANCE)
+            spawnedAnchors += anchor
+            spawnedWeights += weight
+        }
+
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
             debug.links(canvas, cs, ps)
+            for (a in spawnedAnchors) debug.square(canvas, ps.x(a), ps.y(a), 8f, ANCHOR)
+            for (w in spawnedWeights) debug.square(canvas, ps.x(w), ps.y(w), 8f, WEIGHT)
             for (k in 0 until BALLOON_PARTICLES) debug.square(canvas, ps.x(balloon[k]), ps.y(balloon[k]), 2f, BALLOON)
             for (a in anchors) debug.square(canvas, ps.x(a), ps.y(a), 8f, ANCHOR)
             for (w in weights) debug.square(canvas, ps.x(w), ps.y(w), 8f, WEIGHT)

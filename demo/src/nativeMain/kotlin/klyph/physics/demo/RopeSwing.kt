@@ -2,7 +2,6 @@ package klyph.physics.demo
 
 import klyph.math.Rect
 import klyph.physics.PhysicsWorld
-import klyph.physics.SoftBodies
 import klyph.physics.Strand
 import klyph.physics.bridge.DebugDraw
 import klyph.physics.chain
@@ -65,6 +64,9 @@ object RopeSwingScene : Scene {
 
         override val blobs: IntArray
 
+        /** Blobs dropped with a right click. */
+        private val spawned = ArrayList<Int>()
+
         init {
             weights[0] = ps.add(160f + 8f, TOP, mass = WEIGHT_MASS, radius = WEIGHT_RADIUS)
             cs.distance(rope.last, weights[0])
@@ -78,11 +80,15 @@ object RopeSwingScene : Scene {
             bridge = world.chain(left, y, left + length, y, segments = BRIDGE_SEGMENTS, pinEnd = true, radius = length / BRIDGE_SEGMENTS / 2f, collides = true)
             ps.moveTo(bridge.last, right, y)
 
-            val dome = SoftBodies.semiDisc(radius = 13.3f, arcSegments = 14, baseSegments = 8, coreMass = 34f, heightScale = 1.3f)
-            blobs = intArrayOf(world.softBody(dome, (left + right) / 2f, (BRIDGE_ROW - 3) * t))
+            blobs = intArrayOf(world.softBody(Scenes.dome(), (left + right) / 2f, (BRIDGE_ROW - 3) * t))
         }
 
         override fun step(dt: Float) = world.step(dt)
+
+        override fun spawn(x: Float, y: Float) {
+            if (spawned.size >= Scenes.MAX_SPAWNED || !Scenes.isOpen(world, x, y)) return
+            spawned += world.softBody(Scenes.dome(), x, y + Scenes.DOME_HALF_HEIGHT)
+        }
 
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
             debug.solids(canvas, world.solids!!, view)
@@ -91,6 +97,7 @@ object RopeSwingScene : Scene {
             for (strand in listOf(chain, bridge)) dots(canvas, debug, strand, CHAIN_DOT)
             for (w in weights) debug.square(canvas, ps.x(w), ps.y(w), 2f * WEIGHT_RADIUS, WEIGHT)
             debug.softBody(canvas, world, blobs[0], BLOB)
+            for (blob in spawned) debug.softBody(canvas, world, blob, BLOB)
             debug.label(canvas, "rope", 100f, TOP - 22f)
             debug.label(canvas, "chain", 240f, TOP - 22f)
             debug.label(canvas, "stiff rope", 345f, TOP - 22f)

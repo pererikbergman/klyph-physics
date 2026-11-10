@@ -28,7 +28,7 @@ object PileScene : Scene {
     )
 
     private val SHAPES: List<SoftBodyShape> = listOf(
-        SoftBodies.semiDisc(radius = 13.3f, arcSegments = 14, baseSegments = 8, coreMass = 34f, heightScale = 1.3f),
+        Scenes.dome(),
         SoftBodies.circle(radius = 12f, segments = 18, coreMass = 10f),
         SoftBodies.box(width = 26f, height = 18f, across = 7, down = 5, coreMass = 20f),
     )
@@ -50,18 +50,27 @@ object PileScene : Scene {
         private val random = Random(11)
         private val colors = ArrayList<Color>()
         private var steps = 0
+        private var dropped = 0
 
         override val blobs: IntArray get() = IntArray(bodies.count) { it }
 
         override fun step(dt: Float) {
-            if (steps % EVERY == 0 && bodies.count < COUNT) {
-                val i = bodies.count
+            if (steps % EVERY == 0 && dropped < COUNT) {
+                val i = dropped++
                 val x = (14 + random.nextFloat() * 12) * t
                 bodies.add(SHAPES[i % SHAPES.size], x, 4 * t, SoftBodyTuning(spokeCompliance = 0.001f, areaCompliance = 0.0006f))
                 colors += COLORS[i % COLORS.size]
             }
             steps++
             world.step(dt)
+        }
+
+        /** One more body, the next shape in turn, dropped from ([x], [y]). */
+        override fun spawn(x: Float, y: Float) {
+            if (bodies.count >= COUNT + Scenes.MAX_SPAWNED || !Scenes.isOpen(world, x, y)) return
+            val i = bodies.count
+            bodies.add(SHAPES[i % SHAPES.size], x, y + 9f, SoftBodyTuning(spokeCompliance = 0.001f, areaCompliance = 0.0006f))
+            colors += COLORS[i % COLORS.size]
         }
 
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {

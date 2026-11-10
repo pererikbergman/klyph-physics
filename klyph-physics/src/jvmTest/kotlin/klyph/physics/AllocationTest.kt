@@ -47,7 +47,16 @@ class AllocationTest {
         // blobs and colliding grains, so the broadphase and body collisions run too
         repeat(6) { world.softBody(SoftBodies.semiDisc(13f, 14, 8, 34f), 150f + it * 30f, 100f) }
         repeat(60) { ps.add(160f + it % 20 * 5f, 20f + it / 20 * 5f, radius = 2f, collides = true) }
-        val bytes = measure { repeat(10_000) { world.step(1f / 60f) } }
+        // and a hand dragging one of the blobs about
+        world.grab(150f, 90f)
+        var frame = 0
+        val bytes = measure {
+            repeat(10_000) {
+                frame++
+                world.moveGrab(150f + (frame % 120) * 2f, 60f)
+                world.step(1f / 60f)
+            }
+        }
         assertTrue(bytes < 1024, "10 000 steps allocated $bytes bytes")
     }
 

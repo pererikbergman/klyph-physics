@@ -23,6 +23,9 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     /** The level's walls, floors, slopes and moving solids, or `null` for none. Every particle is pushed out of them. */
     var solids: SolidGrid? = null
 
+    /** The hand that drags particles about: see [grab]. */
+    val hand = Grab(this)
+
     private val collisions = Collisions(this)
 
     /** The length of the last substep, in seconds: what velocities in units per second are measured against. */
@@ -45,6 +48,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         val keep = exp(-config.damping * h)
         val restingMove = config.bounceSpeed * h
         events.beginStep()
+        hand.beginStep()
         collisions.beginStep(dt)
         repeat(config.substeps) {
             integrate(h, keep)
@@ -73,6 +77,22 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         for (bend in 0 until c.bendEnd) if (c.isBendAlive(bend) && (c.bendA(bend) == p || c.bendB(bend) == p || c.bendC(bend) == p)) c.removeBend(bend)
         particles.remove(p)
     }
+
+    /**
+     * Takes hold of the movable particle nearest ([x], [y]), within [reach], and pulls it towards that
+     * point with a soft pin until [release]. Returns the particle, or -1 when none is in reach. One
+     * particle at a time: grabbing again lets go of the last. See [Grab].
+     */
+    fun grab(x: Float, y: Float, reach: Float = Grab.REACH, compliance: Float = Grab.COMPLIANCE): Int = hand.grab(x, y, reach, compliance)
+
+    /** Moves the point the grabbed particle is pulled towards. However far it jumps, it pulls gently. */
+    fun moveGrab(x: Float, y: Float) = hand.moveTo(x, y)
+
+    /** Lets go of the grabbed particle, if any. */
+    fun release() = hand.release()
+
+    /** The particle being grabbed, or -1. */
+    val grabbed: Int get() = hand.particle
 
     /**
      * Adds a soft body of [shape] with its middle at [centerX] and its bottom on [baseY], and returns
