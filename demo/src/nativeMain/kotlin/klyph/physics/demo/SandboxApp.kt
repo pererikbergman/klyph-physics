@@ -40,7 +40,7 @@ private val BADGE = Color(0xFFD36BFFu)
  * details on from the start when [details] says so, and a HUD tells what is going on.
  */
 fun App.installSandbox(sandbox: Sandbox, details: Boolean = false) {
-    val debug = DebugDraw(assets.whitePixel).apply { showDetails = details }
+    val debug = DebugDraw(assets.whitePixel, assets.defaultFont).apply { showDetails = details }
     // Two points per world unit: the 640 x 368 units of a scene fill a 1280 x 720 window.
     camera.zoom = ZOOM
     camera.lookAt(Scenes.COLS * Scenes.TILE / 2f, Scenes.ROWS * Scenes.TILE / 2f)
