@@ -3,6 +3,7 @@ package klyph.physics.bridge
 import klyph.math.Rect
 import klyph.physics.Contacts
 import klyph.physics.Outline
+import klyph.physics.Particles
 import klyph.physics.SoftBody
 import klyph.physics.Solid
 import klyph.physics.SolidGrid
@@ -63,6 +64,23 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
             val dot = if (body.isCore(i)) CORE_DOT else DOT
             rect(canvas, body.positionX(i) - dot / 2f, body.positionY(i) - dot / 2f, dot, dot, if (body.isCore(i)) CORE else PARTICLE, layer + 3)
         }
+    }
+
+    /**
+     * Draws every live particle in [particles] as a square as wide as the particle (at least [DOT]), in the
+     * colour [colorOf] picks for its handle.
+     */
+    inline fun particles(canvas: Canvas, particles: Particles, colorOf: (Int) -> Color) {
+        for (p in 0 until particles.end) {
+            if (!particles.isAlive(p)) continue
+            val size = max(particles.radius(p) * 2f, DOT)
+            square(canvas, particles.x(p), particles.y(p), size, colorOf(p))
+        }
+    }
+
+    /** Draws a square [size] wide centred on ([x], [y]) in [color], in the plain view's layer. */
+    fun square(canvas: Canvas, x: Float, y: Float, size: Float, color: Color) {
+        rect(canvas, x - size / 2f, y - size / 2f, size, size, color, layer)
     }
 
     /** With details, marks every particle of [body] that [contacts] says is standing on a floor. */
