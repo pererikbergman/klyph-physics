@@ -38,8 +38,11 @@ private val BADGE = Color(0xFFD36BFFu)
 /**
  * Runs [sandbox] in this app: keys drive it, fixed steps move it, a [DebugDraw] shows it, with its
  * details on from the start when [details] says so, and a HUD tells what is going on.
+ *
+ * For pictures: with a [recording] the physics steps once per frame, not on the clock, and saves
+ * the frames the recording names. [clean] keeps only the scene's title and blurb on screen.
  */
-fun App.installSandbox(sandbox: Sandbox, details: Boolean = false) {
+fun App.installSandbox(sandbox: Sandbox, details: Boolean = false, recording: Recording? = null, clean: Boolean = false) {
     val debug = DebugDraw(assets.whitePixel, assets.defaultFont).apply { showDetails = details }
     // Two points per world unit: the 640 x 368 units of a scene fill a 1280 x 720 window.
     camera.zoom = ZOOM
@@ -63,7 +66,15 @@ fun App.installSandbox(sandbox: Sandbox, details: Boolean = false) {
         if (keys.isJustPressed(PERIOD)) sandbox.stepOnce(app.time.fixedDelta.inWholeNanoseconds / 1e9f)
     }
 
+    if (recording != null) {
+        addSystem(Phase.UPDATE) { app ->
+            sandbox.fixedStep(app.time.fixedDelta.inWholeNanoseconds / 1e9f)
+            recording.fileAfter(sandbox.stepCount)?.let { app.window.capture(it) }
+        }
+    }
+
     addSystem(Phase.FIXED_UPDATE) { app ->
+        if (recording != null) return@addSystem
         val start = TimeSource.Monotonic.markNow()
         if (sandbox.fixedStep(app.time.deltaSeconds)) {
             val millis = start.elapsedNow().inWholeNanoseconds / 1e6f
@@ -87,6 +98,7 @@ fun App.installSandbox(sandbox: Sandbox, details: Boolean = false) {
         title.append(sandbox.index + 1).append('/').append(sandbox.sceneCount).append("  ").append(sandbox.scene.name)
         canvas.drawText(font, title, MARGIN, MARGIN, scale = 3f, layer = HUD_LAYER, shadow = shadow)
         canvas.drawText(font, sandbox.scene.blurb, MARGIN, MARGIN + 34f, color = DIM, scale = 2f, layer = HUD_LAYER, shadow = shadow)
+        if (clean) return@addSystem
 
         // One line at a time: the built-in font's own line spacing is tighter than its glyphs at this scale.
         var line = 0
