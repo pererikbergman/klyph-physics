@@ -1,5 +1,7 @@
 package klyph.physics
 
+import kotlin.math.PI
+import kotlin.math.atan2
 import kotlin.math.sqrt
 
 /**
@@ -8,11 +10,12 @@ import kotlin.math.sqrt
  * it has pushed this substep (its lambda), a compliance means the same softness however many substeps
  * and iterations the world runs.
  *
- * Four kinds, each an `Int` handle in its own store:
+ * Five kinds, each an `Int` handle in its own store:
  * - **distance**: keeps two particles [rest] apart, pushing and pulling
  * - **rope**: the same, but only pulls, so it can go slack
  * - **pin**: holds a particle at a point in the world, which can move (that's how dragging works)
  * - **area**: keeps the area inside a ring of particles, so a squashed body bulges out elsewhere
+ * - **bend**: keeps the angle three particles make at the middle one, so a rope or a sheet resists folding
  *
  * A constraint on a particle that has been removed is skipped. Removed constraints' handles are reused.
  */
@@ -47,12 +50,23 @@ class Constraints internal constructor(private val particles: Particles) {
     private var scratchX = FloatArray(32)
     private var scratchY = FloatArray(32)
 
+    // Bends: the angle at `bendB` between `bendA` and `bendC`.
+    private var bendA = IntArray(16)
+    private var bendB = IntArray(16)
+    private var bendC = IntArray(16)
+    private var bendRest = FloatArray(16)
+    private var bendCompliance = FloatArray(16)
+    private var bendLambda = FloatArray(16)
+    private val bends = Slots()
+
     /** How many distance and rope constraints are alive. */
     val linkCount: Int get() = links.count
 
     val pinCount: Int get() = pins.count
 
     val areaCount: Int get() = areas.count
+
+    val bendCount: Int get() = bends.count
 
     /**
      * Keeps particles [a] and [b] [rest] apart, pushing and pulling, and returns its handle. Without a
@@ -159,11 +173,53 @@ class Constraints internal constructor(private val particles: Particles) {
     /** Removes [area]. Its handle is reused, but the room its ring took is not. */
     fun removeArea(area: Int) = areas.remove(area)
 
+    /**
+     * Keeps the angle at particle [b], from [a] through [b] to [c], at [rest], and returns its handle.
+     * The angle is how far the line turns at [b]: 0 is straight on, and it's signed, positive turning
+     * clockwise on screen (y grows down), so a bend can be held curled one way. Without a [rest], it's
+     * the angle they make now. Its [compliance] is per radian: how far it turns per unit of torque.
+     */
+    fun bend(a: Int, b: Int, c: Int, compliance: Float = 0f, rest: Float = Float.NaN): Int {
+        requireParticle(a)
+        requireParticle(b)
+        requireParticle(c)
+        require(a != b && b != c && a != c) { "a bend needs three different particles, not $a, $b and $c" }
+        requireCompliance(compliance)
+        val bend = bends.take()
+        if (bend == bendA.size) growBends()
+        bendA[bend] = a
+        bendB[bend] = b
+        bendC[bend] = c
+        bendRest[bend] = if (rest.isNaN()) angle(a, b, c) else wrap(rest)
+        bendCompliance[bend] = compliance
+        bendLambda[bend] = 0f
+        return bend
+    }
+
+    /** The angle [bend]'s line turns at its middle particle right now, in radians from -π to π. */
+    fun bendAngle(bend: Int): Float = angle(bendA[bend], bendB[bend], bendC[bend])
+
+    fun restAngle(bend: Int): Float = bendRest[bend]
+
+    fun bendA(bend: Int): Int = bendA[bend]
+
+    fun bendB(bend: Int): Int = bendB[bend]
+
+    fun bendC(bend: Int): Int = bendC[bend]
+
+    fun isBendAlive(bend: Int): Boolean = bends.isAlive(bend)
+
+    /** One past the highest bend handle. */
+    val bendEnd: Int get() = bends.end
+
+    fun removeBend(bend: Int) = bends.remove(bend)
+
     /** Removes every constraint. */
     fun clear() {
         links.clear()
         pins.clear()
         areas.clear()
+        bends.clear()
         ringUsed = 0
     }
 
@@ -172,6 +228,7 @@ class Constraints internal constructor(private val particles: Particles) {
         linkLambda.fill(0f, 0, links.end)
         pinLambda.fill(0f, 0, pins.end)
         areaLambda.fill(0f, 0, areas.end)
+        bendLambda.fill(0f, 0, bends.end)
     }
 
     /** One pass over every constraint, for a substep of [h] seconds. */
@@ -180,6 +237,7 @@ class Constraints internal constructor(private val particles: Particles) {
         for (c in 0 until links.end) if (links.isAlive(c)) solveLink(c, hh)
         for (c in 0 until pins.end) if (pins.isAlive(c)) solvePin(c, hh)
         for (c in 0 until areas.end) if (areas.isAlive(c)) solveArea(c, hh)
+        for (c in 0 until bends.end) if (bends.isAlive(c)) solveBend(c, hh)
     }
 
     private fun solveLink(c: Int, hh: Float) {
@@ -254,6 +312,64 @@ class Constraints internal constructor(private val particles: Particles) {
         }
     }
 
+    /**
+     * The angle at b is θ = atan2(u × v, u · v) for u = b - a and v = c - b. Its gradient: turning u
+     * by moving a changes θ by (-u.y, u.x) / |u|² per unit, turning v by moving c by (-v.y, v.x) / |v|²,
+     * and b takes minus the sum, so the three moves never shift or spin the whole.
+     */
+    private fun solveBend(c: Int, hh: Float) {
+        val a = bendA[c]
+        val b = bendB[c]
+        val d = bendC[c]
+        val ps = particles
+        if (ps.flags[a] and Particles.ALIVE == 0 || ps.flags[b] and Particles.ALIVE == 0 || ps.flags[d] and Particles.ALIVE == 0) return
+        val ux = ps.x[b] - ps.x[a]
+        val uy = ps.y[b] - ps.y[a]
+        val vx = ps.x[d] - ps.x[b]
+        val vy = ps.y[d] - ps.y[b]
+        val uu = ux * ux + uy * uy
+        val vv = vx * vx + vy * vy
+        if (uu < 1e-8f || vv < 1e-8f) return
+        val error = wrap(atan2(ux * vy - uy * vx, ux * vx + uy * vy) - bendRest[c])
+        val gax = -uy / uu
+        val gay = ux / uu
+        val gcx = -vy / vv
+        val gcy = vx / vv
+        val gbx = -gax - gcx
+        val gby = -gay - gcy
+        val wa = ps.invMass[a]
+        val wb = ps.invMass[b]
+        val wc = ps.invMass[d]
+        val weighted = wa * (gax * gax + gay * gay) + wb * (gbx * gbx + gby * gby) + wc * (gcx * gcx + gcy * gcy)
+        val softness = bendCompliance[c] / hh
+        if (weighted + softness == 0f) return
+        val change = (-error - softness * bendLambda[c]) / (weighted + softness)
+        bendLambda[c] += change
+        ps.x[a] += wa * change * gax
+        ps.y[a] += wa * change * gay
+        ps.x[b] += wb * change * gbx
+        ps.y[b] += wb * change * gby
+        ps.x[d] += wc * change * gcx
+        ps.y[d] += wc * change * gcy
+    }
+
+    private fun angle(a: Int, b: Int, c: Int): Float {
+        val ps = particles
+        val ux = ps.x(b) - ps.x(a)
+        val uy = ps.y(b) - ps.y(a)
+        val vx = ps.x(c) - ps.x(b)
+        val vy = ps.y(c) - ps.y(b)
+        return atan2(ux * vy - uy * vx, ux * vx + uy * vy)
+    }
+
+    /** [angle] brought into -π..π, so a bend always turns back the short way. */
+    private fun wrap(angle: Float): Float {
+        var x = angle
+        while (x > PI.toFloat()) x -= 2f * PI.toFloat()
+        while (x < -PI.toFloat()) x += 2f * PI.toFloat()
+        return x
+    }
+
     private fun signedArea(area: Int): Float {
         val start = areaStart[area]
         val n = areaLength[area]
@@ -323,6 +439,16 @@ class Constraints internal constructor(private val particles: Particles) {
         areaCompliance = areaCompliance.copyOf(size)
         areaLambda = areaLambda.copyOf(size)
         areaSign = areaSign.copyOf(size)
+    }
+
+    private fun growBends() {
+        val size = bendA.size * 2
+        bendA = bendA.copyOf(size)
+        bendB = bendB.copyOf(size)
+        bendC = bendC.copyOf(size)
+        bendRest = bendRest.copyOf(size)
+        bendCompliance = bendCompliance.copyOf(size)
+        bendLambda = bendLambda.copyOf(size)
     }
 
     private companion object {

@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **138 tests**, all green
+- 🧪 **149 tests**, all green
 
 ## ▶️ Run it
 
@@ -63,7 +63,8 @@ hands its handle to a new one, so the world's memory stops growing. ♻️
 ### 3 · 🔗 Springs
 
 **Every kind of constraint.** A rigid rod, a soft spring, a rope that goes slack, a weight chasing a
-soft pin, and a water balloon held round by its area. Same solver, different compliance.
+soft pin, and a water balloon held round by its area. Below them, three ropes held at one end:
+stiff bends stick out, soft ones droop, none hang. Same solver, different compliance.
 
 <img src="docs/img/springs.gif" alt="a rod, a spring, a rope, a soft pin and a water balloon" width="100%">
 

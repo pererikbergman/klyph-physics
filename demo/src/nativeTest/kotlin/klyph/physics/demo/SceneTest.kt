@@ -109,6 +109,18 @@ class SceneTest {
         for (p in 0 until ps.end) assertTrue(ps.y(p) in 0f..roomHeight, "particle $p is still in the room: y = ${ps.y(p)}")
     }
 
+    @Test
+    fun inTheSpringsTheStiffChainSticksOutTheSoftOneDroopsAndThePlainOneHangs() {
+        val run = SpringsScene.create() as SpringsScene.Run
+        repeat(300) { run.step(dt) }
+        val ps = run.world.particles
+        val drop = run.chains.map { ps.y(it.last()) - ps.y(it.first()) }
+        val length = (run.chains[0].size - 1) * 8f
+        assertTrue(drop[0] < 0.25f * length, "stiff: the tip is ${drop[0]} below the clamp")
+        assertTrue(drop[1] > drop[0] + 5f && drop[1] < drop[2], "soft: ${drop[1]}")
+        assertTrue(drop[2] > 0.7f * length, "plain: ${drop[2]}")
+    }
+
     /**
      * Steps [run] [steps] times. Every step, every blob must be finite and inside the room. A blob may
      * snag on a corner and stretch for a moment, but not stay stretched: that is tearing. Its core may

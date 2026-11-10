@@ -32,6 +32,7 @@ class AllocationTest {
         repeat(500) { ps.add(it.toFloat(), 0f) }
         for (p in 1 until 300) cs.distance(p - 1, p, compliance = 0.001f)
         for (p in 300 until 400) cs.rope(p - 1, p)
+        for (p in 2 until 300) cs.bend(p - 2, p - 1, p, compliance = 0.01f)
         cs.pin(0)
         cs.area(IntArray(50) { ps.add(400f + 10f * kotlin.math.cos(it * 0.1257f), 10f * kotlin.math.sin(it * 0.1257f)) })
         // a floor and a moving solid under all of it, some particles round, so collisions run too

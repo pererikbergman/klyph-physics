@@ -69,6 +69,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         for (link in 0 until c.linkEnd) if (c.isLinkAlive(link) && (c.linkA(link) == p || c.linkB(link) == p)) c.removeLink(link)
         for (pin in 0 until c.pinEnd) if (c.isPinAlive(pin) && c.pinnedParticle(pin) == p) c.removePin(pin)
         for (area in 0 until c.areaEnd) if (c.isAreaAlive(area) && c.ringContains(area, p)) c.removeArea(area)
+        for (bend in 0 until c.bendEnd) if (c.isBendAlive(bend) && (c.bendA(bend) == p || c.bendB(bend) == p || c.bendC(bend) == p)) c.removeBend(bend)
         particles.remove(p)
     }
 
