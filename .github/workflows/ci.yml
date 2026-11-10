@@ -7,7 +7,7 @@ on:
 
 jobs:
   # The engine's tests on each host Kotlin/Native can run them on, plus the klyph glue's compile.
-  # The demo links on macOS only, where the klyph plugin can fetch SDL3 by itself.
+  # The demo links on macOS only, where the klyph plugin can fetch SDL3 by itself; Linux leaves it out.
   build:
     strategy:
       fail-fast: false
@@ -16,7 +16,7 @@ jobs:
           - os: macos-latest
             tasks: ":klyph-physics:allTests :klyph-physics-bridge:compileKotlinMacosArm64 :demo:linkDebugExecutableMacosArm64"
           - os: ubuntu-latest
-            tasks: ":klyph-physics:allTests :klyph-physics-bridge:compileKotlinLinuxX64"
+            tasks: ":klyph-physics:allTests :klyph-physics-bridge:compileKotlinLinuxX64 -Pdemo=false"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
