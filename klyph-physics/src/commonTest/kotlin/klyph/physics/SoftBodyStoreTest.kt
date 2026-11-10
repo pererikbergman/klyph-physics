@@ -1,22 +1,19 @@
 package klyph.physics
 
 import kotlin.math.abs
-import kotlin.math.ln
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-/** The soft body, ported onto the world's stores: the old [SoftBodyTest]'s checks, through handles. */
+/** Soft bodies: rings and cores of world particles, held by world constraints, reached through handles. */
 class SoftBodyStoreTest {
     private val dt = 1f / 60f
     private val world = PhysicsWorld(PhysicsConfig(gravity = Vec.ZERO))
     private val bodies = world.softBodies
 
-    private fun dome(): SoftBodyShape = SoftBodies.semiDisc(
-        TestBodies.RADIUS, TestBodies.ARC_SEGMENTS, TestBodies.BASE_SEGMENTS, TestBodies.CORE_MASS, TestBodies.HEIGHT_SCALE,
-    )
+    private fun dome(): SoftBodyShape = TestBodies.dome()
 
     @Test
     fun theRestShapeIsADomeAsWideAsTwiceItsRadiusAndHeightScaleTimesItsRadiusTall() {
@@ -73,28 +70,6 @@ class SoftBodyStoreTest {
         repeat(10) { world.step(dt) }
         assertTrue(abs(bodies.area(b) - rest) < rest * 0.01f)
         assertEquals(1f, bodies.maxEdgeStretch(b), 0.01f)
-    }
-
-    @Test
-    fun thePortedBodyMovesLikeTheOldOne() {
-        // The same dome, the same gravity, the same 4 x 6 passes and the same damping per substep: the
-        // old standalone body and the one made of world particles and constraints should agree.
-        val h = dt / 4
-        val damping = -ln(0.999f) / h
-        val w = PhysicsWorld(PhysicsConfig(gravity = Vec(0f, TestBodies.GRAVITY), substeps = 4, iterations = 6, damping = damping))
-        val ported = w.softBody(dome(), 50f, 0f)
-        val old = TestBodies.dome().apply { placeAt(50f, 0f) }
-        val p0 = w.particles.x(w.softBodies.particle(ported, 0))
-        assertEquals(old.positionX(0), p0, 0.001f)
-        repeat(60) {
-            w.step(dt)
-            repeat(4) { old.substep(h, TestBodies.GRAVITY) {} }
-        }
-        for (i in 0..old.ringCount) {
-            val p = w.softBodies.particle(ported, i)
-            assertEquals(old.positionX(i), w.particles.x(p), 0.05f, "particle $i x")
-            assertEquals(old.positionY(i), w.particles.y(p), 0.05f, "particle $i y")
-        }
     }
 
     @Test

@@ -17,7 +17,7 @@
 between 0 and 1. Problem: run more passes and things get stiffer. Your jelly turns to rubber
 because you added an iteration. 😬
 
-**XPBD** (*extended* PBD) fixes that. From `SoftBody.pull`, for a distance constraint:
+**XPBD** (*extended* PBD) fixes that. From `Constraints.solveLink`, for a distance constraint:
 
 ```kotlin
 val softness = compliance / (h * h)                       // α̃: compliance, scaled to the substep
@@ -31,7 +31,7 @@ b -= wb * change * direction                              // heavy ones move les
 - `wa`, `wb` are **inverse masses**. The core is 34× heavier, so its `w` is 1/34 and it barely moves.
 - `softness * lambda` is the magic bit 🪄: the more it has pushed already, the less it adds. It settles
   on the push a spring of that compliance would make, however many passes you run.
-- λ resets every substep, in `integrate`.
+- λ resets every substep, before the first pass.
 
 The area constraint works the same, with the gradient of the area instead of a direction:
 squash the body in one place and every outline particle gets pushed outward a bit.
@@ -40,7 +40,7 @@ squash the body in one place and every outline particle gets pushed outward a bi
 
 ## 🎛️ The knobs
 
-All in `SoftBodyTuning`. Smaller = stiffer. They're tiny numbers because they're in real units.
+All in `SoftBodyTuning`, handed to `world.softBody(shape, x, y, tuning)`. Smaller = stiffer. They're tiny numbers because they're in real units.
 
 | knob | default | turn it up 🔼 | turn it down 🔽 |
 |---|---|---|---|
@@ -53,10 +53,14 @@ The five blobs in the garden:
 | blob | edge | spoke | area | core |
 |---|---|---|---|---|
 | 🩷 jelly | default | `0.004` | `0.003` | 34 |
-| 🧡 rubber | default | `0.0001` | `0.0001` | 34, and `damping = 0.9995` |
+| 🧡 rubber | default | `0.0001` | `0.0001` | 34 |
 | 🩵 stiff | `0` | `0.00001` | `0.00001` | 34 |
 | 💜 heavy core | default | default | default | **80** |
 | 💚 light core | default | default | default | **5** |
+
+🧡 Rubber used to keep more of its speed too (`damping = 0.9995` a substep). Now all five live in one
+world, and damping is the world's (`PhysicsConfig.damping`), so rubber's bounce comes from its stiff
+spokes alone.
 
 ## 💥 Gotchas
 

@@ -2,12 +2,10 @@ package klyph.physics.bridge
 
 import klyph.math.Rect
 import klyph.physics.Constraints
-import klyph.physics.Contacts
 import klyph.physics.Outline
 import klyph.physics.Particles
 import klyph.physics.PhysicsWorld
 import klyph.physics.Ring
-import klyph.physics.SoftBody
 import klyph.physics.Solid
 import klyph.physics.SolidGrid
 import klyph.physics.SolidShape
@@ -43,16 +41,6 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
 
     private var spanLeft = FloatArray(32)
     private var spanRight = FloatArray(32)
-
-    /** Fills [body] in [color] and outlines it; with details, also marks every particle. */
-    fun softBody(canvas: Canvas, body: SoftBody, color: Color) {
-        ring(canvas, body, body.minY(), body.maxY(), color)
-        if (!showDetails) return
-        for (i in 0 until body.size) {
-            val dot = if (body.isCore(i)) CORE_DOT else DOT
-            rect(canvas, body.positionX(i) - dot / 2f, body.positionY(i) - dot / 2f, dot, dot, if (body.isCore(i)) CORE else PARTICLE, layer + 3)
-        }
-    }
 
     /**
      * Draws every live particle in [particles] as a square as wide as the particle (at least [DOT]), in the
@@ -117,12 +105,13 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         }
     }
 
-    /** With details, marks every particle of [body] that [contacts] says is standing on a floor. */
-    fun contacts(canvas: Canvas, body: SoftBody, contacts: Contacts) {
+    /** With details, marks every particle of [world] that stood on a floor during the last step. */
+    fun contacts(canvas: Canvas, world: PhysicsWorld) {
         if (!showDetails) return
-        for (i in 0 until body.size) {
-            if (!contacts.isOnFloor(i)) continue
-            rect(canvas, body.positionX(i) - FOOT / 2f, body.positionY(i) + 1f, FOOT, 1.5f, FLOOR_CONTACT, layer + 4)
+        val ps = world.particles
+        for (p in 0 until ps.end) {
+            if (!ps.isAlive(p) || !world.events.isOnFloor(p)) continue
+            rect(canvas, ps.x(p) - FOOT / 2f, ps.y(p) + ps.radius(p) + 1f, FOOT, 1.5f, FLOOR_CONTACT, layer + 4)
         }
     }
 

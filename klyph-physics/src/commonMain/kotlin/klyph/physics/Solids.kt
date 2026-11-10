@@ -34,7 +34,7 @@ class Solid internal constructor(
     var top: Float,
     val right: Float,
     var bottom: Float,
-    /** Bit flags the game gives this solid, such as "bounce pad", reported to [Contacts] when a body stands on it; 0 for none. */
+    /** Bit flags the game gives this solid, such as "bounce pad", reported by [Events] when a particle stands on it; 0 for none. */
     val tag: Int = 0,
     val col: Int = -1,
     val row: Int = -1,
@@ -55,6 +55,21 @@ class Solid internal constructor(
 
     private fun isWithinEdges(x: Float, y: Float) = x >= left && x <= right && y >= top && y <= bottom
 
+    /**
+     * Whether a particle of radius [r] centred at ([x], [y]) reaches into this solid: its centre is inside
+     * the solid grown by [r]. Corners grow square rather than round, which is close enough at the size
+     * particles are.
+     */
+    internal fun overlaps(x: Float, y: Float, r: Float): Boolean {
+        if (r == 0f) return contains(x, y)
+        if (x <= left - r || x >= right + r || y <= top - r || y >= bottom + r) return false
+        return when (shape) {
+            SolidShape.BOX -> true
+            SolidShape.RISING -> ((x - left) - (bottom - y)) * DIAGONAL > -r
+            SolidShape.FALLING -> ((right - left) - (x - left) - (bottom - y)) * DIAGONAL > -r
+        }
+    }
+
     companion object {
         /** A solid that is not tied to a grid cell, filling the given edges; its [top] and [bottom] may change. */
         fun moving(left: Float, top: Float, right: Float, bottom: Float, tag: Int = 0): Solid =
@@ -64,8 +79,9 @@ class Solid internal constructor(
 
 /**
  * A level's solids: at most one per cell of a grid of [cols] by [rows] cells, each [tileSize] wide,
- * plus [dynamic] ones that move. A particle is a point, so it can only be inside the one tile it is in, and [resolve] looks
- * at that tile and at every dynamic solid.
+ * plus [dynamic] ones that move. Set it as [PhysicsWorld.solids] and every
+ * particle is pushed out of it: a point particle can only be inside the one tile it is in, so only that
+ * tile and the dynamic solids are checked; a round one checks the tiles its radius reaches.
  */
 class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
     private val cells = arrayOfNulls<Solid>(cols * rows)
@@ -113,29 +129,49 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
      * floors. Faces buried against a neighbouring solid are never exits, so a floor made of many
      * tiles has no seams.
      */
-    fun resolve(body: SoftBody, contacts: Contacts) {
+    internal fun collide(particles: Particles, events: Events) {
         val tile = tileSize
-        for (i in 0 until body.size) {
-            val col = floor(body.positionX(i) / tile).toInt()
-            val row = floor(body.positionY(i) / tile).toInt()
-            val solid = at(col, row)
-            if (solid != null) push(body, i, solid, contacts)
-            for (d in dynamic) push(body, i, d, contacts)
+        val x = particles.x
+        val y = particles.y
+        for (p in 0 until particles.end) {
+            if (particles.invMass[p] == 0f) continue
+            val r = particles.radius[p]
+            if (r == 0f) {
+                val solid = at(floor(x[p] / tile).toInt(), floor(y[p] / tile).toInt())
+                if (solid != null) push(particles, p, solid, events)
+            } else {
+                // A round particle can reach into the tiles around the one its centre is in.
+                val col0 = floor((x[p] - r) / tile).toInt()
+                val col1 = floor((x[p] + r) / tile).toInt()
+                val row0 = floor((y[p] - r) / tile).toInt()
+                val row1 = floor((y[p] + r) / tile).toInt()
+                for (row in row0..row1) for (col in col0..col1) {
+                    val solid = at(col, row) ?: continue
+                    push(particles, p, solid, events)
+                }
+            }
+            for (k in 0 until dynamic.size) push(particles, p, dynamic[k], events)
         }
     }
 
-    private fun push(body: SoftBody, i: Int, solid: Solid, contacts: Contacts) {
-        val px = body.positionX(i)
-        val py = body.positionY(i)
-        if (!solid.contains(px, py)) return
+    /**
+     * Pushes particle [p] out of [solid] if it reaches into it. Every way out is worked out for the
+     * particle's centre, then its radius is added, so it ends up a radius clear of the surface.
+     */
+    private fun push(particles: Particles, p: Int, solid: Solid, events: Events) {
+        val px = particles.x[p]
+        val py = particles.y[p]
+        val r = particles.radius[p]
+        if (!solid.overlaps(px, py, r)) return
         val exit = exitScratch
         when (solid.shape) {
             SolidShape.BOX -> exitFromBox(solid, px, py, exit)
             SolidShape.RISING -> exitFromRising(solid, px, py, exit)
             SolidShape.FALLING -> exitFromFalling(solid, px, py, exit)
         }
-        body.pushOut(i, exit.nx, exit.ny, exit.depth)
-        if (exit.ny < MIN_FLOOR_NORMAL_Y) contacts.recordFloor(i, solid.tag)
+        if (exit.depth == Float.MAX_VALUE) return
+        particles.pushOut(p, exit.nx, exit.ny, exit.depth + r)
+        if (exit.ny < MIN_FLOOR_NORMAL_Y) events.recordFloor(p, solid.tag)
     }
 
     /** Writes to [exit] the cheapest way out of the box for a point inside it. */
@@ -155,8 +191,8 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
             nearestExit(solid, px, py, respectBuried = false)
             exit.depth += 0.01f
         }
-        // A tile with nowhere to go at all, such as the only cell of a one-cell grid: leave it be.
-        if (exit.depth == Float.MAX_VALUE) exit.depth = 0f
+        // A tile with nowhere to go at all, such as the only cell of a one-cell grid, keeps the
+        // impossible depth, and the particle is left be.
     }
 
     /** Writes to [exit] the way out, along the surface's normal, for a point under a surface that rises to the right. */
@@ -181,6 +217,8 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
     private fun tryCorner(solid: Solid, dx: Int, dy: Int, toX: Float, toY: Float, exit: Exit) {
         val col = solid.col + dx
         val row = solid.row + dy
+        // Only from inside: a round particle reaching in from outside the corner has a face to leave by.
+        if (toX <= 0f || toY <= 0f) return
         if (col !in 0 until cols || row !in 0 until rows || at(col, row) != null) return
         val depth = sqrt(toX * toX + toY * toY)
         if (depth >= exit.depth || depth < 1e-6f) return

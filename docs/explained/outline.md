@@ -21,9 +21,10 @@ even = "outside" = a **hole** that flickers in and out as it wobbles. Winding sa
 wound around twice, so it's solid. 🧱
 
 ```kotlin
-Outline.contains(body, x, y)                 // true / false
-Outline.spans(body, y, left, right)          // how many stretches; they're in left[i]..right[i]
-Outline.nearestPoint(body, x, y, out)        // squared distance; the point goes in out[0], out[1]
+val ring = world.softBodies.ring(blob)       // any Ring works: a body's skin is one
+Outline.contains(ring, x, y)                 // true / false
+Outline.spans(ring, y, left, right)          // how many stretches; they're in left[i]..right[i]
+Outline.nearestPoint(ring, x, y, out)        // squared distance; the point goes in out[0], out[1]
 ```
 
 **Spans** is how the bridge's `DebugDraw` fills a blob: one row per world unit, a thin rectangle
@@ -38,7 +39,7 @@ that goes exactly through a dot counts it once, never twice.
 
 | knob | what it does |
 |---|---|
-| `left`, `right` arrays | at least `body.ringCount` long. you own them, so nothing allocates |
+| `left`, `right` arrays | at least `ring.ringCount` long. you own them, so nothing allocates |
 | `DebugDraw` row height | `1` world unit. smaller is smoother and costs more draw calls |
 
 ## 💥 Gotchas

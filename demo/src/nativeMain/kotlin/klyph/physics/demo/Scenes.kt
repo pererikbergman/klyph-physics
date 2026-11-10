@@ -1,5 +1,6 @@
 package klyph.physics.demo
 
+import klyph.physics.PhysicsWorld
 import klyph.physics.SolidGrid
 
 /** Every scene of the sandbox, in the order the number keys choose them. */
@@ -21,7 +22,10 @@ object Scenes {
     }
 }
 
-/** A run made of blobs, so tests can look at them. */
+/** A run made of soft bodies in a world, so tests can look at them. */
 interface BlobRun {
-    val blobs: List<Blob>
+    val world: PhysicsWorld
+
+    /** The handles of its soft bodies in [world]. */
+    val blobs: IntArray
 }

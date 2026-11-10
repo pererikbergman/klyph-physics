@@ -1,7 +1,7 @@
 package klyph.physics.demo
 
 import klyph.physics.Outline
-import klyph.physics.SoftBody
+import klyph.physics.PhysicsWorld
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -57,15 +57,16 @@ class SceneTest {
         val coreOutFor = IntArray(run.blobs.size)
         repeat(steps) { step ->
             (run as SceneRun).step(dt)
-            for ((i, blob) in run.blobs.withIndex()) {
-                val body = blob.body
+            val bodies = run.world.softBodies
+            for ((i, body) in run.blobs.withIndex()) {
                 val where = "$name, blob $i, step $step"
-                assertTrue(body.isFinite(), "$where: not finite")
-                assertTrue(body.minX() >= 0f && body.maxX() <= roomWidth && body.minY() >= 0f && body.maxY() <= roomHeight, "$where: left the room")
-                val stretch = body.maxEdgeStretch()
+                assertTrue(bodies.isFinite(body), "$where: not finite")
+                val inRoom = bodies.minX(body) >= 0f && bodies.maxX(body) <= roomWidth && bodies.minY(body) >= 0f && bodies.maxY(body) <= roomHeight
+                assertTrue(inRoom, "$where: left the room")
+                val stretch = bodies.maxEdgeStretch(body)
                 stretchedFor[i] = if (stretch > MAX_STRETCH) stretchedFor[i] + 1 else 0
                 assertTrue(stretchedFor[i] <= MAX_STRETCHED_STEPS, "$where: torn, stretched $stretch times for ${stretchedFor[i]} steps")
-                coreOutFor[i] = if (coreDistanceOutside(body) > MAX_CORE_OUTSIDE) coreOutFor[i] + 1 else 0
+                coreOutFor[i] = if (coreDistanceOutside(run.world, body) > MAX_CORE_OUTSIDE) coreOutFor[i] + 1 else 0
                 assertTrue(coreOutFor[i] <= MAX_STRETCHED_STEPS, "$where: the core left its skin for ${coreOutFor[i]} steps")
             }
         }
@@ -74,12 +75,13 @@ class SceneTest {
     private val nearest = FloatArray(2)
 
     /** How far the core of [body] is outside its outline, or 0 when it's inside. */
-    private fun coreDistanceOutside(body: SoftBody): Float {
-        val core = body.ringCount
-        val x = body.positionX(core)
-        val y = body.positionY(core)
-        if (Outline.contains(body, x, y)) return 0f
-        return sqrt(Outline.nearestPoint(body, x, y, nearest))
+    private fun coreDistanceOutside(world: PhysicsWorld, body: Int): Float {
+        val core = world.softBodies.core(body)
+        val x = world.particles.x(core)
+        val y = world.particles.y(core)
+        val ring = world.softBodies.ring(body)
+        if (Outline.contains(ring, x, y)) return 0f
+        return sqrt(Outline.nearestPoint(ring, x, y, nearest))
     }
 
     private companion object {

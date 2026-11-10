@@ -1,30 +1,31 @@
 # 🦶 Contacts and tags
 
-⚡ **After a step, a body can tell you which of its dots are standing on something, and what that something is.**
+⚡ **After a step, the world can tell you which particles are standing on something, and what that something is.**
 
 <img src="../img/contacts.gif" alt="a blob's feet lighting up yellow, and a bounce pad launching it" width="100%">
 
 ## 🧠 How it works
 
 - 👉 when a solid pushes a particle **up** (any surface flatter than 60°), that particle is **on the floor**
-- 👉 every solid has a **tag**: bit flags you choose, like `PAD = 1`. the body collects the tags of everything it stood on
+- 👉 every solid has a **tag**: bit flags you choose, like `PAD = 1`. each particle collects the tags of everything it stood on
 - 👉 it keeps **this step** and **the last step** apart, because "can I jump?" asks about *before* you left the ground
 
 <details>
 <summary>🤓 the details</summary>
 
+`world.step` keeps the books for you. After a step, ask `world.events` about a particle, or
+`world.softBodies` about a whole body:
+
 ```kotlin
-val contacts = Contacts(body.size, body.ringCount)
+world.step(dt)
 
-// every fixed step:
-contacts.beginStep()                       // last step's touches become "previous"
-repeat(SUBSTEPS) { body.substep(h, g) { grid.resolve(body, contacts) } }
+world.events.isOnFloor(p)                  // particle p, the last step 🦶
+world.events.wasOnFloor(p)                 // particle p, the step before
+world.events.floorTags(p)                  // the tags it stood on, or-ed together
 
-// then ask:
-contacts.touchedFloor                      // anything at all? 🦶
-contacts.isOnFloor(i)                      // particle i, this step
-contacts.wasOnFloor(i)                     // particle i, last step. never the core
-contacts.touched(PAD)                      // stood on anything tagged PAD? 🟨
+world.softBodies.isOnFloor(blob)           // any of its particles? 🦶
+world.softBodies.touched(blob, PAD)        // stood on anything tagged PAD? 🟨
+world.softBodies.floorContactCount(blob)   // how many feet down
 ```
 
 The Blob Garden's bounce pads are just tiles with a tag:
@@ -33,13 +34,15 @@ The Blob Garden's bounce pads are just tiles with a tag:
 const val PAD = 1
 for (c in 28..30) grid.fill(c, 20, tag = PAD)
 // ...
-if (blob.contacts.touched(PAD)) blob.launch(0f, -BOUNCE_SPEED, dt)   // 🚀
+world.step(dt)
+for (blob in blobs) if (bodies.touched(blob, PAD)) launch(blob, 0f, -BOUNCE_SPEED)   // 🚀
 ```
 
 **What counts as a floor?** The push's normal must point up: `ny < -0.5` (y grows down). A flat
 floor is `-1`, a 45° slope `-0.71` ✅, a wall `0` ❌, a ceiling `+1` ❌.
 
-**No allocation**: two `BooleanArray`s, swapped by `beginStep`.
+**No allocation**: two `IntArray`s next to the particles' positions, a bit for "this step", a bit
+for "the step before", and the tags. A reused particle handle starts with nothing touched.
 
 </details>
 
@@ -52,11 +55,12 @@ floor is `-1`, a 45° slope `-0.71` ✅, a wall `0` ❌, a ceiling `+1` ❌.
 
 ## 💥 Gotchas
 
-- 💥 **Forget `beginStep` and the touches pile up forever.** Every touch stays "this step". Call it
-  once at the start of every fixed step, not every substep.
+- 💥 **Ask after the step, not during it.** A touch in any substep of the step counts, so the answer
+  is only complete once `step` returns. Ask before the next `step` for "was I on the floor?".
 - 💥 **Only floors report tags.** Walls and ceilings push but don't record anything. A tagged wall
   stays silent.
-- 💥 **Teleport? Call `clear()`.** Otherwise the body thinks it was standing on wherever it came from.
+- 💥 **Teleport and it still thinks it's on the ground** for one step: the last step's touches are
+  still there until the next `step`.
 
 ## 🧪 Try it
 

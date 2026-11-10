@@ -153,6 +153,25 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
         return true
     }
 
+    /** Whether any particle of [body] stood on a floor during the last step. */
+    fun isOnFloor(body: Int): Boolean {
+        for (i in 0..ringCounts[body]) if (world.events.isOnFloor(particle(body, i))) return true
+        return false
+    }
+
+    /** How many particles of [body] stood on a floor during the last step. */
+    fun floorContactCount(body: Int): Int {
+        var n = 0
+        for (i in 0..ringCounts[body]) if (world.events.isOnFloor(particle(body, i))) n++
+        return n
+    }
+
+    /** Whether [body] stood on a floor carrying any bit of [tag] during the last step. */
+    fun touched(body: Int, tag: Int): Boolean {
+        for (i in 0..ringCounts[body]) if (world.events.floorTags(particle(body, i)) and tag != 0) return true
+        return false
+    }
+
     /** The edge link from ring point [i] to the next. */
     fun edge(body: Int, i: Int): Int = linkPool[linkStart[body] + i]
 

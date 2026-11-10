@@ -30,7 +30,7 @@ world.particles.remove(p)                                                // 👋
 step(dt):
   repeat substeps (h = dt / substeps):
     🏃 integrate: every particle repeats its last move, plus gravity
-    🧮 repeat iterations: solve the constraints, then collide       ← #10 and on
+    🧮 repeat iterations: solve the constraints, then push everything out of world.solids 🧱
 ```
 
 **Handles get reused** ♻️. Remove particle 7 and the next `add` hands out 7 again, so the arrays

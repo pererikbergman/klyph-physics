@@ -34,6 +34,13 @@ class AllocationTest {
         for (p in 300 until 400) cs.rope(p - 1, p)
         cs.pin(0)
         cs.area(IntArray(50) { ps.add(400f + 10f * kotlin.math.cos(it * 0.1257f), 10f * kotlin.math.sin(it * 0.1257f)) })
+        // a floor and a moving solid under all of it, some particles round, so collisions run too
+        world.solids = SolidGrid(40, 10, 16f).apply {
+            for (c in 0 until cols) fill(c, 9)
+            fill(5, 8, SolidShape.RISING)
+            dynamic.add(Solid.moving(100f, 100f, 140f, 120f))
+        }
+        repeat(50) { ps.add(200f + it, 50f, radius = 2f) }
         val bytes = measure { repeat(10_000) { world.step(1f / 60f) } }
         assertTrue(bytes < 1024, "10 000 steps allocated $bytes bytes")
     }

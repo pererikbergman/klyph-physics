@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **106 tests**, all green
+- 🧪 **105 tests**, all green
 
 ## ▶️ Run it
 
