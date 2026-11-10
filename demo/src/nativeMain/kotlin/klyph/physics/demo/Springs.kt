@@ -12,11 +12,12 @@ import kotlin.math.sin
 
 /**
  * Every kind of constraint, one station each: a rigid rod, a soft spring, a rope that goes slack, a
- * soft pin chasing a moving point, and a water balloon held round by its area.
+ * soft pin chasing a moving point, and a water balloon held round by its area. Below them, three
+ * chains held level at one end: with stiff bends, with soft bends, and with none.
  */
 object SpringsScene : Scene {
     override val name = "Springs"
-    override val blurb = "rod, spring, rope, pin, area. same solver, different compliance"
+    override val blurb = "rod, spring, rope, pin, area, bend. same solver, different compliance"
 
     private const val TOP = 70f
     private const val SPRING_COMPLIANCE = 0.02f
@@ -25,10 +26,17 @@ object SpringsScene : Scene {
     private const val BALLOON_PARTICLES = 20
     private const val BALLOON_AREA_COMPLIANCE = 0.0002f
 
+    /** The chains: 12 particles 8 apart, the first two clamped, at the height of the second row. */
+    private const val CHAIN_TOP = 220f
+    private const val CHAIN_LINKS = 12
+    private const val CHAIN_GAP = 8f
+    private const val SOFT_BEND = 0.0000005f
+
     private val WEIGHT = Color(0xF2994AFFu)
     private val ANCHOR = Color(0x3A4A66FFu)
     private val TARGET = Color(0xFF6B6BFFu)
     private val BALLOON = Color(0x5BC0EBFFu)
+    private val CHAIN = Color(0xB8E05CFFu)
 
     override fun create(): SceneRun = Run()
 
@@ -40,6 +48,8 @@ object SpringsScene : Scene {
         private val weights = IntArray(4)
         private val chasePin: Int
         private val balloon = IntArray(BALLOON_PARTICLES)
+        val chains = Array(3) { IntArray(CHAIN_LINKS) }
+        private val chainX = floatArrayOf(64f, 264f, 464f)
         private var seconds = 0f
         private val pinCenterX = 448f
 
@@ -68,10 +78,17 @@ object SpringsScene : Scene {
             for (k in 0 until BALLOON_PARTICLES) cs.distance(balloon[k], balloon[(k + 1) % BALLOON_PARTICLES])
             cs.area(balloon, compliance = BALLOON_AREA_COMPLIANCE)
             cs.pin(balloon[0])
+            // 6. three chains clamped level at their left end: stiff bends stick out, soft ones droop, none hang.
+            for (k in 0 until 3) {
+                val chain = chains[k]
+                for (i in 0 until CHAIN_LINKS) chain[i] = ps.add(chainX[k] + i * CHAIN_GAP, CHAIN_TOP, mass = if (i < 2) Particles.STATIC else 1f)
+                for (i in 1 until CHAIN_LINKS) cs.distance(chain[i - 1], chain[i])
+                if (k < 2) for (i in 2 until CHAIN_LINKS) cs.bend(chain[i - 2], chain[i - 1], chain[i], compliance = if (k == 0) 0f else SOFT_BEND)
+            }
         }
 
         override val particleCount: Int get() = ps.count
-        override val bodyCount: Int get() = 5
+        override val bodyCount: Int get() = 8
 
         override fun step(dt: Float) {
             seconds += dt
@@ -86,11 +103,15 @@ object SpringsScene : Scene {
             for (a in anchors) debug.square(canvas, ps.x(a), ps.y(a), 8f, ANCHOR)
             for (w in weights) debug.square(canvas, ps.x(w), ps.y(w), 8f, WEIGHT)
             debug.square(canvas, pinCenterX + cos(seconds * 2f) * 40f, TOP + 70f + sin(seconds * 2f) * 40f, 4f, TARGET)
+            for (chain in chains) for (i in chain.indices) debug.square(canvas, ps.x(chain[i]), ps.y(chain[i]), if (i < 2) 6f else 3f, if (i < 2) ANCHOR else CHAIN)
             debug.label(canvas, "rod", 64f, TOP - 18f)
             debug.label(canvas, "spring", 192f, TOP - 18f)
             debug.label(canvas, "rope", 300f, TOP - 18f)
             debug.label(canvas, "soft pin", pinCenterX, TOP - 18f)
             debug.label(canvas, "area", 564f, TOP - 18f)
+            debug.label(canvas, "stiff bend", chainX[0] + 44f, CHAIN_TOP - 30f)
+            debug.label(canvas, "soft bend", chainX[1] + 44f, CHAIN_TOP - 30f)
+            debug.label(canvas, "no bend", chainX[2] + 44f, CHAIN_TOP - 30f)
         }
     }
 }
