@@ -1,6 +1,7 @@
 package klyph.physics.demo
 
 import klyph.math.Rect
+import klyph.physics.Broadphase
 import klyph.physics.PhysicsWorld
 import klyph.physics.bridge.DebugDraw
 import klyph.platform.Color
@@ -14,7 +15,9 @@ import kotlin.random.Random
 /**
  * A fountain of loose particles in a [PhysicsWorld]: a few hundred alive at once, each one added at
  * the nozzle and removed when it falls out of sight, so the world's handles are reused all the time.
- * Nothing collides yet; this is the world and its step on their own.
+ * Nothing collides yet; this is the world and its step on their own. With details on, it also shows
+ * what a [Broadphase] makes of the spray: the cells each particle is filed under, and every pair of
+ * particles that might touch.
  */
 object FountainScene : Scene {
     override val name = "Fountain"
@@ -40,6 +43,8 @@ object FountainScene : Scene {
         val nozzleY = Scenes.ROWS * Scenes.TILE - 8f
         val bottom = Scenes.ROWS * Scenes.TILE + 8f
 
+        val broadphase = Broadphase(cellSize = 16f)
+
         override val particleCount: Int get() = world.particles.count
 
         override fun step(dt: Float) {
@@ -55,6 +60,17 @@ object FountainScene : Scene {
         }
 
         override fun draw(canvas: Canvas, debug: DebugDraw, view: Rect) {
+            if (debug.showDetails) {
+                // Each particle's box, grown by how far it will move in the next step.
+                val ps = world.particles
+                broadphase.clear()
+                for (p in 0 until ps.end) {
+                    if (!ps.isAlive(p)) continue
+                    broadphase.addMoving(p, ps.x(p), ps.y(p), world.velocityX(p) * STEP, world.velocityY(p) * STEP, ps.radius(p))
+                }
+                broadphase.build()
+                debug.broadphase(canvas, broadphase, ps)
+            }
             debug.particles(canvas, world.particles) { p ->
                 val speed = world.velocityX(p) * world.velocityX(p) + world.velocityY(p) * world.velocityY(p)
                 lerp(SLOW, FAST, min(1f, speed / (SPEED_MAX * SPEED_MAX)))
@@ -64,6 +80,9 @@ object FountainScene : Scene {
     }
 
     private val NOZZLE = Color(0x3A4A66FFu)
+
+    /** One fixed step of the app, for how far a particle moves in one. */
+    private const val STEP = 1f / 60f
 
     private fun lerp(a: Color, b: Color, t: Float) =
         Color(a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t, 1f)

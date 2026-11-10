@@ -16,6 +16,7 @@ Want more? Every page has the details further down.
 | 🧱 | [Solids](solids.md) | tiles, slopes, and which way is out |
 | 🦶 | [Contacts and tags](contacts.md) | what am I standing on? |
 | 🌀 | [Outline](outline.md) | inside or outside, and how to draw it filled |
+| 🗂️ | [Broadphase](broadphase.md) | who might touch whom, without checking everyone |
 
 Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 
