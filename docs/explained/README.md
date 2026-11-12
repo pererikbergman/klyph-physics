@@ -21,7 +21,7 @@ Want more? Every page has the details further down.
 | 🧽 | [Friction and bounce](friction.md) | what grips, what slides, what bounces back |
 | 🪢 | [Ropes, chains and cloth](ropes.md) | one line for a rope, a chain or a sheet, and tearing |
 | 🖐️ | [Grab](grab.md) | drag anything with the mouse, and never break it |
-| 🔍 | [Debug views](debug-views.md) | see the solver work: stress, contacts, the grid |
+| 🔍 | [Debug views](debug-views.md) | see the solver work: stress, contacts, joints, the grid |
 | 📦 | [Rigid bodies and rotation](rigid-bodies.md) | one thing that moves and turns |
 | 🔷 | [Shapes, mass and inertia](shapes.md) | what a body is made of, and how hard it is to turn |
 | ✂️ | [SAT and contact points](sat.md) | where two shapes touch, to the point |

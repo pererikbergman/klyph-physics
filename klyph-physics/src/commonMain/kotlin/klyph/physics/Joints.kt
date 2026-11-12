@@ -212,6 +212,26 @@ class Joints internal constructor(private val particles: Particles, private val 
         return (anchorBX(j) - anchorAX(j)) * ux + (anchorBY(j) - anchorAY(j)) * uy
     }
 
+    /** Whether hinge or slider [j] has limits, and what they are: see [setLimits]. */
+    fun hasLimits(j: Int): Boolean = limited[j]
+
+    fun lowerLimit(j: Int): Float = lower[j]
+
+    fun upperLimit(j: Int): Float = upper[j]
+
+    /** Whether hinge or slider [j] has a motor on, and how fast it drives: see [setMotor]. */
+    fun hasMotor(j: Int): Boolean = motorMax[j] > 0f
+
+    fun motorSpeed(j: Int): Float = motorSpeed[j]
+
+    /** Slider [j]'s axis in the world now: it turns with its first end. */
+    fun axisX(j: Int): Float = bodies.cos[bodyA[j]] * axisX[j] - bodies.sin[bodyA[j]] * axisY[j]
+
+    fun axisY(j: Int): Float = bodies.sin[bodyA[j]] * axisX[j] + bodies.cos[bodyA[j]] * axisY[j]
+
+    /** The angle hinge [j]'s two ends had when it was made: its second end's less its first's. */
+    fun restAngle(j: Int): Float = restAngle[j]
+
     /** The force joint [j] held its anchors together with over the last substep. */
     fun force(j: Int): Float = force[j]
 

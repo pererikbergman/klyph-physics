@@ -271,4 +271,40 @@ class JointsTest {
         repeat(30) { world.step(dt) }
         assertTrue(bodies.y(box) > 150f, "it falls: ${bodies.y(box)}")
     }
+
+    @Test
+    fun aJointTellsWhatItWasSetTo() {
+        val world = PhysicsWorld(PhysicsConfig(gravity = Vec(0f, 0f)))
+        val joints = world.joints
+        val box = world.rigidBody(Shape.box(20f, 20f), 320f, 100f, angle = 0.5f)
+        val wheel = world.rigidBody(Shape.circle(10f), 340f, 100f)
+        val axle = joints.hinge(box, wheel, 340f, 100f)
+        assertFalse(joints.hasLimits(axle))
+        assertFalse(joints.hasMotor(axle))
+        assertEquals(-0.5f, joints.restAngle(axle), 1e-6f, "the wheel's angle less the box's")
+        joints.setLimits(axle, -0.2f, 0.3f)
+        joints.setMotor(axle, 4f, 100f)
+        assertTrue(joints.hasLimits(axle))
+        assertEquals(-0.2f, joints.lowerLimit(axle))
+        assertEquals(0.3f, joints.upperLimit(axle))
+        assertTrue(joints.hasMotor(axle))
+        assertEquals(4f, joints.motorSpeed(axle))
+        joints.setMotor(axle, 4f, 0f)
+        assertFalse(joints.hasMotor(axle), "no torque is off")
+        joints.clearLimits(axle)
+        assertFalse(joints.hasLimits(axle))
+    }
+
+    @Test
+    fun aSlidersAxisTurnsWithItsFirstBody() {
+        val world = PhysicsWorld(PhysicsConfig(gravity = Vec(0f, 0f)))
+        val box = world.rigidBody(Shape.box(20f, 20f), 320f, 100f, angle = 0.5f)
+        val rail = world.joints.slider(box, Joints.WORLD, 320f, 100f, 0f, 1f)
+        assertEquals(0f, world.joints.axisX(rail), 1e-5f, "as it was given, in the world")
+        assertEquals(1f, world.joints.axisY(rail), 1e-5f)
+        // turned half a radian more, it turns with the box
+        world.rigidBodies.twist(box, 0.5f / world.rigidBodies.inverseInertia(box))
+        assertEquals(-sin(0.5f), world.joints.axisX(rail), 1e-4f)
+        assertEquals(cos(0.5f), world.joints.axisY(rail), 1e-4f)
+    }
 }
