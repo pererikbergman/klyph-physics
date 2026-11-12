@@ -3,6 +3,7 @@ package klyph.physics.demo
 import klyph.physics.PhysicsWorld
 import klyph.physics.SolidGrid
 import klyph.physics.SolidShape
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlin.test.Test
@@ -194,6 +195,36 @@ class HeadlessTest {
         // the car is still on its wheels
         assertTrue(kotlin.math.abs(bodies.angle(run.chassis)) < 0.5f, "the car is upright: ${bodies.angle(run.chassis)}")
     }
+
+    @Test
+    fun inJointsTheCradlePassesItsSwingToTheLastBallAndTheBridgeHoldsTheRagdoll() {
+        val run = JointsScene.create() as JointsScene.Run
+        val bodies = run.world.rigidBodies
+        val joints = run.world.joints
+        val rest = FloatArray(JointsScene.BALLS) { JointsScene.CRADLE_X + it * JointsScene.SPACING }
+        var lastOut = 0f
+        var middleMoved = 0f
+        repeat(48) {
+            run.step(dt)
+            lastOut = maxOf(lastOut, bodies.x(run.balls.last()) - rest.last())
+            for (i in 1 until JointsScene.BALLS - 1) middleMoved = maxOf(middleMoved, abs(bodies.x(run.balls[i]) - rest[i]))
+        }
+        // pulled out a radian on a rod of 120, it swings 101 out
+        assertTrue(lastOut > 80f, "the last ball swung out: $lastOut")
+        assertTrue(middleMoved < 10f, "the middle three stayed put: they moved $middleMoved")
+
+        repeat(240) { run.step(dt) }
+        val torso = run.ragdolls[0].torso
+        val floor = (Scenes.ROWS - 2) * Scenes.TILE
+        assertTrue(bodies.x(torso) in JointsScene.BRIDGE_LEFT..JointsScene.BRIDGE_RIGHT, "the ragdoll is on the bridge: ${bodies.x(torso)}")
+        assertTrue(bodies.y(torso) in JointsScene.BRIDGE_Y..floor - 40f, "held up by it: ${bodies.y(torso)}")
+        for (j in run.ragdolls[0].hinges + run.bridgeHinges) {
+            val gap = sqrt(sq(joints.anchorAX(j) - joints.anchorBX(j)) + sq(joints.anchorAY(j) - joints.anchorBY(j)))
+            assertTrue(gap < 1f, "hinge $j holds together: its anchors are $gap apart")
+        }
+    }
+
+    private fun sq(x: Float) = x * x
 
     @Test
     fun allThirtyBodiesInTheBlobPileGetThroughTheFunnelIntoTheBin() {
