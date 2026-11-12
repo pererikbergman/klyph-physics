@@ -143,14 +143,23 @@ class HeadlessTest {
     }
 
     @Test
-    fun inCratesAndBlobsTheCushionHoldsItsCrateTheThrownBlobFellsTheTowerAndTheSwingScattersTheBlobs() {
+    fun inCratesAndBlobsTheCushionHoldsItsCrateTheBlobFellsTheTowerTheSwingScattersTheBlobsAndTheTrampolineBounces() {
         val run = CratesAndBlobsScene.create() as CratesAndBlobsScene.Run
         val bodies = run.world.rigidBodies
         val soft = run.world.softBodies
         val floor = (Scenes.ROWS - 2) * Scenes.TILE
         val crateHalf = CratesAndBlobsScene.CRATE / 2f
         val targetsAt = run.targets.map { soft.centerX(it) }
-        repeat(600) { run.step(dt) }
+        // the crate dropped on the trampoline: how low it went, and how far back up after
+        var lowest = 0f
+        var bounced = 0f
+        repeat(600) {
+            run.step(dt)
+            if (run.jumper < 0) return@repeat
+            val y = bodies.y(run.jumper)
+            if (y > lowest) lowest = y
+            bounced = maxOf(bounced, lowest - y)
+        }
         val bottom = bodies.y(run.crate) + crateHalf
         assertTrue(bottom < floor - 10f, "the cushion holds its crate up: its bottom at $bottom")
         assertEquals(CratesAndBlobsScene.CUSHION_X, bodies.x(run.crate), 6f, "on top of it")
@@ -164,6 +173,12 @@ class HeadlessTest {
         val dx = run.world.attachments.pointX(tie) - ps.x(run.rope.last)
         val dy = run.world.attachments.pointY(tie) - ps.y(run.rope.last)
         assertTrue(dx * dx + dy * dy < 1f, "the rope stays tied to its crate")
+        val trampoline = CratesAndBlobsScene.TRAMPOLINE_Y
+        assertTrue(lowest > trampoline, "the trampoline stretched under the crate: it went down to $lowest")
+        assertTrue(bounced > 15f, "and threw it back up $bounced")
+        val y = bodies.y(run.jumper)
+        assertTrue(y in trampoline - 20f..trampoline + 60f, "it rests on the trampoline at last, at $y")
+        assertTrue(bodies.x(run.jumper) in CratesAndBlobsScene.TRAMPOLINE_LEFT..CratesAndBlobsScene.TRAMPOLINE_RIGHT)
     }
 
     @Test
