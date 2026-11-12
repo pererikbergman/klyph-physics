@@ -14,6 +14,9 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     /** Distances, ropes, pins and areas between [particles]. */
     val constraints = Constraints(particles)
 
+    /** Bodies that keep their shape and turn: see [RigidBodies]. */
+    val rigidBodies = RigidBodies()
+
     /** Soft bodies: groups of [particles] held together by [constraints]. */
     val softBodies = SoftBodyStore(this)
 
@@ -45,7 +48,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     /**
      * Advances the world by [dt] seconds, in [PhysicsConfig.substeps] substeps. Each one moves every
-     * particle, then [PhysicsConfig.iterations] times solves the [constraints], keeps bodies out of each
+     * particle and rigid body, then [PhysicsConfig.iterations] times solves the [constraints], keeps bodies out of each
      * other, and pushes everything out of the [solids], so walls have the last word.
      */
     fun step(dt: Float) {
@@ -54,11 +57,14 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         substepLength = h
         val keep = exp(-config.damping * h)
         val restingMove = config.bounceSpeed * h
+        val gravity = config.gravity
         events.beginStep()
         hand.beginStep()
+        rigidBodies.beginStep(dt)
         collisions.beginStep(dt)
         repeat(config.substeps) {
             integrate(h, keep)
+            rigidBodies.integrate(h, keep, gravity.x, gravity.y, config.maxStep)
             constraints.beginSubstep()
             repeat(config.iterations) { pass ->
                 constraints.solve(h)
@@ -67,6 +73,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
                 collisions.solve()
                 solids?.collide(particles, events, restingMove)
             }
+            rigidBodies.updateVelocities(h)
         }
         constraints.tear()
         stepCount++
