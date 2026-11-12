@@ -30,7 +30,7 @@ SDL3 3.4+ yourself.
 
 | key | does |
 |---|---|
-| `1`–`9` / `[` `]` | pick a scene |
+| `1`–`9`, `0` / `←` `→` | pick a scene (`[` `]` too, on a US keyboard) |
 | `R` | reset the scene |
 | `Space` | pause |
 | `.` | one step at a time 🐢 |
@@ -130,7 +130,7 @@ friction keeps it from sliding off the one below. Right click to drop a box on t
 
 **Soft meets rigid.** A crate rests on a big blob and squashes it a little. A blob is thrown at a
 tower of crates and knocks it down. A heavy crate on a rope swings through three blobs and sweeps
-them away. Each side moves the other. The 11th scene, so press `]` to reach it. 💥
+them away. Each side moves the other. The 11th scene, so press `→` to reach it. 💥
 
 <img src="docs/img/coupling.gif" alt="a crate on a blob, a blob knocking down a tower of crates, a crate on a rope swinging through blobs" width="100%">
 
@@ -138,7 +138,7 @@ them away. Each side moves the other. The 11th scene, so press `]` to reach it. 
 
 **Bodies joined the way machines are.** A double pendulum swings wildly on two hinges. A car drives
 back and forth on motorised wheels. A welded shelf bears three crates and breaks at the fourth. A lift
-on a slider carries a crate down and up. Press `]` to reach it, and `F1` twice to see the joints. 🏗️
+on a slider carries a crate down and up. Press `→` to reach it, and `F1` twice to see the joints. 🏗️
 
 <img src="docs/img/joints.gif" alt="a double pendulum, a car on motorised wheels, a welded shelf breaking under crates, a lift on a slider" width="100%">
 

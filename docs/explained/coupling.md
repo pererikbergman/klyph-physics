@@ -85,7 +85,7 @@ particle: a rope ties a crate to a hook. A particle doesn't bump into the body i
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `]` until **Crates and Blobs**, the 11th scene: a crate sits on a big
+`./gradlew :demo:run`, press `→` until **Crates and Blobs**, the 11th scene: a crate sits on a big
 blob, a blob knocks a tower down, a crate on a rope swings through three more. Right click to drop
 blobs on the crates. Grab a crate and squash a blob with it. 🎯
 

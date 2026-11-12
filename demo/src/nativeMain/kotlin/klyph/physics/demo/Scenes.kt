@@ -6,7 +6,7 @@ import klyph.physics.SoftBodyShape
 import klyph.physics.SolidGrid
 import kotlin.math.floor
 
-/** Every scene of the sandbox, in the order the number keys choose them: `1` to `9`, then `0`; `[` and `]` reach the rest. */
+/** Every scene of the sandbox, in the order the number keys choose them: `1` to `9`, then `0`; the arrow keys reach the rest. */
 object Scenes {
     val all: List<Scene> = listOf(BlobGardenScene, FountainScene, SpringsScene, PileScene, GripAndBounceScene, RopeSwingScene, ClothScene, SandScene, TumbleScene, StacksScene, CratesAndBlobsScene, MachinesScene)
 
