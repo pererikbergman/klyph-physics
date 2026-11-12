@@ -58,6 +58,18 @@ class Shape private constructor(
     /** How hard the shape is to turn about its [centroidX], [centroidY], for a density of 1: its moment of inertia. */
     val inertia: Float
 
+    /**
+     * A circle around the whole shape, in the body's frame: the middle of its core's points and how far
+     * the furthest of them reaches, its radius too. What's further from the middle can't touch it.
+     */
+    internal val boundX: Float = vx.average().toFloat()
+    internal val boundY: Float = vy.average().toFloat()
+    internal val boundRadius: Float = run {
+        var far = 0f
+        for (i in vx.indices) far = max(far, sqrt((vx[i] - boundX) * (vx[i] - boundX) + (vy[i] - boundY) * (vy[i] - boundY)))
+        far + radius
+    }
+
     init {
         for (i in nx.indices) {
             val j = if (i + 1 == vx.size) 0 else i + 1

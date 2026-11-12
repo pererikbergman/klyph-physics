@@ -236,4 +236,24 @@ class CouplingTest {
         repeat(30) { world.step(dt) }
         assertTrue(bodies.y(crate) > 160f, "let go, it falls: ${bodies.y(crate)}")
     }
+
+    @Test
+    fun grainsAndBlobsMeetTheShapesOfABodyFarFromItsMiddle() {
+        // two shelves, far apart, made one static body: its middle is between them, over nothing
+        val world = room()
+        val shelves = world.rigidBody(
+            listOf(Shape.box(60f, 10f, x = -150f), Shape.box(60f, 10f, x = 150f)),
+            320f,
+            300f,
+            kind = BodyKind.STATIC,
+        )
+        val grain = world.particles.add(470f, 250f, radius = 2f, collides = true)
+        val blob = world.softBody(dome, 170f, 250f)
+        val missed = world.particles.add(320f, 250f, radius = 2f, collides = true)
+        repeat(120) { world.step(dt) }
+        assertEquals(300f - 5f - 2f, world.particles.y(grain), 0.5f, "the grain rests on the right shelf")
+        assertTrue(topOf(world, blob) < 295f, "the blob rests on the left one: its top is at ${topOf(world, blob)}")
+        assertTrue(world.particles.y(missed) > 400f, "between them, a grain falls through to the floor")
+        assertTrue(world.rigidBodies.isAlive(shelves))
+    }
 }
