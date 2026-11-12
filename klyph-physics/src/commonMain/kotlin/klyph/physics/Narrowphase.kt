@@ -294,41 +294,18 @@ class Narrowphase {
         var measured = false
         var nx = 0f
         var ny = 0f
-        var pax = 0f
-        var pay = 0f
-        var pbx = 0f
-        var pby = 0f
         var d = 0f
-        var feature = 0
         if (radii > 0f && sep > SLOP || sep > margin) {
-            var best = Float.MAX_VALUE
-            val edgesA = if (an == 2) 1 else an
-            val edgesB = if (bn == 2) 1 else bn
-            for (i in 0 until edgesA) {
-                val i1 = if (i + 1 == an) 0 else i + 1
-                for (j in 0 until edgesB) {
-                    val j1 = if (j + 1 == bn) 0 else j + 1
-                    val squared = closestPoints(axs[i], ays[i], axs[i1], ays[i1], bxs[j], bys[j], bxs[j1], bys[j1])
-                    if (squared < best) {
-                        best = squared
-                        pax = closeAX
-                        pay = closeAY
-                        pbx = closeBX
-                        pby = closeBY
-                        feature = (i shl 8) or j or ROUNDED
-                    }
-                }
-            }
-            d = sqrt(best)
+            d = nearestCores()
             if (d - radii > margin) return
-            nx = (pbx - pax) / d
-            ny = (pby - pay) / d
+            nx = (nearBX - nearAX) / d
+            ny = (nearBY - nearAY) / d
             measured = true
             // Leaning away from the face's own normal: a corner or a round end, one point.
             val faceX = if (flip) -bnx[edgeB] else anx[edgeA]
             val faceY = if (flip) -bny[edgeB] else any[edgeA]
             if (nx * faceX + ny * faceY < PARALLEL) {
-                nearestPoints(nx, ny, pax, pay, pbx, pby, d - radii, feature, out)
+                nearestPoints(nx, ny, nearAX, nearAY, nearBX, nearBY, d - radii, nearFeature, out)
                 return
             }
         }
@@ -340,8 +317,47 @@ class Narrowphase {
         } else {
             clip(axs, ays, anx, any, an, ar, edgeA, bxs, bys, bnx, bny, bn, br, out)
         }
-        // Along the face's normal, but just past its end, so clipping left nothing: the one nearest point.
-        if (out.count == 0 && measured) nearestPoints(nx, ny, pax, pay, pbx, pby, d - radii, feature, out)
+        if (out.count > 0 || radii == 0f) return
+        // Clipping left nothing. Either the cores are along the face's normal but just past its end, or
+        // they're two segments in line, end to end, whose faces' normals can't see the gap between their
+        // ends: then they only seemed to touch. Either way, the one nearest point.
+        if (!measured) {
+            d = nearestCores()
+            if (d - radii > margin || d <= TINY) return
+            nx = (nearBX - nearAX) / d
+            ny = (nearBY - nearAY) / d
+        }
+        nearestPoints(nx, ny, nearAX, nearAY, nearBX, nearBY, d - radii, nearFeature, out)
+    }
+
+    // The nearest points between the two cores and the edges they're on, as [nearestCores] found them.
+    private var nearAX = 0f
+    private var nearAY = 0f
+    private var nearBX = 0f
+    private var nearBY = 0f
+    private var nearFeature = 0
+
+    /** How far apart the two cores are at their nearest, every edge of one against every edge of the other; the points into the near- fields. */
+    private fun nearestCores(): Float {
+        var best = Float.MAX_VALUE
+        val edgesA = if (an == 2) 1 else an
+        val edgesB = if (bn == 2) 1 else bn
+        for (i in 0 until edgesA) {
+            val i1 = if (i + 1 == an) 0 else i + 1
+            for (j in 0 until edgesB) {
+                val j1 = if (j + 1 == bn) 0 else j + 1
+                val squared = closestPoints(axs[i], ays[i], axs[i1], ays[i1], bxs[j], bys[j], bxs[j1], bys[j1])
+                if (squared < best) {
+                    best = squared
+                    nearAX = closeAX
+                    nearAY = closeAY
+                    nearBX = closeBX
+                    nearBY = closeBY
+                    nearFeature = (i shl 8) or j or ROUNDED
+                }
+            }
+        }
+        return sqrt(best)
     }
 
     /** One contact along ([nx], [ny]) from the cores' nearest points, out to each shape's surface by its radius. */

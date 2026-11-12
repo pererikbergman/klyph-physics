@@ -11,11 +11,11 @@
 
 ## ⚡ 10-second version
 
-- 🍮 **soft bodies**, 🪢 **ropes**, 🧣 **cloth** and ⏳ **sand** today. 📦 rigid bodies and 🔩 joints are on the way
+- 🍮 **soft bodies**, 🪢 **ropes**, 🧣 **cloth**, ⏳ **sand** and 📦 **rigid bodies that stack** today. 🔩 joints are on the way
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **222 tests**, all green
+- 🧪 **236 tests**, all green
 
 ## ▶️ Run it
 
@@ -114,9 +114,17 @@ at 60 FPS and then some. 🏖️
 **Bodies that turn.** A circle, a box, a triangle, a capsule and a hammer of two boxes are tossed up
 with the same twist. They fly the same arc, because spin doesn't change a fall, but the ones that
 are hard to turn spin slowest. A kinematic paddle goes round a circle exactly where it's told, and a
-static bar never moves.
+static bar never moves. Right click to drop more in: the paddle knocks them about.
 
 <img src="docs/img/rigid-bodies.gif" alt="five shapes tossed up spinning at different speeds, a paddle going round a circle" width="100%">
+
+### 0 · 🧱 Stacks
+
+**Held up by contacts alone.** A tower of ten boxes and a pyramid of eight rows stand still, while
+a row of dominoes topples one after another. Two contact points under each box keep it flat, and
+friction keeps it from sliding off the one below. Right click to drop a box on them. 🎯
+
+<img src="docs/img/stacking.gif" alt="a tower and a pyramid of boxes standing while a row of dominoes topples" width="100%">
 
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.
@@ -150,7 +158,7 @@ SANDBOX_BENCH=600 ./gradlew :demo:runRelease        # time every scene's step
 ## 🚧 Status
 
 Milestones 1 and 2 of 5 are done: the sandbox, and the particle world with its soft bodies, ropes,
-cloth and sand. Under way: 📦 rigid bodies, which turn already. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
+cloth and sand. Under way: 📦 rigid bodies, which turn, collide, stack and slide already. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
 the work is tracked in the [milestones](../../milestones).
 
 It grew out of the slime in [slimy-the-blob](https://github.com/pererikbergman/slimy-the-blob). 🟢

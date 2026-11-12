@@ -78,6 +78,10 @@ flickering between two.
   not two: two points there would prop the capsule up on its middle.
 - 💥 **A face that clips to nothing.** A capsule's end just past a box's corner, along the face's
   normal, clipped to the face, left no points at all. It now falls back to the one nearest point.
+- 💥 **Two capsules in a line.** End to end, the faces of their cores look at each other sideways and
+  can't see the gap between their ends, so they seemed to touch, and clipping left nothing: two
+  capsules lying in a row on the floor went into each other. Whenever clipping finds nothing, the
+  cores are now measured exactly.
 
 ## 🧪 Try it
 

@@ -91,6 +91,10 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
     /** Solids that are not tied to a cell, such as a crusher. Checked every time. */
     val dynamic = ArrayList<Solid>()
 
+    /** Counts every change to the cells, so what's built from them, such as the edges rigid bodies meet, knows to build again. */
+    internal var version = 0
+        private set
+
     /** The solid in cell ([col], [row]), or `null` for air and for cells outside the grid. */
     fun at(col: Int, row: Int): Solid? = if (col in 0 until cols && row in 0 until rows) cells[row * cols + col] else null
 
@@ -109,12 +113,15 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
     private fun put(solid: Solid): Solid {
         require(solid.col in 0 until cols && solid.row in 0 until rows) { "Cell (${solid.col}, ${solid.row}) is outside the ${cols}x$rows grid" }
         cells[solid.row * cols + solid.col] = solid
+        version++
         return solid
     }
 
     /** Empties cell ([col], [row]). */
     fun removeAt(col: Int, row: Int) {
-        if (col in 0 until cols && row in 0 until rows) cells[row * cols + col] = null
+        if (col !in 0 until cols || row !in 0 until rows || cells[row * cols + col] == null) return
+        cells[row * cols + col] = null
+        version++
     }
 
     /** Whether the point ([x], [y]) is inside any solid by more than [margin] units; see [Solid.contains]. */
