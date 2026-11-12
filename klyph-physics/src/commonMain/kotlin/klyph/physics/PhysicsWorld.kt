@@ -51,6 +51,8 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     private val sleeping = Sleeping(this)
 
+    private val bullets = Bullets(this)
+
     /**
      * The boxes this step's collisions were found from, for drawing: one per soft body and one per
      * colliding particle that isn't part of a body. A box's id is `2·particle` for a particle and
@@ -93,6 +95,8 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         repeat(config.substeps) {
             integrate(h, keep)
             rigidBodies.integrate(h, keep, gravity.x, gravity.y, config.maxStep)
+            bullets.sweepParticles(particles)
+            bullets.sweepBodies()
             rigidContacts.find()
             constraints.beginSubstep()
             attachments.beginSubstep()
@@ -207,7 +211,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     /**
      * Moves every particle that can move: it repeats its last move, a little weaker for [keep], plus
-     * gravity, capped at [PhysicsConfig.maxStep].
+     * gravity, capped at [PhysicsConfig.maxStep] unless it's a bullet.
      */
     private fun integrate(h: Float, keep: Float) {
         val ps = particles
@@ -224,7 +228,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
             var dx = (x[p] - prevX[p]) * keep + gx
             var dy = (y[p] - prevY[p]) * keep + gy
             val length = sqrt(dx * dx + dy * dy)
-            if (length > maxStep) {
+            if (length > maxStep && ps.flags[p] and Particles.BULLET == 0) {
                 dx *= maxStep / length
                 dy *= maxStep / length
             }

@@ -282,6 +282,28 @@ class HeadlessTest {
     }
 
     @Test
+    fun inBulletsNoBulletPassesThePanesOrThePlateAndNoSparkTheLedge() {
+        val run = BulletsScene.create() as BulletsScene.Run
+        val bodies = run.world.rigidBodies
+        val ps = run.world.particles
+        val ledgeTop = BulletsScene.LEDGE_ROW * Scenes.TILE
+        var swung = 0f
+        var hits = 0
+        repeat(600) {
+            run.step(dt)
+            for (b in run.bullets) {
+                assertTrue(bodies.x(b) > Scenes.TILE && bodies.x(b) < BulletsScene.PLATE_X, "bullet $b went through, to ${bodies.x(b)}")
+                if (bodies.x(b) > BulletsScene.PANE_X - 10f && kotlin.math.abs(bodies.velocityX(b)) < BulletsScene.SPEED / 2f) hits++
+            }
+            for (p in run.sparks) assertTrue(ps.y(p) > ledgeTop, "spark $p went through the ledge, to ${ps.y(p)}")
+            for (pane in run.panes) swung = maxOf(swung, kotlin.math.abs(bodies.angle(pane)))
+        }
+        assertTrue(run.bullets.size >= 10, "it fired: ${run.bullets.size}")
+        assertTrue(hits > 0, "the bullets were stopped")
+        assertTrue(swung > 0.05f, "and knocked the panes swinging: $swung")
+    }
+
+    @Test
     fun allThirtyBodiesInTheBlobPileGetThroughTheFunnelIntoTheBin() {
         val run = PileScene.create() as PileScene.Run
         repeat(PileScene.COUNT * PileScene.EVERY + 600) { run.step(dt) }

@@ -114,6 +114,17 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         restitution[p] = material.restitution
     }
 
+    /**
+     * Makes particle [p] a bullet, or not. A bullet isn't held to [PhysicsConfig.maxStep] a substep:
+     * it goes as fast as it's thrown, and every substep it's swept from where it was to where it went,
+     * and stopped where it first meets a solid. So it can't pass through a thin one.
+     */
+    fun setBullet(p: Int, isBullet: Boolean) {
+        flags[p] = if (isBullet) flags[p] or BULLET else flags[p] and BULLET.inv()
+    }
+
+    fun isBullet(p: Int): Boolean = flags[p] and BULLET != 0
+
     /** Whether particle [p] is kept out of bodies and other particles that collide. See [add]. */
     fun collides(p: Int): Boolean = flags[p] and COLLIDES != 0
 
@@ -349,5 +360,6 @@ class Particles internal constructor(initialCapacity: Int = 64) {
 
         internal const val ALIVE = 1
         internal const val COLLIDES = 2
+        internal const val BULLET = 4
     }
 }
