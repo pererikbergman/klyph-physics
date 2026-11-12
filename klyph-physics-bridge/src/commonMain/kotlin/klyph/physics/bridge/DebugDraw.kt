@@ -316,21 +316,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
             line(canvas, ps.x(p), ps.y(p), x, y, EDGE, tint, top)
             rect(canvas, x - 1.5f, y - 1.5f, 3f, 3f, tint, top + 1)
         }
-        val joints = world.joints
-        for (j in 0 until joints.end) {
-            if (!joints.isAlive(j)) continue
-            val ax = joints.anchorAX(j)
-            val ay = joints.anchorAY(j)
-            val bx = joints.anchorBX(j)
-            val by = joints.anchorBY(j)
-            // a distance joint is its line; the others are a point, red as its two anchors pull apart
-            val stretch = if (joints.kind(j) == JointKind.DISTANCE) 0f else sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay))
-            val tint = stressColor(stretch / FULL_PIN)
-            line(canvas, ax, ay, bx, by, EDGE, tint, top)
-            val size = if (joints.kind(j) == JointKind.WELD) 4f else 3f
-            rect(canvas, ax - size / 2f, ay - size / 2f, size, size, JOINT, top + 1)
-            rect(canvas, bx - 1f, by - 1f, 2f, 2f, tint, top + 1)
-        }
+        joints(canvas, world)
         for (c in 0 until cs.bendEnd) {
             if (!cs.isBendAlive(c)) continue
             val p = cs.bendB(c)
@@ -355,14 +341,89 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     }
 
     /**
+     * From [DebugView.CONSTRAINTS] up, draws every joint of [world]: a dot on its first anchor, yellow,
+     * or orange when its motor is on, a line to its second coloured by how far it's been pulled from
+     * where it should be (a slider's off its axis; a distance joint's line is its stick), and a weld's
+     * dot bigger. A hinge with limits shows them as a wedge fixed to its second end, and its first
+     * end's direction as a needle inside it; a slider shows the stretch of its axis it may slide along.
+     */
+    fun joints(canvas: Canvas, world: PhysicsWorld) {
+        if (!view.shows(DebugView.CONSTRAINTS)) return
+        val joints = world.joints
+        val bodies = world.rigidBodies
+        val top = layer + 6
+        for (j in 0 until joints.end) {
+            if (!joints.isAlive(j)) continue
+            val ax = joints.anchorAX(j)
+            val ay = joints.anchorAY(j)
+            val bx = joints.anchorBX(j)
+            val by = joints.anchorBY(j)
+            val kind = joints.kind(j)
+            // how far it's been pulled from where it should be: a slider's off its axis, the others' apart
+            val stretch = when (kind) {
+                JointKind.DISTANCE -> 0f
+                JointKind.SLIDER -> abs((bx - ax) * joints.axisY(j) - (by - ay) * joints.axisX(j))
+                else -> sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay))
+            }
+            val tint = stressColor(stretch / FULL_PIN)
+            line(canvas, ax, ay, bx, by, EDGE, tint, top)
+            if (kind == JointKind.HINGE && joints.hasLimits(j)) {
+                // the angles the first end's x axis may point in: the second end's, less the rest angle, less the limits
+                val b = joints.endB(j)
+                val base = (if (b >= 0) bodies.angle(b) else 0f) - joints.restAngle(j)
+                arc(canvas, ax, ay, LIMIT_RADIUS, base - joints.upperLimit(j), base - joints.lowerLimit(j), LIMIT, top)
+                val needle = bodies.angle(joints.bodyA(j))
+                line(canvas, ax, ay, ax + cos(needle) * LIMIT_RADIUS, ay + sin(needle) * LIMIT_RADIUS, EDGE, JOINT, top + 1)
+            }
+            if (kind == JointKind.SLIDER) {
+                val ux = joints.axisX(j)
+                val uy = joints.axisY(j)
+                val from = if (joints.hasLimits(j)) joints.lowerLimit(j) else joints.position(j) - SLIDE_SPAN
+                val to = if (joints.hasLimits(j)) joints.upperLimit(j) else joints.position(j) + SLIDE_SPAN
+                line(canvas, ax + ux * from, ay + uy * from, ax + ux * to, ay + uy * to, EDGE, LIMIT, top)
+                for (end in floatArrayOf(from, to)) rect(canvas, ax + ux * end - 1f, ay + uy * end - 1f, 2f, 2f, LIMIT, top)
+            }
+            val size = if (kind == JointKind.WELD) 4f else 3f
+            rect(canvas, ax - size / 2f, ay - size / 2f, size, size, if (joints.hasMotor(j)) MOTOR else JOINT, top + 1)
+            rect(canvas, bx - 1f, by - 1f, 2f, 2f, tint, top + 1)
+        }
+    }
+
+    /** An arc of radius [r] about ([cx], [cy]) from angle [from] to [to], in short straight lines, with a line to each end. */
+    private fun arc(canvas: Canvas, cx: Float, cy: Float, r: Float, from: Float, to: Float, color: Color, layer: Int) {
+        val steps = 12
+        var px = cx + cos(from) * r
+        var py = cy + sin(from) * r
+        line(canvas, cx, cy, px, py, EDGE, color, layer)
+        for (k in 1..steps) {
+            val a = from + (to - from) * k / steps
+            val x = cx + cos(a) * r
+            val y = cy + sin(a) * r
+            line(canvas, px, py, x, y, EDGE, color, layer)
+            px = x
+            py = y
+        }
+        line(canvas, cx, cy, px, py, EDGE, color, layer)
+    }
+
+    /**
      * From [DebugView.EVERYTHING] up, marks every particle of [world] that touched something during the
      * last step: a dot where it touched, and a short line along the normal it was pushed out by, in
-     * yellow on a floor and cyan on anything else. And every rigid body's contact the same way, a line
-     * the way it pushes the first body: green where friction holds it, orange where it slides, dim
-     * where it was found near but didn't push.
+     * yellow on a floor and cyan on anything else. Every rigid body's velocity, as a line to where it
+     * will be in a tenth of a second. And every rigid contact the same way, a line the way it pushes
+     * the first body: green where friction holds it, orange where it slides, dim where it was found
+     * near but didn't push.
      */
     fun contacts(canvas: Canvas, world: PhysicsWorld) {
         if (!view.shows(DebugView.EVERYTHING)) return
+        // how fast each rigid body is going: where it will be in a tenth of a second
+        val bodies = world.rigidBodies
+        for (b in 0 until bodies.end) {
+            if (!bodies.isAlive(b) || bodies.inverseMass(b) == 0f) continue
+            val x = bodies.x(b)
+            val y = bodies.y(b)
+            line(canvas, x, y, x + bodies.velocityX(b) * AHEAD, y + bodies.velocityY(b) * AHEAD, EDGE, VELOCITY, layer + 7)
+        }
         val rigid = world.rigidContacts
         for (c in 0 until rigid.count) {
             val x = rigid.pointX(c)
@@ -392,10 +453,15 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
 
     /**
      * Shades every cell of [world]'s broadphase once per box filed there, so busy cells glow brighter,
-     * and outlines each box: one per soft body and one per colliding particle.
+     * and outlines each box: one per soft body and one per colliding particle, from the world's own
+     * broadphase, and one per rigid body, from its contacts' broadphase.
      */
     fun broadphase(canvas: Canvas, world: PhysicsWorld) {
-        val bp = world.broadphase
+        broadphaseBoxes(canvas, world.broadphase)
+        broadphaseBoxes(canvas, world.rigidContacts.broadphase)
+    }
+
+    private fun broadphaseBoxes(canvas: Canvas, bp: Broadphase) {
         val size = bp.cellSize
         for (e in 0 until bp.count) {
             val col0 = floor(bp.left(e) / size).toInt()
@@ -539,6 +605,16 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         val LABEL = Color(0xE8ECF4FFu)
         val CONTACT = Color(0x5BE0E0FFu)
         val JOINT = Color(0xFFD36BFFu)
+        val MOTOR = Color(0xFF9A3DFFu)
+        val LIMIT = Color(0.6f, 0.65f, 0.75f, 0.7f)
+        val VELOCITY = Color(0.9f, 0.92f, 1f, 0.6f)
+
+        /** How far out a hinge's limits are drawn, and how much of an unlimited slider's axis. */
+        const val LIMIT_RADIUS = 10f
+        const val SLIDE_SPAN = 20f
+
+        /** How far ahead a body's velocity line reaches, in seconds. */
+        const val AHEAD = 0.1f
         val HELD = Color(0x6BE07AFFu)
         val SLIDING = Color(0xFF9A3DFFu)
         val NEAR = Color(0.6f, 0.65f, 0.75f, 0.4f)

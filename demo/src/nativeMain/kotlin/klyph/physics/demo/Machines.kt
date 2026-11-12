@@ -12,7 +12,7 @@ import klyph.render.Canvas
 
 /**
  * Bodies joined the way machines are. On the left, a double pendulum: two planks on hinges, swinging
- * wildly. Along the floor, a car: a body on two wheels, each on a hinge with a motor, driving back
+ * wildly, its elbow bending only so far. Along the floor, a car: a body on two wheels, each on a hinge with a motor, driving back
  * and forth. In the middle, a shelf welded to nothing but the air, strong enough for three crates:
  * they're set on it one by one, and the fourth breaks it. On the right, a lift on a slider, its motor
  * taking a crate up and down between its limits. With `F1` on to the second level, the joints show.
@@ -28,6 +28,9 @@ object MachinesScene : Scene {
     const val PIVOT_X = 110f
     const val PIVOT_Y = 40f
     const val ARM = 90f
+
+    /** How far the pendulum's elbow bends either way, in radians. */
+    const val ELBOW = 1.5f
 
     /** The car's wheels' radius and how fast they turn, and where it turns back. */
     const val WHEEL = 10f
@@ -97,7 +100,8 @@ object MachinesScene : Scene {
 
         init {
             joints.hinge(upper, Joints.WORLD, PIVOT_X, PIVOT_Y)
-            joints.hinge(lower, upper, PIVOT_X + ARM, PIVOT_Y)
+            // its elbow bends only so far either way: F1 shows the wedge it may swing in
+            joints.setLimits(joints.hinge(lower, upper, PIVOT_X + ARM, PIVOT_Y), -ELBOW, ELBOW)
             for (axle in axles) joints.setMotor(axle, DRIVE, TORQUE)
             // a crate's weight times SHELF_HOLDS, at the shelf's weld: the crates' leverage adds no force
             val crateWeight = world.config.gravity.y / bodies.inverseMass(rider)
