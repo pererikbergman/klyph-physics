@@ -16,9 +16,10 @@ import kotlin.math.sin
 /**
  * Soft meets rigid. On the left, a crate rests on a big blob and squashes it a little, and the blob
  * holds it up. In the middle, after a second, a blob is thrown at a tower of crates and knocks it
- * down. On the right, a heavy crate tied to a rope swings down through three blobs and scatters them. Each
- * side moves the other: a crate is pushed back by what it hits, and turned when it's hit off its
- * middle. A right click drops another blob.
+ * down. On the right, a heavy crate tied to a rope swings down through three blobs and scatters them.
+ * Up on the left, a trampoline: a stretchy strand of round particles pinned at both ends, and a crate
+ * dropped on it bounces. Each side moves the other: a crate is pushed back by what it hits, and
+ * turned when it's hit off its middle. A right click drops another blob.
  */
 object CratesAndBlobsScene : Scene {
     override val name = "Crates and Blobs"
@@ -51,6 +52,19 @@ object CratesAndBlobsScene : Scene {
     /** How heavy it is for its size: five times a crate, a wrecking ball of a crate. */
     const val SWINGER_DENSITY = 0.25f
 
+    /**
+     * The trampoline: its two pinned ends, how many links, how round its particles are, and how
+     * stretchy each link is, the inverse of its stiffness. And the crate dropped on it: from where, and when.
+     */
+    const val TRAMPOLINE_LEFT = 100f
+    const val TRAMPOLINE_RIGHT = 250f
+    const val TRAMPOLINE_Y = 170f
+    const val TRAMPOLINE_LINKS = 15
+    const val SPRING_RADIUS = 3f
+    const val STRETCH = 3e-5f
+    const val JUMPER_Y = 60f
+    const val JUMP_AT = 0.5f
+
     /** The three blobs it swings through, on the floor below its pivot. */
     val TARGETS = floatArrayOf(490f, 522f, 554f)
 
@@ -59,6 +73,7 @@ object CratesAndBlobsScene : Scene {
     private val THROWN = Color(0xF27BB6FFu)
     private val ROPE_DOT = Color(0xC9A26BFFu)
     private val ANCHOR = Color(0x3A4A66FFu)
+    private val TRAMPOLINE = Color(0xF27BB6FFu)
 
     override fun create(): SceneRun = Run()
 
@@ -81,6 +96,22 @@ object CratesAndBlobsScene : Scene {
         val rope: Strand
         val swinger: Int
         val targets = IntArray(TARGETS.size) { world.softBody(Scenes.dome(), TARGETS[it], floor) }
+
+        val trampoline = world.rope(
+            TRAMPOLINE_LEFT,
+            TRAMPOLINE_Y,
+            TRAMPOLINE_RIGHT,
+            TRAMPOLINE_Y,
+            segments = TRAMPOLINE_LINKS,
+            compliance = STRETCH,
+            pinEnd = true,
+            radius = SPRING_RADIUS,
+            collides = true,
+        )
+
+        /** The crate dropped on the trampoline, once it's been dropped. */
+        var jumper = -1
+            private set
 
         init {
             // along the rope pulled back by [PULLED_BACK] from straight down
@@ -106,6 +137,9 @@ object CratesAndBlobsScene : Scene {
                 val soft = world.softBodies
                 for (i in 0..soft.ringCount(ball)) world.setVelocity(soft.particle(ball, i), THROW_SPEED_X, THROW_SPEED_Y)
             }
+            if (jumper < 0 && time >= JUMP_AT) {
+                jumper = world.rigidBody(Shape.box(TOWER_CRATE, TOWER_CRATE), (TRAMPOLINE_LEFT + TRAMPOLINE_RIGHT) / 2f, JUMPER_Y)
+            }
             world.step(dt)
         }
 
@@ -122,6 +156,10 @@ object CratesAndBlobsScene : Scene {
                 val pinned = ps.inverseMass(p) == 0f
                 debug.square(canvas, ps.x(p), ps.y(p), if (pinned) 6f else 2f, if (pinned) ANCHOR else ROPE_DOT)
             }
+            for (p in trampoline.particles) {
+                val pinned = ps.inverseMass(p) == 0f
+                debug.square(canvas, ps.x(p), ps.y(p), if (pinned) 6f else 2f * SPRING_RADIUS, if (pinned) ANCHOR else TRAMPOLINE)
+            }
             debug.softBody(canvas, world, cushion, BLOB)
             for (t in targets) debug.softBody(canvas, world, t, BLOB)
             for (s in spawned) debug.softBody(canvas, world, s, BLOB)
@@ -129,6 +167,7 @@ object CratesAndBlobsScene : Scene {
             debug.rigidBody(canvas, world, crate, CRATE_COLOR)
             for (b in tower) debug.rigidBody(canvas, world, b, CRATE_COLOR)
             debug.rigidBody(canvas, world, swinger, CRATE_COLOR)
+            if (jumper >= 0) debug.rigidBody(canvas, world, jumper, CRATE_COLOR)
         }
 
         override val particleCount get() = world.particles.count
