@@ -58,6 +58,18 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     internal var kind = IntArray(initialCapacity)
     internal var alive = BooleanArray(initialCapacity)
 
+    // Sleeping: whether each body is asleep, how long it has been still, which island it fell asleep
+    // with, and its inverse mass and inertia while it sleeps, when the solver sees 0 for both.
+    internal var asleep = BooleanArray(initialCapacity)
+    internal var stillFor = FloatArray(initialCapacity)
+    internal var island = IntArray(initialCapacity)
+    private var sleepingInvMass = FloatArray(initialCapacity)
+    private var sleepingInvInertia = FloatArray(initialCapacity)
+
+    /** How many bodies are asleep. */
+    var sleepingCount: Int = 0
+        private set
+
     /** What each body is made of, around its centre of mass; none for a body made with [add]. */
     internal var shapes = arrayOfNulls<Array<Shape>>(initialCapacity)
 
@@ -119,6 +131,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         invInertia[b] = if (moves) 1f / inertia else 0f
         hasTarget[b] = false
         alive[b] = true
+        asleep[b] = false
+        stillFor[b] = 0f
         shapes[b] = NO_SHAPES
         reach[b] = 0f
         setMaterial(b, Material.DEFAULT)
@@ -196,6 +210,9 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     /** Removes body [b]; its handle may be handed out again. Removing a dead body does nothing. */
     fun remove(b: Int) {
         if (!isAlive(b)) return
+        // what rested on it wakes and falls: a body that sleeps did so with everything it touched, and
+        // a static or kinematic one may hold up any sleeping body
+        if (kind[b] == DYNAMIC) wake(b) else wakeAll()
         alive[b] = false
         invMass[b] = 0f
         invInertia[b] = 0f
@@ -206,6 +223,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     /** Removes every body. Handles start from 0 again. */
     fun clear() {
         alive.fill(false, 0, end)
+        asleep.fill(false, 0, end)
+        sleepingCount = 0
         end = 0
         freeCount = 0
     }
@@ -230,14 +249,94 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     /** How fast body [b] turns, in radians per second, clockwise on screen. */
     fun angularVelocity(b: Int): Float = omega[b]
 
-    /** 0 for a body that nothing moves: a static or kinematic one. */
-    fun inverseMass(b: Int): Float = invMass[b]
+    /**
+     * Whether body [b] is asleep: it and everything it touched were still for
+     * [PhysicsConfig.timeToSleep], so it isn't moved or solved until something wakes it. See [wake].
+     */
+    fun isAsleep(b: Int): Boolean = asleep[b]
 
-    fun inverseInertia(b: Int): Float = invInertia[b]
+    /**
+     * Wakes body [b] and every body that fell asleep with it: its island, everything it touched or was
+     * joined to. A body wakes by itself when an awake one hits it, when it's grabbed, given a velocity,
+     * moved, or joined, and when what holds it up is removed; call this when you change the world some
+     * other way, such as removing a particle it rests on. Waking an awake body does nothing.
+     */
+    fun wake(b: Int) {
+        if (!isAlive(b) || !asleep[b]) return
+        val group = island[b]
+        for (other in 0 until end) if (asleep[other] && island[other] == group) wakeOne(other)
+    }
+
+    /** Wakes every sleeping body. */
+    fun wakeAll() {
+        if (sleepingCount == 0) return
+        for (b in 0 until end) if (asleep[b]) wakeOne(b)
+    }
+
+    private fun wakeOne(b: Int) {
+        asleep[b] = false
+        sleepingCount--
+        stillFor[b] = 0f
+        invMass[b] = sleepingInvMass[b]
+        invInertia[b] = sleepingInvInertia[b]
+        prevX[b] = x[b]
+        prevY[b] = y[b]
+        prevAngle[b] = angle[b]
+        movedX[b] = 0f
+        movedY[b] = 0f
+        turned[b] = 0f
+        // Woken after this substep's bodies moved, it moves as they did: gravity, from rest. Without
+        // that, it would sit out the substep's gravity while the solver still pushed it up against it,
+        // and come out moving up: a box woken under a load jolts it.
+        if (inSubstep) {
+            vx[b] = substepGravityX * substepLength
+            vy[b] = substepGravityY * substepLength
+            x[b] += vx[b] * substepLength
+            y[b] += vy[b] * substepLength
+        }
+    }
+
+    // While a substep is being solved: how long it is, and its gravity, for a body woken in it.
+    internal var inSubstep = false
+    private var substepLength = 0f
+    private var substepGravityX = 0f
+    private var substepGravityY = 0f
+
+    /**
+     * Puts body [b] to sleep with the rest of [group], its island: it stops where it is, and the solver
+     * sees nothing that can move it, so its contacts with other sleeping bodies and the solids aren't
+     * even looked for.
+     */
+    internal fun sleep(b: Int, group: Int) {
+        if (asleep[b]) return
+        asleep[b] = true
+        sleepingCount++
+        island[b] = group
+        vx[b] = 0f
+        vy[b] = 0f
+        omega[b] = 0f
+        sleepingInvMass[b] = invMass[b]
+        sleepingInvInertia[b] = invInertia[b]
+        invMass[b] = 0f
+        invInertia[b] = 0f
+    }
+
+    /** Whether body [b] can push a sleeping body awake: an awake dynamic body, or a kinematic one that moves. */
+    internal fun isMoving(b: Int): Boolean = when (kind[b]) {
+        DYNAMIC -> !asleep[b]
+        KINEMATIC -> vx[b] != 0f || vy[b] != 0f || omega[b] != 0f
+        else -> false
+    }
+
+    /** 0 for a body that nothing moves: a static or kinematic one. A sleeping body keeps its own. */
+    fun inverseMass(b: Int): Float = if (asleep[b]) sleepingInvMass[b] else invMass[b]
+
+    fun inverseInertia(b: Int): Float = if (asleep[b]) sleepingInvInertia[b] else invInertia[b]
 
     /** Gives body [b] a velocity of ([vx], [vy]) units per second. A static body stays still. */
     fun setVelocity(b: Int, vx: Float, vy: Float) {
         if (kind[b] == STATIC) return
+        wake(b)
         this.vx[b] = vx
         this.vy[b] = vy
     }
@@ -245,11 +344,14 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     /** Sets how fast body [b] turns, in radians per second. A static body stays still. */
     fun setAngularVelocity(b: Int, omega: Float) {
         if (kind[b] == STATIC) return
+        wake(b)
         this.omega[b] = omega
     }
 
     /** Puts body [b] at ([x], [y]), turned by [angle], keeping its velocity: a teleport, not a move. */
     fun moveTo(b: Int, x: Float, y: Float, angle: Float = this.angle[b]) {
+        // what rested on a moved static or kinematic body has nothing under it now
+        if (kind[b] == DYNAMIC) wake(b) else wakeAll()
         this.x[b] = x
         this.y[b] = y
         this.angle[b] = angle
@@ -297,8 +399,12 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * [gy]) and loses a little to damping, [keep], and none moves further than [maxStep].
      */
     internal fun integrate(h: Float, keep: Float, gx: Float, gy: Float, maxStep: Float) {
+        inSubstep = true
+        substepLength = h
+        substepGravityX = gx
+        substepGravityY = gy
         for (b in 0 until end) {
-            if (!alive[b]) continue
+            if (!alive[b] || asleep[b]) continue
             val k = kind[b]
             if (k == STATIC) continue
             prevX[b] = x[b]
@@ -332,7 +438,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      */
     internal fun updateVelocities(h: Float) {
         for (b in 0 until end) {
-            if (!alive[b] || kind[b] != DYNAMIC) continue
+            if (!alive[b] || kind[b] != DYNAMIC || asleep[b]) continue
             vx[b] += movedX[b] / h
             vy[b] += movedY[b] / h
             omega[b] += turned[b] / h
@@ -413,6 +519,11 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         invInertia = invInertia.copyOf(size)
         kind = kind.copyOf(size)
         alive = alive.copyOf(size)
+        asleep = asleep.copyOf(size)
+        stillFor = stillFor.copyOf(size)
+        island = island.copyOf(size)
+        sleepingInvMass = sleepingInvMass.copyOf(size)
+        sleepingInvInertia = sleepingInvInertia.copyOf(size)
         targetX = targetX.copyOf(size)
         targetY = targetY.copyOf(size)
         targetAngle = targetAngle.copyOf(size)

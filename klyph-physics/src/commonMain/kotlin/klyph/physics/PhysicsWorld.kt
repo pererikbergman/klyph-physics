@@ -23,8 +23,15 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     /** What happened during the last step: which particles stood on a floor, and what it was tagged. */
     val events = Events(particles)
 
-    /** The level's walls, floors, slopes and moving solids, or `null` for none. Every particle is pushed out of them. */
+    /**
+     * The level's walls, floors, slopes and moving solids, or `null` for none. Every particle is pushed
+     * out of them. Setting it wakes every sleeping body: what they rested on may be gone.
+     */
     var solids: SolidGrid? = null
+        set(value) {
+            field = value
+            rigidBodies.wakeAll()
+        }
 
     /** The hand that drags particles about: see [grab]. */
     val hand = Grab(this)
@@ -41,6 +48,8 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     /** Where rigid bodies touched each other and the solids in the last substep, for drawing: see [RigidContacts]. */
     val rigidContacts = RigidContacts(this)
+
+    private val sleeping = Sleeping(this)
 
     /**
      * The boxes this step's collisions were found from, for drawing: one per soft body and one per
@@ -64,6 +73,9 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * alike, and pushes everything out of the
      * [solids], so walls have the last word. Last, rigid bodies take their velocities from how far they
      * moved, and their contacts' friction and bounce change them.
+     *
+     * After the substeps, islands of rigid bodies that have been still long enough fall asleep: they
+     * cost nothing until something wakes them. See [RigidBodies.isAsleep] and [RigidBodies.wake].
      */
     fun step(dt: Float) {
         require(dt > 0f && dt.isFinite()) { "dt is $dt: it must be a finite time more than 0" }
@@ -98,11 +110,14 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
                 solids?.collide(particles, events, restingMove)
                 rigidContacts.solve()
             }
+            // a body woken from here on, by a joint breaking, waits for the next substep to move
+            rigidBodies.inSubstep = false
             joints.endSubstep(h)
             rigidBodies.updateVelocities(h)
             rigidContacts.solveVelocities(h, config.bounceSpeed, config.iterations)
         }
         constraints.tear()
+        sleeping.update(dt)
         stepCount++
     }
 

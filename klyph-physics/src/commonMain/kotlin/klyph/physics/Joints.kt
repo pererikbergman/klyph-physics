@@ -141,12 +141,14 @@ class Joints internal constructor(private val particles: Particles, private val 
     fun setLimits(j: Int, lower: Float, upper: Float) {
         require(kind[j] == JointKind.HINGE || kind[j] == JointKind.SLIDER) { "only a hinge or a slider has limits" }
         require(lower <= upper) { "lower $lower is above upper $upper" }
+        wakeEnds(j)
         limited[j] = true
         this.lower[j] = lower
         this.upper[j] = upper
     }
 
     fun clearLimits(j: Int) {
+        wakeEnds(j)
         limited[j] = false
     }
 
@@ -157,18 +159,32 @@ class Joints internal constructor(private val particles: Particles, private val 
     fun setMotor(j: Int, speed: Float, maxTorque: Float) {
         require(kind[j] == JointKind.HINGE || kind[j] == JointKind.SLIDER) { "only a hinge or a slider has a motor" }
         require(maxTorque >= 0f) { "maxTorque is $maxTorque: it must not be negative" }
+        wakeEnds(j)
         motorSpeed[j] = speed
         motorMax[j] = maxTorque
     }
 
+    /** Removes joint [j]; its two bodies wake, as what held them is gone. */
     fun remove(j: Int) {
         if (!slots.isAlive(j)) return
+        wakeEnds(j)
         slots.remove(j)
         onBody[bodyA[j]]--
         if (endB[j] >= 0) onBody[endB[j]]--
     }
 
     fun isAlive(j: Int): Boolean = slots.isAlive(j)
+
+    private fun wakeEnds(j: Int) {
+        bodies.wake(bodyA[j])
+        if (endB[j] >= 0) bodies.wake(endB[j])
+    }
+
+    /**
+     * Whether joint [j] keeps its bodies from sleeping: a motor drives them, and a particle at its end
+     * isn't in any island, so it could be pulled away from a sleeping body unseen.
+     */
+    internal fun keepsAwake(j: Int): Boolean = motorMax[j] > 0f || endB[j] < WORLD
 
     fun kind(j: Int): JointKind = kind[j]!!
 
@@ -232,7 +248,7 @@ class Joints internal constructor(private val particles: Particles, private val 
     /** The angle hinge [j]'s two ends had when it was made: its second end's less its first's. */
     fun restAngle(j: Int): Float = restAngle[j]
 
-    /** The force joint [j] held its anchors together with over the last substep. */
+    /** The force joint [j] held its anchors together with over the last substep: 0 while its bodies sleep. */
     fun force(j: Int): Float = force[j]
 
     private fun add(k: JointKind, a: Int, b: Int, ax: Float, ay: Float, bx: Float, by: Float): Int {
@@ -243,6 +259,8 @@ class Joints internal constructor(private val particles: Particles, private val 
             b == WORLD -> {}
             else -> require(particles.isAlive(particleOf(b))) { "particle ${particleOf(b)} is not alive" }
         }
+        bodies.wake(a)
+        if (b >= 0) bodies.wake(b)
         val j = slots.take()
         if (j >= bodyA.size) grow()
         if (max(a, b) >= onBody.size) onBody = onBody.copyOf(max(max(a, b) + 1, 2 * onBody.size))

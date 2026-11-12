@@ -130,8 +130,11 @@ class HeadlessTest {
         for ((k, b) in (run.tower + run.pyramid).withIndex()) {
             assertEquals(startX[k], bodies.x(b), 1f, "box $b stays where it was stacked")
             assertEquals(startY[k], bodies.y(b), 1f, "box $b keeps its height")
+            assertTrue(bodies.isAsleep(b), "box $b has fallen asleep")
         }
-        repeat(900 - held) { run.step(dt) }
+        repeat(60) { run.step(dt) }
+        assertFalse(bodies.isAsleep(run.tower.last()), "the ball has woken the tower")
+        repeat(900 - held - 60) { run.step(dt) }
         val pyramidFrom = run.tower.size
         for ((k, b) in run.pyramid.withIndex()) {
             assertEquals(startX[pyramidFrom + k], bodies.x(b), 1f, "pyramid box $b stands: the ball misses it")
@@ -192,6 +195,8 @@ class HeadlessTest {
         var rose = false
         var swinging = 0
         var springGave = 0f
+        // the most the car leaned: turning round with all its torque, it rears up, but no further than this
+        var tilt = 0f
         val ballFrom = bodies.y(run.ball)
         var ballHighest = ballFrom
         val placeEvery = (MachinesScene.PLACE_EVERY / dt).toInt()
@@ -205,6 +210,7 @@ class HeadlessTest {
             if (kotlin.math.abs(bodies.angularVelocity(run.lower)) > 1f) swinging++
             for (shock in run.shocks) springGave = maxOf(springGave, kotlin.math.abs(joints.position(shock)))
             ballHighest = minOf(ballHighest, bodies.y(run.ball))
+            tilt = maxOf(tilt, kotlin.math.abs(bodies.angle(run.chassis)))
             // three crates on the shelf and it holds; the fourth breaks it
             if (step == (MachinesScene.PLACED) * placeEvery - 10) assertTrue(joints.isAlive(run.weld), "it bears three crates")
         }
@@ -212,8 +218,8 @@ class HeadlessTest {
         assertTrue(furthest > MachinesScene.TURN_LEFT_AT && turnedBack, "the car drove right, and turned back: as far as $furthest")
         assertTrue(lowest > MachinesScene.LIFT_TRAVEL - 2f && rose, "the lift went all the way down, $lowest, and back up")
         assertTrue(swinging > 300, "the pendulum keeps swinging: fast in $swinging steps")
-        // the car is still on its wheels
-        assertTrue(kotlin.math.abs(bodies.angle(run.chassis)) < 0.5f, "the car is upright: ${bodies.angle(run.chassis)}")
+        // the car stays on its wheels: it rears up as it turns round, but never tips over (on its side is 1.57)
+        assertTrue(tilt < 1f, "the car never tipped over: it leaned $tilt")
         assertTrue(springGave > 1f, "its springs gave, on the bump and under its weight: $springGave")
         for (shock in run.shocks) {
             assertTrue(kotlin.math.abs(joints.position(shock)) <= MachinesScene.TRAVEL + 0.5f, "a strut stays in its travel: ${joints.position(shock)}")

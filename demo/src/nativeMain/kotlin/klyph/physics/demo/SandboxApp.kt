@@ -142,6 +142,11 @@ fun App.installSandbox(
         stat(numbers.append("particles ").append(run.particleCount))
         numbers.clear()
         stat(numbers.append("bodies ").append(run.bodyCount))
+        val sleeping = run.world?.rigidBodies?.sleepingCount ?: 0
+        if (sleeping > 0) {
+            numbers.clear()
+            stat(numbers.append("asleep ").append(sleeping))
+        }
         numbers.clear()
         stat(numbers.append("contacts ").append(run.contactCount))
         numbers.clear()

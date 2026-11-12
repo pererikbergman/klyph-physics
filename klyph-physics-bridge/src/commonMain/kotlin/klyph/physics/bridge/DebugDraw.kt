@@ -105,10 +105,12 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
 
     /**
      * Fills every shape of rigid body [body] of [world] in [color] and outlines it, with a spoke on each
-     * round shape so its turning shows; with details, also marks its centre of mass.
+     * round shape so its turning shows; with details, also marks its centre of mass. A sleeping body
+     * is drawn faded, half way to the background.
      */
     fun rigidBody(canvas: Canvas, world: PhysicsWorld, body: Int, color: Color) {
         val bodies = world.rigidBodies
+        val color = if (bodies.isAsleep(body)) color.faded() else color
         val edge = color.darker()
         for (i in 0 until bodies.shapeCount(body)) {
             val shape = bodies.shape(body, i)
@@ -581,6 +583,10 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
 
     private fun Color.darker(): Color = Color(red * 0.6f, green * 0.6f, blue * 0.6f, alpha)
 
+    private fun Color.faded(): Color = Color(
+        (red + ASLEEP.red) / 2f, (green + ASLEEP.green) / 2f, (blue + ASLEEP.blue) / 2f, alpha,
+    )
+
     companion object {
         /** How many straight edges make a circle's outline; a capsule's two ends share as many. */
         const val ROUND_STEPS = 24
@@ -596,6 +602,9 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         const val FOOT = 3f
 
         val SOLID = Color(0x3A4A66FFu)
+
+        /** What a sleeping body's colour fades half way to. */
+        val ASLEEP = Color(0x2A3248FFu)
         val MOVING = Color(0x7A5A3AFFu)
         val PARTICLE = Color(0xFFFFFFFFu)
         val LINK = Color(0x9FB3D9FFu)

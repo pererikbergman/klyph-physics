@@ -34,6 +34,7 @@ class Attachments internal constructor(private val particles: Particles, private
         require(particles.isAlive(p)) { "particle $p is not alive" }
         require(bodies.isAlive(b)) { "body $b is not alive" }
         require(compliance >= 0f) { "compliance is $compliance: it must not be negative" }
+        bodies.wake(b)
         val a = slots.take()
         if (a >= particle.size) {
             val size = particle.size * 2

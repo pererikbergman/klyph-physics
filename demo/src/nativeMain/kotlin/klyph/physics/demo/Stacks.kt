@@ -17,7 +17,8 @@ import kotlin.math.sin
  * each knocks the next. Nothing here is held up but contacts: two points under each box keep it
  * flat, and friction keeps it from sliding off the one below. Then a wrecking ball, held up and out
  * on its rod, is let go: it swings down into the tower and knocks the top of it off. A right click
- * drops a box on them.
+ * drops a box on them. What stands still for half a second falls asleep, and is drawn faded until
+ * something wakes it.
  * With `F1` on to the last level, every contact shows: green where friction holds, orange where it
  * slides.
  */
