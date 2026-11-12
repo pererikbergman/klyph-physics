@@ -239,6 +239,28 @@ class HeadlessTest {
     private fun sq(x: Float) = x * x
 
     @Test
+    fun inTheDrumEverythingTumblesAndNothingGetsOut() {
+        val run = DrumScene.create() as DrumScene.Run
+        val bodies = run.world.rigidBodies
+        val ps = run.world.particles
+        var highest = Float.MAX_VALUE
+        // its ring is flat boxes, so where two meet the wall is 0.7 further out than its radius
+        val wall = -1f
+        repeat(600) { step ->
+            run.step(dt)
+            for (c in run.crates) highest = minOf(highest, bodies.y(c))
+            if (step % 60 == 59) {
+                for (c in run.crates) assertTrue(run.inside(bodies.x(c), bodies.y(c), wall), "crate $c is in the drum, at (${bodies.x(c)}, ${bodies.y(c)})")
+                for (p in 0 until ps.end) {
+                    if (ps.isAlive(p)) assertTrue(run.inside(ps.x(p), ps.y(p), wall), "particle $p is in the drum, at (${ps.x(p)}, ${ps.y(p)})")
+                }
+            }
+        }
+        assertEquals(DrumScene.SPEED * 600 * dt, bodies.angle(run.drum), 0.01f, "the drum turned at its speed")
+        assertTrue(highest < DrumScene.CENTER_Y, "a crate was carried up past the drum's middle: as high as $highest")
+    }
+
+    @Test
     fun allThirtyBodiesInTheBlobPileGetThroughTheFunnelIntoTheBin() {
         val run = PileScene.create() as PileScene.Run
         repeat(PileScene.COUNT * PileScene.EVERY + 600) { run.step(dt) }
