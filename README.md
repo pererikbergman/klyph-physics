@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **288 tests**, all green
+- 🧪 **308 tests**, all green
 
 ## ▶️ Run it
 
@@ -170,6 +170,15 @@ right, sparks shoot up at a ledge half a tile thick and drop back into their bin
 at the mouse. 🎯 [🚀 Fast things and tunnelling](docs/explained/tunnelling.md)
 
 <img src="docs/img/bullets.gif" alt="bullets with yellow tracers stopping at thin hanging panes and a plate, and sparks hitting the underside of a thin ledge" width="100%">
+
+### 16 · 🔦 Laser
+
+**A beam traced by raycasts.** A laser hits a mirror spinning on a motor, which throws it round the
+room, off mirrors on the walls, the ceiling, the floor and one swinging on a hinge. It ends on the first
+thing that isn't a mirror, which lights up. Each bounce is a new ray from where the last one hit. In the bin on the right a box query finds
+what's inside, and it glows. Right click to drop a crate or a blob. 🎯 [🔦 Raycasts and queries](docs/explained/queries.md)
+
+<img src="docs/img/laser.gif" alt="a red laser beam bouncing between mirrors, ending on crates, blobs and walls, with crates and a blob glowing in a bin" width="100%">
 
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.

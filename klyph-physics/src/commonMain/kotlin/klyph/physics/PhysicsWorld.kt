@@ -53,6 +53,8 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     private val bullets = Bullets(this)
 
+    private val queries = Queries(this)
+
     /**
      * The boxes this step's collisions were found from, for drawing: one per soft body and one per
      * colliding particle that isn't part of a body. A box's id is `2·particle` for a particle and
@@ -194,6 +196,33 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         material: Material = Material.DEFAULT,
         kind: BodyKind = BodyKind.DYNAMIC,
     ): Int = rigidBodies.add(shapes, x, y, angle, density, material, kind)
+
+    /**
+     * Finds the first thing the ray from ([fromX], [fromY]) to ([toX], [toY]) hits, of [what] (see
+     * [Query]), and writes where into [hit]: the point, the surface's normal there, how far along the
+     * ray, and the rigid body and shape, soft body or solid. Returns whether it hit anything.
+     *
+     * Rigid bodies are hit on their shapes, soft bodies on their outlines, and the solids on their open
+     * faces. Something the ray starts inside isn't hit: a ray from a surface going out doesn't hit
+     * that surface, so a reflected ray can start where the last one hit. Allocates nothing.
+     */
+    fun raycast(fromX: Float, fromY: Float, toX: Float, toY: Float, hit: RayHit, what: Int = Query.EVERYTHING): Boolean =
+        queries.raycast(fromX, fromY, toX, toY, hit, what)
+
+    /**
+     * Finds everything of [what] (see [Query]) that the point ([x], [y]) is inside, writes it into
+     * [found] and returns how many. A point on a surface is outside it. Allocates nothing once [found]
+     * is big enough.
+     */
+    fun queryPoint(x: Float, y: Float, found: Overlaps, what: Int = Query.EVERYTHING): Int = queries.queryPoint(x, y, found, what)
+
+    /**
+     * Finds everything of [what] (see [Query]) that reaches into the box from ([left], [top]) to
+     * ([right], [bottom]), writes it into [found] and returns how many. Touching the box's edge counts.
+     * Allocates nothing once [found] is big enough.
+     */
+    fun queryBox(left: Float, top: Float, right: Float, bottom: Float, found: Overlaps, what: Int = Query.EVERYTHING): Int =
+        queries.queryBox(left, top, right, bottom, found, what)
 
     /**
      * Holds particle [p] to rigid body [body] at the point where [p] is now, as softly as [compliance],

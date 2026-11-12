@@ -304,6 +304,34 @@ class HeadlessTest {
     }
 
     @Test
+    fun inLaserTheBeamBouncesOffEveryMirrorAndOnlyEverCrossesOpenSpace() {
+        val run = LaserScene.create() as LaserScene.Run
+        val found = klyph.physics.Overlaps()
+        val bouncedOff = HashSet<Int>()
+        val endedOn = HashSet<klyph.physics.HitKind>()
+        var mostBounces = 0
+        repeat(900) { step ->
+            run.step(dt)
+            assertTrue(run.beamPoints >= 2, "step $step: no beam")
+            // the room is closed: the beam always ends on something
+            assertTrue(run.endedOn != klyph.physics.HitKind.NOTHING, "step $step: the beam went out of the room")
+            for (i in 0 until run.beamPoints - 1) {
+                val mx = (run.beamX[i] + run.beamX[i + 1]) / 2f
+                val my = (run.beamY[i] + run.beamY[i + 1]) / 2f
+                assertEquals(0, run.world.queryPoint(mx, my, found), "step $step: the beam's part $i passes through something at ($mx, $my)")
+            }
+            for (k in 0 until run.bounces) bouncedOff += run.bouncedOff[k]
+            endedOn += run.endedOn
+            mostBounces = maxOf(mostBounces, run.bounces)
+        }
+        assertEquals(run.mirrors.toSet(), bouncedOff, "it bounced off every mirror")
+        assertTrue(mostBounces >= 3, "and off several in a row: $mostBounces")
+        assertTrue(endedOn.containsAll(listOf(klyph.physics.HitKind.RIGID_BODY, klyph.physics.HitKind.SOFT_BODY, klyph.physics.HitKind.SOLID)), "it ended on a crate, a blob and a wall: $endedOn")
+        assertEquals(3, run.inBin.rigidBodyCount, "the box query finds the three crates in the bin")
+        assertEquals(1, run.inBin.softBodyCount, "and the blob")
+    }
+
+    @Test
     fun allThirtyBodiesInTheBlobPileGetThroughTheFunnelIntoTheBin() {
         val run = PileScene.create() as PileScene.Run
         repeat(PileScene.COUNT * PileScene.EVERY + 600) { run.step(dt) }
