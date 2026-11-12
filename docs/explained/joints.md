@@ -2,7 +2,7 @@
 
 ⚡ **Pin two bodies together at a point, along a line, or solid, and let a motor turn them: cars, lifts, pendulums.**
 
-<img src="../img/joints.gif" alt="a double pendulum swinging, a car driving on motorised wheels, crates set on a welded shelf until it breaks, and a lift going down and up" width="100%">
+<img src="../img/joints.gif" alt="a double pendulum swinging, a car on sprung, motorised wheels driving over a bump, crates set on a welded shelf until it breaks, a windmill turning, a lift going down and up, and a seesaw throwing a ball" width="100%">
 
 ## 🧠 How it works
 
@@ -89,10 +89,14 @@ pulled harder than its `breakForce` is removed.
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `→` until **Machines**, the 12th scene, then `F1` twice for the joints:
+`./gradlew :demo:run`, press `→` until **Machines**, the 12th scene ([`Machines.kt`](../../demo/src/nativeMain/kotlin/klyph/physics/demo/Machines.kt)), then `F1` twice for the joints:
 a double pendulum, a car on motorised wheels with sprung struts, a shelf that bears three crates and
 breaks at the fourth, a windmill, a lift on a slider and a seesaw. Right click to drop crates on the
-lift. 🏗️ Press `→` once more for **Joints**: a Newton's cradle, and a ragdoll dropped on a chain
-bridge.
+lift. 🏗️ Press `→` once more for **Joints** ([`JointsScene.kt`](../../demo/src/nativeMain/kotlin/klyph/physics/demo/JointsScene.kt)): a Newton's
+cradle, and a ragdoll dropped on a chain bridge, its limits drawn as wedges.
+
+<img src="../img/cradle-and-bridge.gif" alt="a Newton's cradle passing its swing from the first ball to the last, and a ragdoll dropped on a chain bridge of hinged planks" width="100%">
 
 📸 `scripts/capture.sh 12 joints --from 0 --to 7.5 --clean --view 2 --width 640`
+
+📸 `scripts/capture.sh 13 cradle-and-bridge --from 0 --to 5 --clean --view 2 --width 640`

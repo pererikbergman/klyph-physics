@@ -85,8 +85,10 @@ flickering between two.
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `9` for **Tumble**, then `F1`: the paddle on the right sweeps through
-the bar, and the contact points show where they overlap. One where a corner pokes in, two where it
-lies flat. Nothing pushes them apart yet: that's the contacts' job, next.
+`./gradlew :demo:run`, press `9` for **Tumble** ([`Tumble.kt`](../../demo/src/nativeMain/kotlin/klyph/physics/demo/Tumble.kt)), then `F1`: the
+paddle on the right sweeps through the bar, and the contact points show where they overlap. One
+where a corner pokes in, two where it lies flat. Neither is pushed: the paddle is kinematic and the
+bar static, so both go only where they're told. For contacts that push, see
+[🧱 stacking](stacking.md).
 
 📸 `scripts/capture.sh 9 sat --from 0.5 --to 1.5 --slow --view 1 --clean --crop 0.68,0.45,0.3,0.4 --width 600`

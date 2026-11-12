@@ -2,7 +2,7 @@
 
 ⚡ **Push overlapping bodies apart at their contact points, hold them in place sideways while friction can, and give back the bounce afterwards.**
 
-<img src="../img/stacking.gif" alt="a tower of ten boxes and a pyramid standing still while a row of dominoes topples one after another, every contact point shown green" width="100%">
+<img src="../img/stacking.gif" alt="a tower of ten boxes and a pyramid standing still while a row of dominoes topples one after another, every contact point shown green, until a wrecking ball swings into the tower" width="100%">
 
 ## 🧠 How it works
 
@@ -104,8 +104,8 @@ geometric mean of the two, restitution the larger.
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `0` for **Stacks**, then `F1` three times to see every contact: the
+`./gradlew :demo:run`, press `0` for **Stacks** ([`Stacks.kt`](../../demo/src/nativeMain/kotlin/klyph/physics/demo/Stacks.kt)), then `F1` three times to see every contact: the
 tower and the pyramid stand, the dominoes fall one by one, and at 2.5 s a wrecking ball swings into
 the tower. Right click to drop a box on them. 🎯
 
-📸 `scripts/capture.sh 10 stacking --from 0.5 --to 4 --view 3 --clean`
+📸 `scripts/capture.sh 10 stacking --from 0.5 --to 4.5 --view 3 --clean --width 640`

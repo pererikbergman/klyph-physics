@@ -2,7 +2,7 @@
 
 ⚡ **A particle that touches a rigid body pushes it back, at that point: crates squash blobs, blobs knock crates over.**
 
-<img src="../img/coupling.gif" alt="a crate resting on a big blob, a pink blob knocking down a tower of crates, and a heavy crate on a rope swinging through three blobs" width="100%">
+<img src="../img/coupling.gif" alt="a crate resting on a big blob, a pink blob knocking down a tower of crates, a crate bouncing on a trampoline of round particles, and a heavy crate on a rope swinging through three blobs" width="100%">
 
 ## 🧠 How it works
 
@@ -85,9 +85,13 @@ particle: a rope ties a crate to a hook. A particle doesn't bump into the body i
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `→` until **Crates and Blobs**, the 11th scene: a crate sits on a big
+`./gradlew :demo:run`, press `→` until **Crates and Blobs**, the 11th scene ([`CratesAndBlobs.kt`](../../demo/src/nativeMain/kotlin/klyph/physics/demo/CratesAndBlobs.kt)): a crate sits on a big
 blob, a blob knocks a tower down, a crate on a rope swings through three more, and a crate bounces
 on a trampoline of round particles. Right click to drop blobs on the crates. Grab a crate and squash
-a blob with it. 🎯 Press `→` twice more for **Drum**: blobs, crates and sand tumbling together.
+a blob with it. 🎯 Press `→` three more times for **Drum** ([`Drum.kt`](../../demo/src/nativeMain/kotlin/klyph/physics/demo/Drum.kt)): blobs, crates and sand tumbling together in one kinematic body.
 
-📸 `scripts/capture.sh 11 coupling --from 0 --to 3 --clean`
+<img src="../img/drum.gif" alt="a turning drum carrying blobs, crates and sand up its side until they tumble back down" width="50%">
+
+📸 `scripts/capture.sh 11 coupling --from 0 --to 3.5 --clean --width 640`
+
+📸 `scripts/capture.sh 14 drum --from 1.5 --to 5.5 --clean --crop 0.25,0.1,0.5,0.9 --width 320`
