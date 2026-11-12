@@ -19,7 +19,8 @@ import kotlin.math.sin
  * They fly the same arc, because spin doesn't change a fall, but they spin at different speeds: the
  * same twist turns a shape that's hard to turn, one with its mass far from its middle, more slowly.
  * The hammer turns about its centre of mass, the dot near its head. On the right, a kinematic paddle
- * goes round a circle, exactly where it's told, through a static bar that never moves. With `F1` on,
+ * goes round a circle, exactly where it's told, through a static bar that never moves: neither can
+ * push the other, but it knocks aside anything a right click drops in its way. With `F1` on,
  * the points where the two overlap show, as the narrowphase finds them: two where they lie flat on
  * each other, one where a corner pokes in.
  */
@@ -96,7 +97,7 @@ object TumbleScene : Scene {
         }
 
         override fun step(dt: Float) {
-            // Nothing collides yet, so each shape is caught where it was tossed from and tossed again.
+            // Each shape is caught where it was tossed from and tossed again, before it can land.
             for ((k, b) in all.withIndex()) {
                 if (world.grabbedBody != b && bodies.velocityY(b) > 0f && bodies.y(b) >= spotY[k]) toss(b, spotX[k], spotY[k])
             }
@@ -121,7 +122,8 @@ object TumbleScene : Scene {
             debug.rigidBody(canvas, world, paddle, PADDLE)
             debug.rigidBody(canvas, world, bar, STATIC)
             if (debug.showDetails) {
-                // nothing pushes them apart yet: this is only where they overlap
+                // a kinematic body and a static one can't push each other, so they pass through: this is
+                // only where they overlap, as the narrowphase finds it
                 val p = paddle
                 val q = bar
                 val found = narrow.collide(
@@ -133,5 +135,6 @@ object TumbleScene : Scene {
         }
 
         override val bodyCount get() = bodies.count
+        override val contactCount get() = world.rigidContacts.count
     }
 }

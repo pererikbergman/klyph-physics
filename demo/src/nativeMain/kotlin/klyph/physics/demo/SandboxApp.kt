@@ -16,16 +16,17 @@ import klyph.text.TextAlign
 import klyph.text.TextShadow
 import kotlin.time.TimeSource
 
-/** The keys that choose scene 1, 2, ... 9. */
-private val SCENE_KEYS = listOf(
-    Scancode.DIGIT_1, Scancode.DIGIT_2, Scancode.DIGIT_3, Scancode.DIGIT_4, Scancode.DIGIT_5,
-    Scancode.DIGIT_6, Scancode.DIGIT_7, Scancode.DIGIT_8, Scancode.DIGIT_9,
-)
-
 // klyph names no constants for these keys; its keyboard state is indexed by SDL scancode, so these are SDL's.
+private val DIGIT_0 = Scancode(39u)
 private val LEFT_BRACKET = Scancode(47u)
 private val RIGHT_BRACKET = Scancode(48u)
 private val PERIOD = Scancode(55u)
+
+/** The keys that choose scene 1, 2, ... 9, and 0 for the tenth. */
+private val SCENE_KEYS = listOf(
+    Scancode.DIGIT_1, Scancode.DIGIT_2, Scancode.DIGIT_3, Scancode.DIGIT_4, Scancode.DIGIT_5,
+    Scancode.DIGIT_6, Scancode.DIGIT_7, Scancode.DIGIT_8, Scancode.DIGIT_9, DIGIT_0,
+)
 
 /** How much each new frame or step time moves the HUD's averages: small, so the numbers stay readable. */
 private const val SMOOTHING = 0.05f
@@ -166,7 +167,7 @@ fun App.installSandbox(
         )
         canvas.drawText(
             font,
-            "1-9 [ ] scene  R reset  Space pause  . step  S slow  F1 view  B grid  F3 stats",
+            "0-9 [ ] scene  R reset  Space pause  . step  S slow  F1 view  B grid  F3 stats",
             MARGIN,
             height - MARGIN - 16f,
             color = DIM,

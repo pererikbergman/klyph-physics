@@ -326,10 +326,24 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     /**
      * From [DebugView.EVERYTHING] up, marks every particle of [world] that touched something during the
      * last step: a dot where it touched, and a short line along the normal it was pushed out by, in
-     * yellow on a floor and cyan on anything else.
+     * yellow on a floor and cyan on anything else. And every rigid body's contact the same way, a line
+     * the way it pushes the first body: green where friction holds it, orange where it slides, dim
+     * where it was found near but didn't push.
      */
     fun contacts(canvas: Canvas, world: PhysicsWorld) {
         if (!view.shows(DebugView.EVERYTHING)) return
+        val rigid = world.rigidContacts
+        for (c in 0 until rigid.count) {
+            val x = rigid.pointX(c)
+            val y = rigid.pointY(c)
+            val tint = when {
+                rigid.push(c) <= 0f -> NEAR
+                rigid.isSliding(c) -> SLIDING
+                else -> HELD
+            }
+            line(canvas, x, y, x - rigid.normalX(c) * NORMAL, y - rigid.normalY(c) * NORMAL, EDGE, tint, layer + 7)
+            rect(canvas, x - 1f, y - 1f, 2f, 2f, tint, layer + 7)
+        }
         val ps = world.particles
         val events = world.events
         for (p in 0 until ps.end) {
@@ -493,6 +507,9 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         val FLOOR_CONTACT = Color(0xFFD36BFFu)
         val LABEL = Color(0xE8ECF4FFu)
         val CONTACT = Color(0x5BE0E0FFu)
+        val HELD = Color(0x6BE07AFFu)
+        val SLIDING = Color(0xFF9A3DFFu)
+        val NEAR = Color(0.6f, 0.65f, 0.75f, 0.4f)
         val SLACK = Color(0.55f, 0.6f, 0.7f, 0.35f)
         val BOX = Color(0.36f, 0.55f, 0.94f, 0.6f)
 

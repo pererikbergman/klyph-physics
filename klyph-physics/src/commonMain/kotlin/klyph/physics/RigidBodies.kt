@@ -61,6 +61,9 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     /** What each body is made of, around its centre of mass; none for a body made with [add]. */
     internal var shapes = arrayOfNulls<Array<Shape>>(initialCapacity)
 
+    /** How far each body's shapes reach from its centre of mass: a circle round it holds them all. */
+    internal var reach = FloatArray(initialCapacity)
+
     /** Each body's [Material], spread over three arrays. */
     internal var friction = FloatArray(initialCapacity)
     internal var staticFriction = FloatArray(initialCapacity)
@@ -117,6 +120,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         hasTarget[b] = false
         alive[b] = true
         shapes[b] = NO_SHAPES
+        reach[b] = 0f
         setMaterial(b, Material.DEFAULT)
         cos[b] = kotlin.math.cos(angle)
         sin[b] = kotlin.math.sin(angle)
@@ -144,7 +148,13 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         val c = kotlin.math.cos(angle)
         val s = kotlin.math.sin(angle)
         val b = add(x + c * mass.centerX - s * mass.centerY, y + s * mass.centerX + c * mass.centerY, angle, mass.mass, mass.inertia, kind)
-        this.shapes[b] = Array(shapes.size) { shapes[it].moved(-mass.centerX, -mass.centerY) }
+        val placed = Array(shapes.size) { shapes[it].moved(-mass.centerX, -mass.centerY) }
+        this.shapes[b] = placed
+        var far = 0f
+        for (shape in placed) for (i in 0 until shape.vertexCount) {
+            far = maxOf(far, sqrt(shape.vx[i] * shape.vx[i] + shape.vy[i] * shape.vy[i]) + shape.radius)
+        }
+        reach[b] = far
         setMaterial(b, material)
         return b
     }
@@ -351,6 +361,19 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     /**
+     * Changes body [b]'s velocity as if struck by the impulse ([ix], [iy]) at the point ([rx], [ry]) from
+     * its centre: along by the impulse over its mass, and its spin by the impulse's torque over its
+     * inertia. The velocity pass's one way of changing a body's speed.
+     */
+    internal fun kick(b: Int, ix: Float, iy: Float, rx: Float, ry: Float) {
+        val w = invMass[b]
+        if (w == 0f) return
+        vx[b] += ix * w
+        vy[b] += iy * w
+        omega[b] += (rx * iy - ry * ix) * invInertia[b]
+    }
+
+    /**
      * How hard body [b] is to move at ([rx], [ry]) from its centre along the unit ([nx], [ny]): its
      * inverse mass plus what turning adds. A push there moves the point by the push times this.
      */
@@ -382,6 +405,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         targetAngle = targetAngle.copyOf(size)
         hasTarget = hasTarget.copyOf(size)
         shapes = shapes.copyOf(size)
+        reach = reach.copyOf(size)
         friction = friction.copyOf(size)
         staticFriction = staticFriction.copyOf(size)
         restitution = restitution.copyOf(size)

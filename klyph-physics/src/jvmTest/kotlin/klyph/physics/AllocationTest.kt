@@ -61,6 +61,28 @@ class AllocationTest {
     }
 
     @Test
+    fun aStepOfStackedAndTumblingBodiesAllocatesNothing() {
+        val world = PhysicsWorld()
+        world.solids = SolidGrid(40, 30, 16f).apply {
+            for (c in 0 until cols) fill(c, 29)
+            for (r in 0 until 30) {
+                fill(0, r)
+                fill(cols - 1, r)
+            }
+            fill(10, 28, SolidShape.RISING)
+            dynamic.add(Solid.moving(400f, 300f, 460f, 316f))
+        }
+        // a stack, a pile of every kind of shape, and a kinematic paddle sweeping through them
+        repeat(6) { world.rigidBody(Shape.box(20f, 20f), 100f, 454f - it * 20f) }
+        val shapes = arrayOf(Shape.box(16f, 16f), Shape.circle(8f), Shape.capsule(20f, 5f), Shape.polygon(-8f, 6f, 0f, -8f, 8f, 6f))
+        repeat(40) { world.rigidBody(shapes[it % shapes.size], 250f + (it % 8) * 20f, 200f + (it / 8) * 24f, angle = it * 0.4f) }
+        val paddle = world.rigidBody(Shape.box(60f, 8f), 300f, 380f, kind = BodyKind.KINEMATIC)
+        world.rigidBodies.setAngularVelocity(paddle, 1f)
+        val bytes = measure { repeat(5_000) { world.step(1f / 60f) } }
+        assertTrue(bytes < 1024, "5 000 steps allocated $bytes bytes")
+    }
+
+    @Test
     fun buildingTheBroadphaseAllocatesNothingOnceItHasGrown() {
         val bp = Broadphase()
         val random = kotlin.random.Random(1)

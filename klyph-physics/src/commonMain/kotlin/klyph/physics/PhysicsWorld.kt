@@ -31,6 +31,9 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     private val collisions = Collisions(this)
 
+    /** Where rigid bodies touched each other and the solids in the last substep, for drawing: see [RigidContacts]. */
+    val rigidContacts = RigidContacts(this)
+
     /**
      * The boxes this step's collisions were found from, for drawing: one per soft body and one per
      * colliding particle that isn't part of a body. A box's id is `2·particle` for a particle and
@@ -48,8 +51,10 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     /**
      * Advances the world by [dt] seconds, in [PhysicsConfig.substeps] substeps. Each one moves every
-     * particle and rigid body, then [PhysicsConfig.iterations] times solves the [constraints], keeps bodies out of each
-     * other, and pushes everything out of the [solids], so walls have the last word.
+     * particle and rigid body and finds where rigid bodies touch, then [PhysicsConfig.iterations] times
+     * solves the [constraints], keeps bodies out of each other, and pushes everything out of the
+     * [solids], so walls have the last word. Last, rigid bodies take their velocities from how far they
+     * moved, and their contacts' friction and bounce change them.
      */
     fun step(dt: Float) {
         require(dt > 0f && dt.isFinite()) { "dt is $dt: it must be a finite time more than 0" }
@@ -62,9 +67,11 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         hand.beginStep()
         rigidBodies.beginStep(dt)
         collisions.beginStep(dt)
+        rigidContacts.beginStep(dt)
         repeat(config.substeps) {
             integrate(h, keep)
             rigidBodies.integrate(h, keep, gravity.x, gravity.y, config.maxStep)
+            rigidContacts.find()
             constraints.beginSubstep()
             hand.beginSubstep()
             repeat(config.iterations) { pass ->
@@ -74,8 +81,10 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
                 if (pass == config.iterations - 1) particles.applyFriction()
                 collisions.solve()
                 solids?.collide(particles, events, restingMove)
+                rigidContacts.solve()
             }
             rigidBodies.updateVelocities(h)
+            rigidContacts.solveVelocities(h, config.bounceSpeed, config.iterations)
         }
         constraints.tear()
         stepCount++

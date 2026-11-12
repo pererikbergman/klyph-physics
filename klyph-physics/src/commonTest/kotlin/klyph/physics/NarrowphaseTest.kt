@@ -112,6 +112,21 @@ class NarrowphaseTest {
     }
 
     @Test
+    fun twoCapsulesEndToEndInALineTouchAtTheirEnds() {
+        // In line, their faces' normals can't see the gap between their ends: they seem to touch along
+        // the line, but clipping to the face's ends leaves nothing. Measured, they touch at their ends.
+        val capsule = Shape.capsule(20f, 6f)
+        for (margin in listOf(0f, 0.5f)) for (turn in listOf(0f, 3.1415927f, 0.0001f)) {
+            val n = Narrowphase().apply { this.margin = margin }
+            assertTrue(n.collide(capsule, 0f, 0f, turn, capsule, 30f, 0f, 0f, m), "margin $margin, turned $turn")
+            assertEquals(1, m.count)
+            assertEquals(-2f, m.separation(0), 1e-3f)
+            assertEquals(1f, m.normalX, 1e-3f)
+            assertFalse(n.collide(capsule, 0f, 0f, turn, capsule, 33f, 0f, 0f, m), "a unit apart, margin $margin, turned $turn")
+        }
+    }
+
+    @Test
     fun theSameContactKeepsItsFeatureIdsAsTheShapesShiftALittle() {
         val box = Shape.box(20f, 20f)
         narrow.collide(box, 0f, 0f, 0f, box, 3f, 19.5f, 0.02f, m)

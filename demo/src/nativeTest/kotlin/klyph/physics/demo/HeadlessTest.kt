@@ -73,6 +73,18 @@ class HeadlessTest {
         }
         val bodies = world.softBodies
         for (body in 0 until bodies.end) if (bodies.isAlive(body)) assertTrue(bodies.isFinite(body), "$name: body $body went NaN")
+        val rigid = world.rigidBodies
+        for (b in 0 until rigid.end) {
+            if (!rigid.isAlive(b)) continue
+            val x = rigid.x(b)
+            val y = rigid.y(b)
+            assertTrue(x.isFinite() && y.isFinite() && rigid.angle(b).isFinite(), "$name: rigid body $b is at ($x, $y)")
+            if (grid == null || rigid.inverseMass(b) == 0f) continue
+            assertTrue(x in 0f..roomWidth && y in 0f..roomHeight, "$name: rigid body $b left the room, to ($x, $y)")
+            // its middle in a tile, deeper than a contact being solved: through a wall
+            val deep = depth(grid, floor(x / grid.tileSize).toInt(), floor(y / grid.tileSize).toInt(), x, y)
+            assertTrue(deep < slack, "$name: rigid body $b at ($x, $y) is $deep deep in a solid")
+        }
     }
 
     @Test
@@ -102,6 +114,20 @@ class HeadlessTest {
         }
         assertEquals(SandScene.GRAINS, ps.count)
         assertTrue(below > SandScene.GRAINS * 9 / 10, "after 15 seconds most have poured through: $below")
+    }
+
+    @Test
+    fun inStacksTheTowerAndPyramidStandAndEveryDominoFalls() {
+        val run = StacksScene.create() as StacksScene.Run
+        val bodies = run.world.rigidBodies
+        val startX = (run.tower + run.pyramid).map { bodies.x(it) }
+        val startY = (run.tower + run.pyramid).map { bodies.y(it) }
+        repeat(900) { run.step(dt) }
+        for ((k, b) in (run.tower + run.pyramid).withIndex()) {
+            assertEquals(startX[k], bodies.x(b), 1f, "box $b stays where it was stacked")
+            assertEquals(startY[k], bodies.y(b), 1f, "box $b keeps its height")
+        }
+        for (d in run.dominoes) assertTrue(bodies.angle(d) > 0.6f, "domino $d fell: it's at ${bodies.angle(d)}")
     }
 
     @Test
