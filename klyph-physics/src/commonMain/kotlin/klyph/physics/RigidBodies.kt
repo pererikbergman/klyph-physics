@@ -66,6 +66,11 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     private var sleepingInvMass = FloatArray(initialCapacity)
     private var sleepingInvInertia = FloatArray(initialCapacity)
 
+    // Bullets: whether each body is swept from where it was to where it is every substep, so it
+    // can't pass through anything, and how thin it is at its thinnest, which says how finely.
+    internal var bullet = BooleanArray(initialCapacity)
+    internal var thickness = FloatArray(initialCapacity)
+
     /** How many bodies are asleep. */
     var sleepingCount: Int = 0
         private set
@@ -133,6 +138,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         alive[b] = true
         asleep[b] = false
         stillFor[b] = 0f
+        bullet[b] = false
+        thickness[b] = 0f
         shapes[b] = NO_SHAPES
         reach[b] = 0f
         setMaterial(b, Material.DEFAULT)
@@ -169,9 +176,23 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
             far = maxOf(far, sqrt(shape.vx[i] * shape.vx[i] + shape.vy[i] * shape.vy[i]) + shape.radius)
         }
         reach[b] = far
+        thickness[b] = placed.minOf { it.thickness }
         setMaterial(b, material)
         return b
     }
+
+    /**
+     * Makes body [b] a bullet, or not. A bullet isn't held to [PhysicsConfig.maxStep] a substep: it
+     * goes as fast as it's thrown, and every substep it's swept from where it was to where it went,
+     * and stopped where it first meets a body or a solid. So nothing fast passes through a thin wall
+     * or another body. It costs a few shape tests a substep for each bullet; use it for the few
+     * things that need it.
+     */
+    fun setBullet(b: Int, isBullet: Boolean) {
+        bullet[b] = isBullet
+    }
+
+    fun isBullet(b: Int): Boolean = bullet[b]
 
     /** Makes body [b] grip and bounce like [material]. */
     fun setMaterial(b: Int, material: Material) {
@@ -415,7 +436,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
                 vy[b] = (vy[b] + gy * h) * keep
                 omega[b] *= keep
                 val move = sqrt(vx[b] * vx[b] + vy[b] * vy[b]) * h
-                if (move > maxStep) {
+                if (move > maxStep && !bullet[b]) {
                     vx[b] *= maxStep / move
                     vy[b] *= maxStep / move
                 }
@@ -520,6 +541,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         kind = kind.copyOf(size)
         alive = alive.copyOf(size)
         asleep = asleep.copyOf(size)
+        bullet = bullet.copyOf(size)
+        thickness = thickness.copyOf(size)
         stillFor = stillFor.copyOf(size)
         island = island.copyOf(size)
         sleepingInvMass = sleepingInvMass.copyOf(size)

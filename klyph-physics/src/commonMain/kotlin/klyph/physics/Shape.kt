@@ -62,6 +62,22 @@ class Shape private constructor(
      * A circle around the whole shape, in the body's frame: the middle of its core's points and how far
      * the furthest of them reaches, its radius too. What's further from the middle can't touch it.
      */
+    /**
+     * How thin the shape is at its thinnest, near enough: twice its radius, plus for a polygon twice
+     * the distance from its middle to its nearest face. A bullet is swept in steps no longer than half
+     * this, so it can't step over anything.
+     */
+    internal val thickness: Float get() = run {
+        var inner = 0f
+        if (vx.size >= 3) {
+            val cx = vx.average().toFloat()
+            val cy = vy.average().toFloat()
+            inner = Float.MAX_VALUE
+            for (i in vx.indices) inner = minOf(inner, (vx[i] - cx) * nx[i] + (vy[i] - cy) * ny[i])
+        }
+        2f * (inner + radius)
+    }
+
     internal val boundX: Float = vx.average().toFloat()
     internal val boundY: Float = vy.average().toFloat()
     internal val boundRadius: Float = run {

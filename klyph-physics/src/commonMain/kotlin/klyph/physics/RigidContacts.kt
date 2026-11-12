@@ -228,11 +228,7 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private fun findAgainstSolids() {
         val grid = world.solids ?: return
         // rebuilt, the edges are numbered afresh: an old edge contact's number means nothing now
-        if (edges.update(grid)) {
-            forgetEdges()
-            // a tile may have gone from under a sleeping body
-            bodies.wakeAll()
-        }
+        updateEdges(grid)
         val moving = grid.dynamic
         for (body in 0 until bodies.end) {
             if (!bodies.isAlive(body) || bodies.kind[body] != RigidBodies.DYNAMIC) continue
@@ -247,6 +243,17 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
             for (k in 0 until edges.foundCount) bodyAgainstEdge(body, edges.found[k])
             for (k in 0 until moving.size) bodyAgainstSolid(body, moving[k], k)
         }
+    }
+
+    /**
+     * Builds the solids' edges again if [grid] has changed since they were last built. The edges are
+     * numbered afresh then, so an old edge contact's number means nothing, and a tile may have gone
+     * from under a sleeping body.
+     */
+    internal fun updateEdges(grid: SolidGrid) {
+        if (!edges.update(grid)) return
+        forgetEdges()
+        bodies.wakeAll()
     }
 
     /** Whether sleeping [body] touches one of the [moving] solids: if so, it's woken. */
@@ -275,10 +282,41 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         if (world.joints.connected(p, q)) return
         val shapesP = bodies.shapes[p]!!
         val shapesQ = bodies.shapes[q]!!
+        // Speculative: a pair that moved more than the margin this substep, and more than half the
+        // thinner of the two, so far it could be past the middle of it, is looked at where it was at
+        // the start of it, as far apart as it moved, so the normal is the one from the side it came
+        // from, even if it's gone right through since. The solver measures how far the two points are
+        // apart along it from where the bodies are now. Not for a body that turned far, whose points
+        // from the start of the substep needn't be the ones touching now; nor for a bullet, whose own
+        // sweep has already stopped it on the near side.
+        val moved = moved(p) + moved(q)
+        val thinner = minOf(bodies.thickness[p], bodies.thickness[q])
+        val speculative = moved > MARGIN && moved > thinner / 2f &&
+            !bodies.bullet[p] && !bodies.bullet[q] && turnedLittle(p) && turnedLittle(q)
+        if (speculative) {
+            narrow.margin = MARGIN + moved
+            prevCosP = cos(bodies.prevAngle[p])
+            prevSinP = sin(bodies.prevAngle[p])
+            prevCosQ = cos(bodies.prevAngle[q])
+            prevSinQ = sin(bodies.prevAngle[q])
+        }
         for (i in shapesP.indices) for (j in shapesQ.indices) {
             val sp = shapesP[i]
             val sq = shapesQ[j]
-            if (!narrow.collide(sp, bodies.x[p], bodies.y[p], bodies.cos[p], bodies.sin[p], sq, bodies.x[q], bodies.y[q], bodies.cos[q], bodies.sin[q], manifold)) continue
+            val fromStart = speculative &&
+                narrow.collide(sp, bodies.prevX[p], bodies.prevY[p], prevCosP, prevSinP, sq, bodies.prevX[q], bodies.prevY[q], prevCosQ, prevSinQ, manifold)
+            if (fromStart) {
+                // each point from where its body was to where it is now, on the same spot of it
+                for (k in 0 until manifold.count) {
+                    manifold.ax[k] = carried(p, manifold.ax[k], manifold.ay[k], prevCosP, prevSinP)
+                    manifold.ay[k] = carriedY
+                    manifold.bx[k] = carried(q, manifold.bx[k], manifold.by[k], prevCosQ, prevSinQ)
+                    manifold.by[k] = carriedY
+                }
+            } else {
+                if (speculative) narrow.margin = MARGIN
+                if (!narrow.collide(sp, bodies.x[p], bodies.y[p], bodies.cos[p], bodies.sin[p], sq, bodies.x[q], bodies.y[q], bodies.cos[q], bodies.sin[q], manifold)) continue
+            }
             val m = manifold
             for (k in 0 until m.count) {
                 add(p, q, m.ax[k], m.ay[k], m.bx[k], m.by[k], m.normalX, m.normalY,
@@ -288,8 +326,40 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
                     shapes = (i shl 16) or j, id = m.ids[k])
             }
             if (m.count == 2) pair(count - 2, count - 1)
+            if (speculative) narrow.margin = MARGIN + moved
         }
+        narrow.margin = MARGIN
     }
+
+    // The turns of the two bodies [bodyAgainstBody] looks at, at the start of the substep.
+    private var prevCosP = 1f
+    private var prevSinP = 0f
+    private var prevCosQ = 1f
+    private var prevSinQ = 0f
+
+    private fun turnedLittle(b: Int): Boolean = abs(bodies.angle[b] - bodies.prevAngle[b]) < MAX_SPECULATIVE_TURN
+
+    /** How far body [b] moved this substep, its farthest point: along, and round as it turned. */
+    private fun moved(b: Int): Float {
+        val dx = bodies.x[b] - bodies.prevX[b]
+        val dy = bodies.y[b] - bodies.prevY[b]
+        return sqrt(dx * dx + dy * dy) + abs(bodies.angle[b] - bodies.prevAngle[b]) * bodies.reach[b]
+    }
+
+    /**
+     * Where the point ([wx], [wy]) of body [b], where it was at the start of the substep, turned by
+     * [c] and [s], is now: its x, and its y in [carriedY].
+     */
+    private fun carried(b: Int, wx: Float, wy: Float, c: Float, s: Float): Float {
+        val dx = wx - bodies.prevX[b]
+        val dy = wy - bodies.prevY[b]
+        val lx = c * dx + s * dy
+        val ly = -s * dx + c * dy
+        carriedY = bodies.worldY(b, lx, ly)
+        return bodies.worldX(b, lx, ly)
+    }
+
+    private var carriedY = 0f
 
     // The turn of the body [bodyAgainstEdge] is looking at, as it was at the start of the substep.
     private var prevCos = 1f
@@ -984,6 +1054,9 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     companion object {
         /** Shapes nearer than this make a contact already, so one that closes in during the substep is caught. */
         const val MARGIN = 0.5f
+
+        /** Turned more than this in a substep, in radians, a body's contacts are found where it is, not speculatively. */
+        const val MAX_SPECULATIVE_TURN = 0.2f
 
         /** A point further behind an edge than this is through the solid, not touching it: the far side's business. */
         const val MAX_DEPTH = 8f

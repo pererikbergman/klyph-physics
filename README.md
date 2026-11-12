@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **278 tests**, all green
+- 🧪 **288 tests**, all green
 
 ## ▶️ Run it
 
@@ -161,6 +161,15 @@ kinematic drum by its paddles until they tumble back down, pushing on each other
 click to drop a crate in. 🌀
 
 <img src="docs/img/drum.gif" alt="a turning drum carrying blobs, crates and sand up its side until they tumble back down" width="50%">
+
+### 15 · 🚀 Bullets
+
+**Too fast to see, stopped by too thin to see.** A gun fires bullets at 5 000 units a second, 20
+units a substep, at three hanging panes and a plate one unit thick, and none goes through. On the
+right, sparks shoot up at a ledge half a tile thick and drop back into their bin. Right click to fire
+at the mouse. 🎯 [🚀 Fast things and tunnelling](docs/explained/tunnelling.md)
+
+<img src="docs/img/bullets.gif" alt="bullets with yellow tracers stopping at thin hanging panes and a plate, and sparks hitting the underside of a thin ledge" width="100%">
 
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.
