@@ -33,6 +33,16 @@ data class PhysicsConfig(
      * resting things settle instead of buzzing. Gravity alone reaches it in a fall of under a unit.
      */
     val bounceSpeed: Float = 40f,
+    /**
+     * How long, in seconds, a rigid body and everything it touches must be still before they fall
+     * asleep and stop costing time; [Float.POSITIVE_INFINITY] for never. See the sleeping page.
+     */
+    val timeToSleep: Float = 0.5f,
+    /**
+     * Slower than this, in units per second, a rigid body counts as still: its speed, plus how fast
+     * its farthest point goes round as it turns.
+     */
+    val sleepSpeed: Float = 5f,
 ) {
     init {
         require(substeps >= 1) { "substeps is $substeps: there must be at least one" }
@@ -41,5 +51,7 @@ data class PhysicsConfig(
         require(maxStep > 0f) { "maxStep is $maxStep: it must be more than 0" }
         require(cellSize > 0f) { "cellSize is $cellSize: it must be more than 0" }
         require(bounceSpeed >= 0f) { "bounceSpeed is $bounceSpeed: it must not be negative" }
+        require(timeToSleep > 0f) { "timeToSleep is $timeToSleep: it must be more than 0" }
+        require(sleepSpeed >= 0f && sleepSpeed.isFinite()) { "sleepSpeed is $sleepSpeed: it must be finite and not negative" }
     }
 }

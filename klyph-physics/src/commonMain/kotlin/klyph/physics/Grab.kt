@@ -64,7 +64,8 @@ class Grab internal constructor(private val world: PhysicsWorld) {
         release()
         val bodies = world.rigidBodies
         for (b in bodies.end - 1 downTo 0) {
-            if (!bodies.isAlive(b) || bodies.inverseMass(b) == 0f || !bodies.contains(b, x, y)) continue
+            if (!bodies.isAlive(b) || bodies.kind(b) != BodyKind.DYNAMIC || !bodies.contains(b, x, y)) continue
+            bodies.wake(b)
             body = b
             localX = bodies.localX(b, x, y)
             localY = bodies.localY(b, x, y)

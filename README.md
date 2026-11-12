@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **267 tests**, all green
+- 🧪 **278 tests**, all green
 
 ## ▶️ Run it
 
@@ -122,8 +122,9 @@ static bar never moves. Right click to drop more in: the paddle knocks them abou
 
 **Held up by contacts alone.** A tower of ten boxes and a pyramid of eight rows stand still, while
 a row of dominoes topples one after another. Two contact points under each box keep it flat, and
-friction keeps it from sliding off the one below. Then a wrecking ball swings in and knocks the
-tower's top off. Right click to drop a box on them. 🎯
+friction keeps it from sliding off the one below. Once still, they fall asleep, fade and cost
+nothing, until a wrecking ball swings in, wakes the tower and knocks its top off. Right click to
+drop a box on them. 🎯 [😴 Sleeping](docs/explained/sleeping.md)
 
 <img src="docs/img/stacking.gif" alt="a tower and a pyramid of boxes standing while a row of dominoes topples, then a wrecking ball knocking the tower down" width="100%">
 

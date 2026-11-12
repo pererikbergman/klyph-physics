@@ -137,6 +137,7 @@ internal class Coupling(private val world: PhysicsWorld) {
             if (!narrow.collidePoint(ps.x[p], ps.y[p], radius, shape, bx, by, bodies.cos[body], bodies.sin[body], m)) continue
             val depth = -m.separation(0)
             if (depth <= 0f) continue
+            disturb(body, p)
             // the normal points from the particle into the body: the particle goes back along it
             val nx = m.normalX
             val ny = m.normalY
@@ -197,6 +198,8 @@ internal class Coupling(private val world: PhysicsWorld) {
                 val a = soft.particle(s, nearEdge)
                 val b = soft.particle(s, if (nearEdge + 1 == n) 0 else nearEdge + 1)
                 val t = nearT
+                disturb(body, a)
+                disturb(body, b)
                 val wa = ps.invMass[a] * (1f - t)
                 val wb = ps.invMass[b] * t
                 val w = bodies.inverseMassAt(body, rx, ry, nx, ny) + wa * (1f - t) + wb * t
@@ -209,6 +212,20 @@ internal class Coupling(private val world: PhysicsWorld) {
                 ps.y[b] -= wb * push * ny
             }
         }
+    }
+
+    /**
+     * Particle [p] is touching [body]: if it's moving, faster than a body counts as still, the body
+     * wakes, or doesn't fall asleep. Particles aren't in any island, so this is how a blob pulled out
+     * from under a sleeping crate lets it fall.
+     */
+    private fun disturb(body: Int, p: Int) {
+        val dx = ps.x[p] - ps.prevX[p]
+        val dy = ps.y[p] - ps.prevY[p]
+        val still = world.config.sleepSpeed * world.substepLength
+        if (dx * dx + dy * dy <= still * still) return
+        bodies.wake(body)
+        bodies.stillFor[body] = 0f
     }
 
     /** Finds the edge of soft body [s]'s outline nearest ([x], [y]), into the near- fields. */

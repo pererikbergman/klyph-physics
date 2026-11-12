@@ -136,9 +136,37 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         remember()
         count = 0
         val bp = broadphase
+        // first wake what's been hit, so the bodies it wakes find their contacts with each other too
+        if (bodies.sleepingCount > 0) for (i in 0 until bp.pairCount) wakeIfHit(bp.pairA(i), bp.pairB(i))
         for (i in 0 until bp.pairCount) bodyAgainstBody(bp.pairA(i), bp.pairB(i))
         findAgainstSolids()
     }
+
+    /**
+     * Wakes [p] or [q] if it's asleep and the other, awake and moving, touches it. Two sleeping
+     * bodies, or one sleeping on a static one, aren't looked at: that's what sleeping saves.
+     */
+    private fun wakeIfHit(p: Int, q: Int) {
+        val bs = bodies
+        if (!bs.isAlive(p) || !bs.isAlive(q)) return
+        val sleeper = when {
+            bs.asleep[p] && bs.isMoving(q) -> p
+            bs.asleep[q] && bs.isMoving(p) -> q
+            else -> return
+        }
+        if (world.joints.connected(p, q)) return
+        val shapesP = bs.shapes[p]!!
+        val shapesQ = bs.shapes[q]!!
+        for (sp in shapesP) for (sq in shapesQ) {
+            if (narrow.collide(sp, bs.x[p], bs.y[p], bs.cos[p], bs.sin[p], sq, bs.x[q], bs.y[q], bs.cos[q], bs.sin[q], manifold) && manifold.count > 0) {
+                bs.wake(sleeper)
+                return
+            }
+        }
+    }
+
+    /** Whether contact [c] is against a moving solid, one of [SolidGrid.dynamic], which keeps a body awake. */
+    internal fun isAgainstMovingSolid(c: Int): Boolean = b[c] < 0 && feature[c] and KIND == ON_SOLID
 
     /**
      * Keeps what the last substep's contacts need to carry their friction anchors on, and files them
@@ -200,9 +228,16 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private fun findAgainstSolids() {
         val grid = world.solids ?: return
         // rebuilt, the edges are numbered afresh: an old edge contact's number means nothing now
-        if (edges.update(grid)) forgetEdges()
+        if (edges.update(grid)) {
+            forgetEdges()
+            // a tile may have gone from under a sleeping body
+            bodies.wakeAll()
+        }
+        val moving = grid.dynamic
         for (body in 0 until bodies.end) {
             if (!bodies.isAlive(body) || bodies.kind[body] != RigidBodies.DYNAMIC) continue
+            // a sleeping body only wakes if a moving solid reaches it: the still ones it slept on
+            if (bodies.asleep[body] && !touchesMovingSolid(body, moving)) continue
             val reach = bodies.reach[body] + MARGIN
             val x = bodies.x[body]
             val y = bodies.y[body]
@@ -210,9 +245,28 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
             prevCos = cos(bodies.prevAngle[body])
             prevSin = sin(bodies.prevAngle[body])
             for (k in 0 until edges.foundCount) bodyAgainstEdge(body, edges.found[k])
-            val moving = grid.dynamic
             for (k in 0 until moving.size) bodyAgainstSolid(body, moving[k], k)
         }
+    }
+
+    /** Whether sleeping [body] touches one of the [moving] solids: if so, it's woken. */
+    private fun touchesMovingSolid(body: Int, moving: List<Solid>): Boolean {
+        for (k in 0 until moving.size) {
+            val solid = moving[k]
+            val w = solid.right - solid.left
+            val h = solid.bottom - solid.top
+            if (w <= 0f || h <= 0f) continue
+            val box = solidBox(w, h)
+            val cx = (solid.left + solid.right) / 2f
+            val cy = (solid.top + solid.bottom) / 2f
+            for (shape in bodies.shapes[body]!!) {
+                if (narrow.collide(shape, bodies.x[body], bodies.y[body], bodies.cos[body], bodies.sin[body], box, cx, cy, 1f, 0f, manifold) && manifold.count > 0) {
+                    bodies.wake(body)
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     private fun bodyAgainstBody(p: Int, q: Int) {

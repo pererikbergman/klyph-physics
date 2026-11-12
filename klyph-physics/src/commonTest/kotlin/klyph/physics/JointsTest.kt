@@ -175,7 +175,8 @@ class JointsTest {
     @Test
     fun aWeldHoldsUntilItsLoadIsMoreThanItCanBear() {
         for ((strength, holds) in listOf(1.5f to true, 0.5f to false)) {
-            val world = PhysicsWorld()
+            // kept awake: a sleeping body's joints aren't solved, and their force reads 0
+            val world = PhysicsWorld(PhysicsConfig(timeToSleep = Float.POSITIVE_INFINITY))
             val bodies = world.rigidBodies
             val box = world.rigidBody(Shape.box(20f, 20f), 320f, 110f)
             val weight = gravity / bodies.inverseMass(box)
