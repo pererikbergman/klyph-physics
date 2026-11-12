@@ -66,8 +66,10 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
             integrate(h, keep)
             rigidBodies.integrate(h, keep, gravity.x, gravity.y, config.maxStep)
             constraints.beginSubstep()
+            hand.beginSubstep()
             repeat(config.iterations) { pass ->
                 constraints.solve(h)
+                hand.solve(h)
                 // Grip just before the last pass, so collisions still have the last word over it.
                 if (pass == config.iterations - 1) particles.applyFriction()
                 collisions.solve()
@@ -93,9 +95,10 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     }
 
     /**
-     * Takes hold of the movable particle nearest ([x], [y]), within [reach], and pulls it towards that
-     * point with a soft pin until [release]. Returns the particle, or -1 when none is in reach. One
-     * particle at a time: grabbing again lets go of the last. See [Grab].
+     * Takes hold of the dynamic rigid body at ([x], [y]), by that point, or else the movable particle
+     * nearest it, within [reach], and pulls it towards that point with a soft pin until [release].
+     * Returns the particle, or -1 for a body (see [grabbedBody]) or nothing in reach. One thing at a
+     * time: grabbing again lets go of the last. See [Grab].
      */
     fun grab(x: Float, y: Float, reach: Float = Grab.REACH, compliance: Float = Grab.COMPLIANCE): Int = hand.grab(x, y, reach, compliance)
 
@@ -108,6 +111,9 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     /** The particle being grabbed, or -1. */
     val grabbed: Int get() = hand.particle
 
+    /** The rigid body being grabbed, or -1. */
+    val grabbedBody: Int get() = hand.body
+
     /**
      * Adds a soft body of [shape] with its middle at [centerX] and its bottom on [baseY], and returns
      * its handle in [softBodies].
@@ -119,6 +125,31 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         tuning: SoftBodyTuning = SoftBodyTuning(),
         material: Material = Material.DEFAULT,
     ): Int = softBodies.add(shape, centerX, baseY, tuning, material = material)
+
+    /**
+     * Adds a rigid body made of [shape] with the shape's origin at ([x], [y]), turned by [angle], and
+     * returns its handle in [rigidBodies]. Its mass and inertia come from the shape's size and [density].
+     */
+    fun rigidBody(
+        shape: Shape,
+        x: Float,
+        y: Float,
+        angle: Float = 0f,
+        density: Float = RigidBodies.DENSITY,
+        material: Material = Material.DEFAULT,
+        kind: BodyKind = BodyKind.DYNAMIC,
+    ): Int = rigidBodies.add(listOf(shape), x, y, angle, density, material, kind)
+
+    /** Adds a rigid body made of several [shapes], such as a hammer of two boxes: see [RigidBodies.add]. */
+    fun rigidBody(
+        shapes: List<Shape>,
+        x: Float,
+        y: Float,
+        angle: Float = 0f,
+        density: Float = RigidBodies.DENSITY,
+        material: Material = Material.DEFAULT,
+        kind: BodyKind = BodyKind.DYNAMIC,
+    ): Int = rigidBodies.add(shapes, x, y, angle, density, material, kind)
 
     /** Velocity of particle [p] in units per second, over the last substep. */
     fun velocityX(p: Int): Float = particles.movedX(p) / substepLength

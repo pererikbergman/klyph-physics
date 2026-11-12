@@ -66,10 +66,14 @@ class Sandbox(private val scenes: List<Scene>) {
     }
 
     /**
-     * Takes hold of the particle nearest ([x], [y]) in the current run's world, if one is near enough,
-     * and returns whether it did. The left mouse button.
+     * Takes hold of the rigid body at ([x], [y]) in the current run's world, or the particle nearest
+     * it if one is near enough, and returns whether it took anything. The left mouse button.
      */
-    fun grab(x: Float, y: Float): Boolean = (run.world?.grab(x, y) ?: -1) >= 0
+    fun grab(x: Float, y: Float): Boolean {
+        val world = run.world ?: return false
+        world.grab(x, y)
+        return world.hand.isHolding
+    }
 
     /** Moves the hand to ([x], [y]): the grabbed particle follows. The mouse, while the button is down. */
     fun moveGrab(x: Float, y: Float) {

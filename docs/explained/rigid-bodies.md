@@ -2,7 +2,7 @@
 
 ⚡ **A rigid body is one thing that moves and turns: a position, an angle, and a velocity for each.**
 
-<img src="../img/rigid-bodies.gif" alt="three bars tossed up spinning at different speeds fly the same arc; a paddle goes round a circle" width="100%">
+<img src="../img/rigid-bodies.gif" alt="five shapes tossed up spinning at different speeds fly the same arc; a paddle goes round a circle" width="100%">
 
 ## 🧠 How it works
 
@@ -45,14 +45,14 @@ are added to it.
 **Mass and inertia.** Mass is how hard a body is to push; inertia is how hard it is to turn. A push
 off the centre does both: it moves the body by the push over the mass, and turns it by the push's
 torque over the inertia. That's the solver's one way of moving a body. Give a body a shape and it
-works both out from its size and density.
+works both out from its size and density: see [🔷 shapes](shapes.md).
 
 **Kinematic bodies** are given a velocity, or told where to be with `moveKinematic` every step, and
 go there exactly: gravity, contacts and joints don't touch them. They push dynamic bodies out of the
 way and are never pushed back. Lifts, platforms, paddles.
 
-**Spin doesn't change the fall.** Gravity pulls on the centre, so it never turns anything. Toss three
-bars with different spins and they fly the same arc. 🎯
+**Spin doesn't change the fall.** Gravity pulls on the centre, so it never turns anything. Toss five
+shapes with different spins and they fly the same arc. 🎯
 
 </details>
 
@@ -79,7 +79,7 @@ bars with different spins and they fly the same arc. 🎯
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `9` for **Tumble**: three bars tossed up with three spins land together,
-and the paddle on the right goes round its circle exactly where it's told.
+`./gradlew :demo:run`, press `9` for **Tumble**: five shapes tossed up with different spins come
+down together, and the paddle on the right goes round its circle exactly where it's told.
 
 📸 `scripts/capture.sh 9 rigid-bodies --from 0 --to 4 --clean`

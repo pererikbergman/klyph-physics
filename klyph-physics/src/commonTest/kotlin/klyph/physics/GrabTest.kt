@@ -113,4 +113,37 @@ class GrabTest {
         world.step(dt)
         assertEquals(0f, world.particles.x(q), 0.01f)
     }
+
+    @Test
+    fun aBoxGrabbedByItsCornerHangsFromThatCorner() {
+        val world = PhysicsWorld()
+        val bodies = world.rigidBodies
+        val box = world.rigidBody(Shape.box(30f, 30f), 100f, 100f)
+        // just inside its top-left corner
+        assertEquals(-1, world.grab(87f, 87f), "a body, not a particle")
+        assertEquals(box, world.grabbedBody)
+        // it swings down, like a pendulum, until damping has stilled it with its centre straight under the corner held
+        repeat(1200) { world.step(dt) }
+        assertEquals(world.hand.heldX, bodies.x(box), 0.5f, "under the corner")
+        assertTrue(bodies.y(box) > world.hand.heldY + 15f, "below it")
+        assertEquals(87f, world.hand.heldX, 0.5f, "the corner stays in the hand")
+        assertEquals(87f, world.hand.heldY, 0.5f)
+        world.release()
+        assertEquals(-1, world.grabbedBody)
+    }
+
+    @Test
+    fun aGrabbedBodyFollowsTheHandAndAStaticOneCantBeGrabbed() {
+        val world = PhysicsWorld(PhysicsConfig(gravity = Vec.ZERO))
+        val bodies = world.rigidBodies
+        val wall = world.rigidBody(Shape.box(20f, 20f), 300f, 300f, kind = BodyKind.STATIC)
+        world.grab(300f, 300f)
+        assertFalse(world.hand.isHolding, "the static wall stays where it is: $wall")
+        val heavy = world.rigidBody(Shape.circle(20f), 100f, 100f, density = 5f)
+        world.grab(100f, 100f)
+        world.moveGrab(200f, 150f)
+        repeat(60) { world.step(dt) }
+        assertEquals(200f, bodies.x(heavy), 1f, "a heavy body follows as well as a light one")
+        assertEquals(150f, bodies.y(heavy), 1f)
+    }
 }
