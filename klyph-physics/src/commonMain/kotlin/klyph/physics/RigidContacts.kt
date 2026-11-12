@@ -218,6 +218,7 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private fun bodyAgainstBody(p: Int, q: Int) {
         if (!bodies.isAlive(p) || !bodies.isAlive(q)) return
         if (bodies.invMass[p] == 0f && bodies.invMass[q] == 0f) return
+        if (world.joints.connected(p, q)) return
         val shapesP = bodies.shapes[p]!!
         val shapesQ = bodies.shapes[q]!!
         for (i in shapesP.indices) for (j in shapesQ.indices) {

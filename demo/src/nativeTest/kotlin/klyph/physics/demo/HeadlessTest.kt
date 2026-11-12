@@ -7,6 +7,7 @@ import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -152,6 +153,36 @@ class HeadlessTest {
         val dx = run.world.attachments.pointX(tie) - ps.x(run.rope.last)
         val dy = run.world.attachments.pointY(tie) - ps.y(run.rope.last)
         assertTrue(dx * dx + dy * dy < 1f, "the rope stays tied to its crate")
+    }
+
+    @Test
+    fun inMachinesTheCarDrivesBothWaysTheShelfBreaksAtItsFourthCrateAndTheLiftGoesDownAndUp() {
+        val run = MachinesScene.create() as MachinesScene.Run
+        val bodies = run.world.rigidBodies
+        val joints = run.world.joints
+        var furthest = 0f
+        var turnedBack = false
+        var lowest = 0f
+        var rose = false
+        var swinging = 0
+        val placeEvery = (MachinesScene.PLACE_EVERY / dt).toInt()
+        repeat(MachinesScene.PLACED * placeEvery + 120) { step ->
+            run.step(dt)
+            furthest = maxOf(furthest, bodies.x(run.chassis))
+            if (run.direction < 0f) turnedBack = true
+            val down = -joints.position(run.slider)
+            if (down > lowest) lowest = down
+            if (lowest > MachinesScene.LIFT_TRAVEL - 2f && down < lowest - 30f) rose = true
+            if (kotlin.math.abs(bodies.angularVelocity(run.lower)) > 1f) swinging++
+            // three crates on the shelf and it holds; the fourth breaks it
+            if (step == (MachinesScene.PLACED) * placeEvery - 10) assertTrue(joints.isAlive(run.weld), "it bears three crates")
+        }
+        assertFalse(joints.isAlive(run.weld), "the fourth crate broke the shelf")
+        assertTrue(furthest > MachinesScene.TURN_LEFT_AT && turnedBack, "the car drove right, and turned back: as far as $furthest")
+        assertTrue(lowest > MachinesScene.LIFT_TRAVEL - 2f && rose, "the lift went all the way down, $lowest, and back up")
+        assertTrue(swinging > 300, "the pendulum keeps swinging: fast in $swinging steps")
+        // the car is still on its wheels
+        assertTrue(kotlin.math.abs(bodies.angle(run.chassis)) < 0.5f, "the car is upright: ${bodies.angle(run.chassis)}")
     }
 
     @Test

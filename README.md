@@ -11,11 +11,11 @@
 
 ## ⚡ 10-second version
 
-- 🍮 **soft bodies**, 🪢 **ropes**, 🧣 **cloth**, ⏳ **sand** and 📦 **rigid bodies that stack**, all pushing each other, today. 🔩 joints are on the way
+- 🍮 **soft bodies**, 🪢 **ropes**, 🧣 **cloth**, ⏳ **sand**, 📦 **rigid bodies that stack** and 🔩 **joints with motors**, all pushing each other
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **248 tests**, all green
+- 🧪 **262 tests**, all green
 
 ## ▶️ Run it
 
@@ -134,6 +134,14 @@ them away. Each side moves the other. The 11th scene, so press `]` to reach it. 
 
 <img src="docs/img/coupling.gif" alt="a crate on a blob, a blob knocking down a tower of crates, a crate on a rope swinging through blobs" width="100%">
 
+### 12 · 🔩 Machines
+
+**Bodies joined the way machines are.** A double pendulum swings wildly on two hinges. A car drives
+back and forth on motorised wheels. A welded shelf bears three crates and breaks at the fourth. A lift
+on a slider carries a crate down and up. Press `]` to reach it, and `F1` twice to see the joints. 🏗️
+
+<img src="docs/img/joints.gif" alt="a double pendulum, a car on motorised wheels, a welded shelf breaking under crates, a lift on a slider" width="100%">
+
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.
 
@@ -166,7 +174,7 @@ SANDBOX_BENCH=600 ./gradlew :demo:runRelease        # time every scene's step
 ## 🚧 Status
 
 Milestones 1 and 2 of 5 are done: the sandbox, and the particle world with its soft bodies, ropes,
-cloth and sand. Under way: 📦 rigid bodies, which turn, collide, stack, slide, and push and are pushed by blobs already. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
+cloth and sand. Under way: 📦 rigid bodies, which turn, collide, stack, slide, push and are pushed by blobs, and join up into machines already. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
 the work is tracked in the [milestones](../../milestones).
 
 It grew out of the slime in [slimy-the-blob](https://github.com/pererikbergman/slimy-the-blob). 🟢

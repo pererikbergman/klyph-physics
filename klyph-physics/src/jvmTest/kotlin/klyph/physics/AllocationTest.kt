@@ -83,6 +83,17 @@ class AllocationTest {
         repeat(30) { world.particles.add(260f + it % 10 * 5f, 100f + it / 10 * 5f, radius = 2f, collides = true) }
         val knot = world.particles.add(100f, 330f)
         world.attach(knot, 0)
+        // and joints of every kind, with limits, motors and a weld that breaks
+        val arm = world.rigidBody(Shape.box(40f, 6f), 500f, 100f)
+        val hinge = world.joints.hinge(arm, Joints.WORLD, 480f, 100f)
+        world.joints.setLimits(hinge, -1f, 1f)
+        world.joints.setMotor(hinge, 3f, 1e5f)
+        val lift = world.rigidBody(Shape.box(30f, 6f), 560f, 100f)
+        val slider = world.joints.slider(lift, Joints.WORLD, 560f, 100f, 0f, 1f)
+        world.joints.setLimits(slider, -60f, 0f)
+        world.joints.setMotor(slider, 20f, 1e5f)
+        world.joints.weld(world.rigidBody(Shape.box(10f, 10f), 600f, 60f), Joints.WORLD, 600f, 55f, breakForce = 1e4f)
+        world.joints.distance(arm, Joints.particle(knot), 510f, 100f, 100f, 330f)
         val bytes = measure { repeat(5_000) { world.step(1f / 60f) } }
         assertTrue(bytes < 1024, "5 000 steps allocated $bytes bytes")
     }
