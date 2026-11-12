@@ -131,6 +131,30 @@ class HeadlessTest {
     }
 
     @Test
+    fun inCratesAndBlobsTheCushionHoldsItsCrateTheThrownBlobFellsTheTowerAndTheSwingScattersTheBlobs() {
+        val run = CratesAndBlobsScene.create() as CratesAndBlobsScene.Run
+        val bodies = run.world.rigidBodies
+        val soft = run.world.softBodies
+        val floor = (Scenes.ROWS - 2) * Scenes.TILE
+        val crateHalf = CratesAndBlobsScene.CRATE / 2f
+        val targetsAt = run.targets.map { soft.centerX(it) }
+        repeat(600) { run.step(dt) }
+        val bottom = bodies.y(run.crate) + crateHalf
+        assertTrue(bottom < floor - 10f, "the cushion holds its crate up: its bottom at $bottom")
+        assertEquals(CratesAndBlobsScene.CUSHION_X, bodies.x(run.crate), 6f, "on top of it")
+        val top = run.tower.last()
+        assertTrue(bodies.y(top) > floor - CratesAndBlobsScene.TOWER * CratesAndBlobsScene.TOWER_CRATE + 30f, "the tower was knocked down: its top crate at ${bodies.y(top)}")
+        var scattered = 0
+        for ((k, t) in run.targets.withIndex()) if (kotlin.math.abs(soft.centerX(t) - targetsAt[k]) > 20f) scattered++
+        assertTrue(scattered >= 2, "the swinging crate scattered the blobs: $scattered of ${run.targets.size}")
+        val ps = run.world.particles
+        val tie = 0
+        val dx = run.world.attachments.pointX(tie) - ps.x(run.rope.last)
+        val dy = run.world.attachments.pointY(tie) - ps.y(run.rope.last)
+        assertTrue(dx * dx + dy * dy < 1f, "the rope stays tied to its crate")
+    }
+
+    @Test
     fun allThirtyBodiesInTheBlobPileGetThroughTheFunnelIntoTheBin() {
         val run = PileScene.create() as PileScene.Run
         repeat(PileScene.COUNT * PileScene.EVERY + 600) { run.step(dt) }

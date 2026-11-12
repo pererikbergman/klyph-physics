@@ -274,7 +274,8 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     /**
      * From [DebugView.CONSTRAINTS] up, draws every constraint of [world] coloured by its stress, from
      * blue squeezed through grey at rest to red stretched: a link along its length, a pin as a line to
-     * the point it holds, a bend as a dot on its middle particle, an area as a dot in its middle.
+     * the point it holds, an attachment as a line to its point on its rigid body, a bend as a dot on
+     * its middle particle, an area as a dot in its middle.
      */
     fun constraints(canvas: Canvas, world: PhysicsWorld) {
         if (!view.shows(DebugView.CONSTRAINTS)) return
@@ -299,6 +300,19 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
             val tint = stressColor(sqrt(dx * dx + dy * dy) / FULL_PIN)
             line(canvas, ps.x(p), ps.y(p), cs.pinX(c), cs.pinY(c), EDGE, tint, top)
             rect(canvas, cs.pinX(c) - 1f, cs.pinY(c) - 1f, 2f, 2f, tint, top)
+        }
+        val tied = world.attachments
+        for (a in 0 until tied.end) {
+            if (!tied.isAlive(a)) continue
+            val p = tied.particle(a)
+            if (!ps.isAlive(p) || !world.rigidBodies.isAlive(tied.body(a))) continue
+            val x = tied.pointX(a)
+            val y = tied.pointY(a)
+            val dx = x - ps.x(p)
+            val dy = y - ps.y(p)
+            val tint = stressColor(sqrt(dx * dx + dy * dy) / FULL_PIN)
+            line(canvas, ps.x(p), ps.y(p), x, y, EDGE, tint, top)
+            rect(canvas, x - 1.5f, y - 1.5f, 3f, 3f, tint, top + 1)
         }
         for (c in 0 until cs.bendEnd) {
             if (!cs.isBendAlive(c)) continue

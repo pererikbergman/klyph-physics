@@ -140,6 +140,20 @@ class Narrowphase {
     }
 
     /**
+     * Finds where a round point of [radius] at ([x], [y]), such as a particle, touches [b] at ([bx], [by])
+     * turned by the angle with cosine [bc] and sine [bsn], into [out], with the point as the first shape.
+     */
+    internal fun collidePoint(x: Float, y: Float, radius: Float, b: Shape, bx: Float, by: Float, bc: Float, bsn: Float, out: Manifold): Boolean {
+        an = 1
+        axs[0] = x
+        ays[0] = y
+        ar = radius
+        bn = place(b, bx, by, bc, bsn, bxs, bys, bnx, bny)
+        br = b.radius
+        return collidePlaced(out)
+    }
+
+    /**
      * Finds where [a] touches the one-sided segment from ([x1], [y1]) to ([x2], [y2]), with its outward
      * normal ([nx], [ny]), into [out], with the segment as the second shape.
      */

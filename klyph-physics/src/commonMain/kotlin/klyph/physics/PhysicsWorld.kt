@@ -31,6 +31,11 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     private val collisions = Collisions(this)
 
+    /** Particles held to points on rigid bodies: see [attach] and [Attachments]. */
+    val attachments = Attachments(particles, rigidBodies)
+
+    private val coupling = Coupling(this)
+
     /** Where rigid bodies touched each other and the solids in the last substep, for drawing: see [RigidContacts]. */
     val rigidContacts = RigidContacts(this)
 
@@ -52,7 +57,8 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     /**
      * Advances the world by [dt] seconds, in [PhysicsConfig.substeps] substeps. Each one moves every
      * particle and rigid body and finds where rigid bodies touch, then [PhysicsConfig.iterations] times
-     * solves the [constraints], keeps bodies out of each other, and pushes everything out of the
+     * solves the [constraints] and [attachments], keeps bodies out of each other, soft and rigid
+     * alike, and pushes everything out of the
      * [solids], so walls have the last word. Last, rigid bodies take their velocities from how far they
      * moved, and their contacts' friction and bounce change them.
      */
@@ -67,19 +73,23 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         hand.beginStep()
         rigidBodies.beginStep(dt)
         collisions.beginStep(dt)
+        coupling.beginStep(dt)
         rigidContacts.beginStep(dt)
         repeat(config.substeps) {
             integrate(h, keep)
             rigidBodies.integrate(h, keep, gravity.x, gravity.y, config.maxStep)
             rigidContacts.find()
             constraints.beginSubstep()
+            attachments.beginSubstep()
             hand.beginSubstep()
             repeat(config.iterations) { pass ->
                 constraints.solve(h)
+                attachments.solve(h)
                 hand.solve(h)
                 // Grip just before the last pass, so collisions still have the last word over it.
-                if (pass == config.iterations - 1) particles.applyFriction()
+                if (pass == config.iterations - 1) particles.applyFriction(rigidBodies)
                 collisions.solve()
+                coupling.solve()
                 solids?.collide(particles, events, restingMove)
                 rigidContacts.solve()
             }
@@ -159,6 +169,12 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         material: Material = Material.DEFAULT,
         kind: BodyKind = BodyKind.DYNAMIC,
     ): Int = rigidBodies.add(shapes, x, y, angle, density, material, kind)
+
+    /**
+     * Holds particle [p] to rigid body [body] at the point where [p] is now, as softly as [compliance],
+     * so each drags the other: a rope tied to a crate. Returns the handle in [attachments].
+     */
+    fun attach(p: Int, body: Int, compliance: Float = 0f): Int = attachments.attach(p, body, compliance)
 
     /** Velocity of particle [p] in units per second, over the last substep. */
     fun velocityX(p: Int): Float = particles.movedX(p) / substepLength
