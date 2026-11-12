@@ -37,8 +37,9 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     internal var restitution = FloatArray(initialCapacity)
 
     // Each particle's contact this substep, for [applyFriction]: how far it was pushed out in all, along
-    // which normal, with what grip, and against what: nothing that moves (-1), a particle (contactA), or
-    // the point `(1 - contactT)·contactA + contactT·contactB` of an edge.
+    // which normal, with what grip, and against what: nothing that moves (-1), a particle (contactA),
+    // the point `(1 - contactT)·contactA + contactT·contactB` of an edge, or the point (contactLocalX,
+    // contactLocalY) of rigid body contactBody, from its centre of mass in its own frame.
     internal var contactDepth = FloatArray(initialCapacity)
     internal var contactNx = FloatArray(initialCapacity)
     internal var contactNy = FloatArray(initialCapacity)
@@ -47,6 +48,9 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     internal var contactA = IntArray(initialCapacity)
     internal var contactB = IntArray(initialCapacity)
     internal var contactT = FloatArray(initialCapacity)
+    internal var contactBody = IntArray(initialCapacity) { -1 }
+    internal var contactLocalX = FloatArray(initialCapacity)
+    internal var contactLocalY = FloatArray(initialCapacity)
     private var free = IntArray(16)
     private var freeCount = 0
 
@@ -195,6 +199,18 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         contactA[p] = a
         contactB[p] = b
         contactT[p] = t
+        contactBody[p] = -1
+    }
+
+    /**
+     * Remembers that particle [p] was pushed [depth] along ([nx], [ny]) by rigid [body], at the point
+     * ([localX], [localY]) of it from its centre of mass in its own frame, with [grip] and [hold].
+     */
+    internal fun touchBody(p: Int, nx: Float, ny: Float, depth: Float, grip: Float, hold: Float, body: Int, localX: Float, localY: Float) {
+        touch(p, nx, ny, depth, grip, hold, -1, -1, 0f)
+        contactBody[p] = body
+        contactLocalX[p] = localX
+        contactLocalY[p] = localY
     }
 
     /**
@@ -207,12 +223,19 @@ class Particles internal constructor(initialCapacity: Int = 64) {
      * own constraints tug its particles to and fro between passes, and only what's left near the end
      * is really sliding. The pushes it weighs are the ones since it last ran: the last pass of the
      * substep before, and every pass but the last of this one.
+     *
+     * A particle that touched a rigid body slides past the point of [bodies] it touched, and the body
+     * is held back at that point as the particle is, moving and turning it.
      */
-    internal fun applyFriction() {
+    internal fun applyFriction(bodies: RigidBodies) {
         for (p in 0 until end) {
             val depth = contactDepth[p]
             if (depth == 0f) continue
             contactDepth[p] = 0f
+            if (contactBody[p] >= 0) {
+                slidePast(p, contactBody[p], depth, bodies)
+                continue
+            }
             val a = contactA[p]
             val b = contactB[p]
             val t = if (b < 0) 0f else contactT[p]
@@ -257,6 +280,41 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         }
     }
 
+    /** [applyFriction] for particle [p], pushed [depth] in all by rigid [body] this substep. */
+    private fun slidePast(p: Int, body: Int, depth: Float, bodies: RigidBodies) {
+        if (!bodies.isAlive(body)) return
+        val lx = contactLocalX[p]
+        val ly = contactLocalY[p]
+        // where the point it touched is now, from the body's centre, and how far it moved this substep
+        val rx = bodies.cos[body] * lx - bodies.sin[body] * ly
+        val ry = bodies.sin[body] * lx + bodies.cos[body] * ly
+        val before = bodies.prevAngle[body]
+        val c = kotlin.math.cos(before)
+        val s = kotlin.math.sin(before)
+        val movedX = bodies.x[body] + rx - (bodies.prevX[body] + c * lx - s * ly)
+        val movedY = bodies.y[body] + ry - (bodies.prevY[body] + s * lx + c * ly)
+        val dx = x[p] - prevX[p] - movedX
+        val dy = y[p] - prevY[p] - movedY
+        val nx = contactNx[p]
+        val ny = contactNy[p]
+        val along = dx * nx + dy * ny
+        val tx = dx - along * nx
+        val ty = dy - along * ny
+        val slide = sqrt(tx * tx + ty * ty)
+        if (slide < 1e-7f) return
+        val held = if (slide < contactHold[p] * depth) slide else min(slide, contactGrip[p] * depth)
+        if (held == 0f) return
+        val ux = -tx / slide
+        val uy = -ty / slide
+        val wp = invMass[p]
+        val w = wp + bodies.inverseMassAt(body, rx, ry, ux, uy)
+        if (w == 0f) return
+        val push = held / w
+        x[p] += wp * push * ux
+        y[p] += wp * push * uy
+        bodies.shove(body, -push * ux, -push * uy, rx, ry)
+    }
+
     private fun grow() {
         val size = x.size * 2
         x = x.copyOf(size)
@@ -280,6 +338,9 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         contactA = contactA.copyOf(size)
         contactB = contactB.copyOf(size)
         contactT = contactT.copyOf(size)
+        contactBody = contactBody.copyOf(size)
+        contactLocalX = contactLocalX.copyOf(size)
+        contactLocalY = contactLocalY.copyOf(size)
     }
 
     companion object {

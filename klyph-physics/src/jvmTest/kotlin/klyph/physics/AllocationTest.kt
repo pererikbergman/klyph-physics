@@ -61,7 +61,7 @@ class AllocationTest {
     }
 
     @Test
-    fun aStepOfStackedAndTumblingBodiesAllocatesNothing() {
+    fun aStepOfRigidBodiesAmongBlobsAndGrainsAllocatesNothing() {
         val world = PhysicsWorld()
         world.solids = SolidGrid(40, 30, 16f).apply {
             for (c in 0 until cols) fill(c, 29)
@@ -78,6 +78,11 @@ class AllocationTest {
         repeat(40) { world.rigidBody(shapes[it % shapes.size], 250f + (it % 8) * 20f, 200f + (it / 8) * 24f, angle = it * 0.4f) }
         val paddle = world.rigidBody(Shape.box(60f, 8f), 300f, 380f, kind = BodyKind.KINEMATIC)
         world.rigidBodies.setAngularVelocity(paddle, 1f)
+        // blobs and grains among them, and a rope tied to a crate, so the soft-rigid coupling runs too
+        repeat(4) { world.softBody(SoftBodies.semiDisc(13f, 14, 8, 34f), 200f + it * 60f, 440f) }
+        repeat(30) { world.particles.add(260f + it % 10 * 5f, 100f + it / 10 * 5f, radius = 2f, collides = true) }
+        val knot = world.particles.add(100f, 330f)
+        world.attach(knot, 0)
         val bytes = measure { repeat(5_000) { world.step(1f / 60f) } }
         assertTrue(bytes < 1024, "5 000 steps allocated $bytes bytes")
     }
