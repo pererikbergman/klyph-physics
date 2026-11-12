@@ -31,6 +31,9 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
 
     private val collisions = Collisions(this)
 
+    /** Hinges, sliders, welds and distance joints between rigid bodies: see [Joints]. */
+    val joints = Joints(particles, rigidBodies)
+
     /** Particles held to points on rigid bodies: see [attach] and [Attachments]. */
     val attachments = Attachments(particles, rigidBodies)
 
@@ -57,7 +60,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     /**
      * Advances the world by [dt] seconds, in [PhysicsConfig.substeps] substeps. Each one moves every
      * particle and rigid body and finds where rigid bodies touch, then [PhysicsConfig.iterations] times
-     * solves the [constraints] and [attachments], keeps bodies out of each other, soft and rigid
+     * solves the [constraints], [attachments] and [joints], keeps bodies out of each other, soft and rigid
      * alike, and pushes everything out of the
      * [solids], so walls have the last word. Last, rigid bodies take their velocities from how far they
      * moved, and their contacts' friction and bounce change them.
@@ -81,10 +84,12 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
             rigidContacts.find()
             constraints.beginSubstep()
             attachments.beginSubstep()
+            joints.beginSubstep(h)
             hand.beginSubstep()
             repeat(config.iterations) { pass ->
                 constraints.solve(h)
                 attachments.solve(h)
+                joints.solve(h)
                 hand.solve(h)
                 // Grip just before the last pass, so collisions still have the last word over it.
                 if (pass == config.iterations - 1) particles.applyFriction(rigidBodies)
@@ -93,6 +98,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
                 solids?.collide(particles, events, restingMove)
                 rigidContacts.solve()
             }
+            joints.endSubstep(h)
             rigidBodies.updateVelocities(h)
             rigidContacts.solveVelocities(h, config.bounceSpeed, config.iterations)
         }

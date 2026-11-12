@@ -27,6 +27,7 @@ Want more? Every page has the details further down.
 | ✂️ | [SAT and contact points](sat.md) | where two shapes touch, to the point |
 | 🧱 | [Stacking: contacts, friction, bounce](stacking.md) | towers that stand, dominoes that fall |
 | 🤝 | [Soft meets rigid](coupling.md) | crates squash blobs, blobs knock crates over |
+| 🔩 | [Joints and motors](joints.md) | hinges, sliders, welds: cars, lifts, pendulums |
 
 Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 

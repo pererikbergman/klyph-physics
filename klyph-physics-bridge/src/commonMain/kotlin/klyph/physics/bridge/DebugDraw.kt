@@ -3,6 +3,7 @@ package klyph.physics.bridge
 import klyph.math.Rect
 import klyph.physics.Broadphase
 import klyph.physics.Constraints
+import klyph.physics.JointKind
 import klyph.physics.Manifold
 import klyph.physics.Outline
 import klyph.physics.Particles
@@ -274,7 +275,8 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     /**
      * From [DebugView.CONSTRAINTS] up, draws every constraint of [world] coloured by its stress, from
      * blue squeezed through grey at rest to red stretched: a link along its length, a pin as a line to
-     * the point it holds, an attachment as a line to its point on its rigid body, a bend as a dot on
+     * the point it holds, an attachment as a line to its point on its rigid body, a joint as a dot
+     * on its anchor (a line to its other end for a distance joint), a bend as a dot on
      * its middle particle, an area as a dot in its middle.
      */
     fun constraints(canvas: Canvas, world: PhysicsWorld) {
@@ -313,6 +315,21 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
             val tint = stressColor(sqrt(dx * dx + dy * dy) / FULL_PIN)
             line(canvas, ps.x(p), ps.y(p), x, y, EDGE, tint, top)
             rect(canvas, x - 1.5f, y - 1.5f, 3f, 3f, tint, top + 1)
+        }
+        val joints = world.joints
+        for (j in 0 until joints.end) {
+            if (!joints.isAlive(j)) continue
+            val ax = joints.anchorAX(j)
+            val ay = joints.anchorAY(j)
+            val bx = joints.anchorBX(j)
+            val by = joints.anchorBY(j)
+            // a distance joint is its line; the others are a point, red as its two anchors pull apart
+            val stretch = if (joints.kind(j) == JointKind.DISTANCE) 0f else sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay))
+            val tint = stressColor(stretch / FULL_PIN)
+            line(canvas, ax, ay, bx, by, EDGE, tint, top)
+            val size = if (joints.kind(j) == JointKind.WELD) 4f else 3f
+            rect(canvas, ax - size / 2f, ay - size / 2f, size, size, JOINT, top + 1)
+            rect(canvas, bx - 1f, by - 1f, 2f, 2f, tint, top + 1)
         }
         for (c in 0 until cs.bendEnd) {
             if (!cs.isBendAlive(c)) continue
@@ -521,6 +538,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         val FLOOR_CONTACT = Color(0xFFD36BFFu)
         val LABEL = Color(0xE8ECF4FFu)
         val CONTACT = Color(0x5BE0E0FFu)
+        val JOINT = Color(0xFFD36BFFu)
         val HELD = Color(0x6BE07AFFu)
         val SLIDING = Color(0xFF9A3DFFu)
         val NEAR = Color(0.6f, 0.65f, 0.75f, 0.4f)

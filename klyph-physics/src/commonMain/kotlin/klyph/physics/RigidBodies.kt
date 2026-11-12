@@ -361,6 +361,19 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     /**
+     * Turns body [b] as if twisted by the angular push [amount]: by the amount over its inertia. The
+     * solver's way of turning a body without moving it, for a joint's angle.
+     */
+    internal fun twist(b: Int, amount: Float) {
+        val turn = amount * invInertia[b]
+        if (turn == 0f) return
+        angle[b] += turn
+        cos[b] = kotlin.math.cos(angle[b])
+        sin[b] = kotlin.math.sin(angle[b])
+        turned[b] += turn
+    }
+
+    /**
      * Changes body [b]'s velocity as if struck by the impulse ([ix], [iy]) at the point ([rx], [ry]) from
      * its centre: along by the impulse over its mass, and its spin by the impulse's torque over its
      * inertia. The velocity pass's one way of changing a body's speed.
