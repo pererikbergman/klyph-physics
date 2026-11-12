@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **181 tests**, all green
+- 🧪 **193 tests**, all green
 
 ## ▶️ Run it
 
@@ -109,6 +109,14 @@ at 60 FPS and then some. 🏖️
 
 <img src="docs/img/sand.gif" alt="sand in bands of colour pouring through an hourglass and heaping up below" width="60%">
 
+### 9 · 📦 Tumble
+
+**Bodies that turn.** Three bars tossed up with three different spins fly the same arc, because spin
+doesn't change a fall. A kinematic paddle goes round a circle exactly where it's told, and a static
+bar never moves.
+
+<img src="docs/img/rigid-bodies.gif" alt="three bars tossed up spinning at different speeds, a paddle going round a circle" width="100%">
+
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.
 
@@ -141,7 +149,7 @@ SANDBOX_BENCH=600 ./gradlew :demo:runRelease        # time every scene's step
 ## 🚧 Status
 
 Milestones 1 and 2 of 5 are done: the sandbox, and the particle world with its soft bodies, ropes,
-cloth and sand. Next up: 📦 rigid bodies. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
+cloth and sand. Under way: 📦 rigid bodies, which turn already. The plan is in [the design](docs/specs/2026-11-10-klyph-physics-design.md), and
 the work is tracked in the [milestones](../../milestones).
 
 It grew out of the slime in [slimy-the-blob](https://github.com/pererikbergman/slimy-the-blob). 🟢

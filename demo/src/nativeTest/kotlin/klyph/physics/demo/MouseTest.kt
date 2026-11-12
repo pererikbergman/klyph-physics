@@ -49,6 +49,8 @@ class MouseTest {
             val world = sandbox.run.world ?: fail("$name has no world to grab in")
             val ps = world.particles
             val p = movableNearTheMiddle(world)
+            // a scene of rigid bodies only: the hand holds particles, not those yet
+            if (p < 0) continue
             assertTrue(sandbox.grab(ps.x(p), ps.y(p)), "$name: nothing grabbed at particle $p")
             // a mouse thrown about the whole window, somewhere new every frame
             val random = Random(i)
@@ -81,9 +83,9 @@ class MouseTest {
             sandbox.select(i)
             sandbox.fixedStep(dt)
             val world = sandbox.run.world ?: fail("${sandbox.scene.name} has no world")
-            val before = world.particles.count
+            val before = world.particles.count + world.rigidBodies.count
             sandbox.spawn(roomWidth / 2f, 60f)
-            assertTrue(world.particles.count > before, "${sandbox.scene.name}: nothing spawned")
+            assertTrue(world.particles.count + world.rigidBodies.count > before, "${sandbox.scene.name}: nothing spawned")
             repeat(120) { sandbox.fixedStep(dt) }
             assertAllFinite(sandbox.scene.name, world)
         }

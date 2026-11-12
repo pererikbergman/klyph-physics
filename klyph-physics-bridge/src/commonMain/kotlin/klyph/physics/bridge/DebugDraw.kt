@@ -20,6 +20,8 @@ import klyph.text.Font
 import klyph.text.TextAlign
 import klyph.text.TextShadow
 import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -72,6 +74,27 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
             if (!particles.isAlive(a) || !particles.isAlive(b)) continue
             val tint = if (constraints.isRope(c)) ropeColor else color
             line(canvas, particles.x(a), particles.y(a), particles.x(b), particles.y(b), OUTLINE, tint, layer)
+        }
+    }
+
+    /**
+     * Fills a rectangle [width] by [height] centred on ([x], [y]) and turned by [angle] radians, in
+     * [color], with a darker edge: how a rigid box looks.
+     */
+    fun turnedRect(canvas: Canvas, x: Float, y: Float, width: Float, height: Float, angle: Float, color: Color) {
+        canvas.drawSprite(pixel, x = x, y = y, width = width, height = height, rotation = angle, color = color, layer = layer, space = DrawSpace.WORLD)
+        val c = cos(angle)
+        val s = sin(angle)
+        val hx = width / 2f
+        val hy = height / 2f
+        val edge = color.darker()
+        for (k in 0 until 4) {
+            // the corners in turn, round the rectangle
+            val ax = if (k == 0 || k == 3) -hx else hx
+            val ay = if (k < 2) -hy else hy
+            val bx = if (k == 0 || k == 1) hx else -hx
+            val by = if (k == 0 || k == 3) -hy else hy
+            line(canvas, x + c * ax - s * ay, y + s * ax + c * ay, x + c * bx - s * by, y + s * bx + c * by, OUTLINE, edge, layer + 1)
         }
     }
 
