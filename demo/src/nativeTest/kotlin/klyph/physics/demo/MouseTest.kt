@@ -31,7 +31,29 @@ class MouseTest {
         return best
     }
 
+    /** The dynamic rigid body nearest the middle of the room, or -1. */
+    private fun bodyNearTheMiddle(world: PhysicsWorld): Int {
+        val bodies = world.rigidBodies
+        var best = -1
+        var bestSquared = Float.MAX_VALUE
+        for (b in 0 until bodies.end) {
+            if (!bodies.isAlive(b) || bodies.inverseMass(b) == 0f) continue
+            val dx = bodies.x(b) - roomWidth / 2f
+            val dy = bodies.y(b) - roomHeight / 2f
+            if (dx * dx + dy * dy < bestSquared) {
+                best = b
+                bestSquared = dx * dx + dy * dy
+            }
+        }
+        return best
+    }
+
     private fun assertAllFinite(name: String, world: PhysicsWorld) {
+        val bodies = world.rigidBodies
+        for (b in 0 until bodies.end) {
+            if (!bodies.isAlive(b)) continue
+            assertTrue(bodies.x(b).isFinite() && bodies.y(b).isFinite() && bodies.angle(b).isFinite(), "$name: body $b went to (${bodies.x(b)}, ${bodies.y(b)})")
+        }
         val ps = world.particles
         for (p in 0 until ps.end) {
             if (!ps.isAlive(p)) continue
@@ -49,9 +71,10 @@ class MouseTest {
             val world = sandbox.run.world ?: fail("$name has no world to grab in")
             val ps = world.particles
             val p = movableNearTheMiddle(world)
-            // a scene of rigid bodies only: the hand holds particles, not those yet
-            if (p < 0) continue
-            assertTrue(sandbox.grab(ps.x(p), ps.y(p)), "$name: nothing grabbed at particle $p")
+            val b = bodyNearTheMiddle(world)
+            // a scene of rigid bodies only has no particles: grab one of its bodies by its middle
+            val grabbed = if (p >= 0) sandbox.grab(ps.x(p), ps.y(p)) else sandbox.grab(world.rigidBodies.x(b), world.rigidBodies.y(b))
+            assertTrue(grabbed, "$name: nothing grabbed at particle $p or body $b")
             // a mouse thrown about the whole window, somewhere new every frame
             val random = Random(i)
             repeat(240) {
@@ -61,6 +84,7 @@ class MouseTest {
             }
             sandbox.release()
             assertEquals(-1, world.grabbed, "$name: let go")
+            assertEquals(-1, world.grabbedBody, "$name: let go")
             repeat(180) { sandbox.fixedStep(dt) }
             assertAllFinite(name, world)
             val bodies = world.softBodies

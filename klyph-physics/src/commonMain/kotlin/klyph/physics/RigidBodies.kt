@@ -58,6 +58,19 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     internal var kind = IntArray(initialCapacity)
     internal var alive = BooleanArray(initialCapacity)
 
+    /** What each body is made of, around its centre of mass; none for a body made with [add]. */
+    internal var shapes = arrayOfNulls<Array<Shape>>(initialCapacity)
+
+    /** Each body's [Material], spread over three arrays. */
+    internal var friction = FloatArray(initialCapacity)
+    internal var staticFriction = FloatArray(initialCapacity)
+    internal var restitution = FloatArray(initialCapacity)
+
+    // The cosine and sine of each body's angle, kept up to date whenever it turns: the solver's way to
+    // turn a shape's points into the world without a call to cos and sin for every one.
+    internal var cos = FloatArray(initialCapacity)
+    internal var sin = FloatArray(initialCapacity)
+
     // Where a kinematic body has been told to be at the end of the step, if [hasTarget].
     private var targetX = FloatArray(initialCapacity)
     private var targetY = FloatArray(initialCapacity)
@@ -77,8 +90,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     /**
      * Adds a body of [kind] at ([x], [y]), turned by [angle] radians, at rest, and returns its handle.
      * Its [mass] and its moment of [inertia] (how hard it is to turn, in mass times units squared) only
-     * matter to a [BodyKind.DYNAMIC] body. Most bodies are better made from a shape, which works both
-     * out from its size: see [PhysicsWorld.rigidBody].
+     * matter to a [BodyKind.DYNAMIC] body. It has no shape, so nothing touches it: most bodies are
+     * better made from shapes, which work both out from their size.
      */
     fun add(x: Float, y: Float, angle: Float = 0f, mass: Float = 1f, inertia: Float = 1f, kind: BodyKind = BodyKind.DYNAMIC): Int {
         require(x.isFinite() && y.isFinite() && angle.isFinite()) { "a body can't start at ($x, $y), turned $angle" }
@@ -103,7 +116,71 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         invInertia[b] = if (moves) 1f / inertia else 0f
         hasTarget[b] = false
         alive[b] = true
+        shapes[b] = NO_SHAPES
+        setMaterial(b, Material.DEFAULT)
+        cos[b] = kotlin.math.cos(angle)
+        sin[b] = kotlin.math.sin(angle)
         return b
+    }
+
+    /**
+     * Adds a body of [kind] made of [shapes] at [density], and returns its handle. The shapes' origin,
+     * the point (0, 0) they were made around, goes at ([x], [y]), turned by [angle]; the body itself is
+     * at its centre of mass, where it balances and turns about. Mass and inertia come from the shapes'
+     * areas and the [density]. Its [material] says how it grips and bounces.
+     */
+    fun add(
+        shapes: List<Shape>,
+        x: Float,
+        y: Float,
+        angle: Float = 0f,
+        density: Float = DENSITY,
+        material: Material = Material.DEFAULT,
+        kind: BodyKind = BodyKind.DYNAMIC,
+    ): Int {
+        require(shapes.isNotEmpty()) { "a body needs at least one shape" }
+        require(density > 0f && density.isFinite()) { "density is $density: it must be finite and more than 0" }
+        val mass = MassProperties(shapes, density)
+        val c = kotlin.math.cos(angle)
+        val s = kotlin.math.sin(angle)
+        val b = add(x + c * mass.centerX - s * mass.centerY, y + s * mass.centerX + c * mass.centerY, angle, mass.mass, mass.inertia, kind)
+        this.shapes[b] = Array(shapes.size) { shapes[it].moved(-mass.centerX, -mass.centerY) }
+        setMaterial(b, material)
+        return b
+    }
+
+    /** Makes body [b] grip and bounce like [material]. */
+    fun setMaterial(b: Int, material: Material) {
+        friction[b] = material.friction
+        staticFriction[b] = material.staticFriction
+        restitution[b] = material.restitution
+    }
+
+    /** How many shapes body [b] is made of. */
+    fun shapeCount(b: Int): Int = shapes[b]!!.size
+
+    /**
+     * Shape [i] of body [b], around the body's centre of mass: a point (sx, sy) of it is in the world
+     * at [worldX], [worldY].
+     */
+    fun shape(b: Int, i: Int): Shape = shapes[b]!![i]
+
+    /** Where the point ([localX], [localY]) of body [b], measured from its centre of mass, is in the world. */
+    fun worldX(b: Int, localX: Float, localY: Float): Float = x[b] + cos[b] * localX - sin[b] * localY
+
+    fun worldY(b: Int, localX: Float, localY: Float): Float = y[b] + sin[b] * localX + cos[b] * localY
+
+    /** Where the world point ([wx], [wy]) is on body [b], measured from its centre of mass. */
+    fun localX(b: Int, wx: Float, wy: Float): Float = cos[b] * (wx - x[b]) + sin[b] * (wy - y[b])
+
+    fun localY(b: Int, wx: Float, wy: Float): Float = -sin[b] * (wx - x[b]) + cos[b] * (wy - y[b])
+
+    /** Whether the world point ([wx], [wy]) is inside one of body [b]'s shapes. */
+    fun contains(b: Int, wx: Float, wy: Float): Boolean {
+        val lx = localX(b, wx, wy)
+        val ly = localY(b, wx, wy)
+        for (shape in shapes[b]!!) if (shape.contains(lx, ly)) return true
+        return false
     }
 
     /** Removes body [b]; its handle may be handed out again. Removing a dead body does nothing. */
@@ -166,6 +243,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         this.x[b] = x
         this.y[b] = y
         this.angle[b] = angle
+        cos[b] = kotlin.math.cos(angle)
+        sin[b] = kotlin.math.sin(angle)
         prevX[b] = x
         prevY[b] = y
         prevAngle[b] = angle
@@ -228,6 +307,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
             x[b] += vx[b] * h
             y[b] += vy[b] * h
             angle[b] += omega[b] * h
+            cos[b] = kotlin.math.cos(angle[b])
+            sin[b] = kotlin.math.sin(angle[b])
             movedX[b] = 0f
             movedY[b] = 0f
             turned[b] = 0f
@@ -259,7 +340,11 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         val turn = (rx * py - ry * px) * invInertia[b]
         x[b] += px * w
         y[b] += py * w
-        angle[b] += turn
+        if (turn != 0f) {
+            angle[b] += turn
+            cos[b] = kotlin.math.cos(angle[b])
+            sin[b] = kotlin.math.sin(angle[b])
+        }
         movedX[b] += px * w
         movedY[b] += py * w
         turned[b] += turn
@@ -296,12 +381,26 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         targetY = targetY.copyOf(size)
         targetAngle = targetAngle.copyOf(size)
         hasTarget = hasTarget.copyOf(size)
+        shapes = shapes.copyOf(size)
+        friction = friction.copyOf(size)
+        staticFriction = staticFriction.copyOf(size)
+        restitution = restitution.copyOf(size)
+        cos = cos.copyOf(size)
+        sin = sin.copyOf(size)
     }
 
-    internal companion object {
+    companion object {
+        /**
+         * How heavy a body's shapes are per unit squared, unless told otherwise: a 32-unit crate weighs
+         * about 50, as much as a blob.
+         */
+        const val DENSITY = 0.05f
+
+        private val NO_SHAPES = emptyArray<Shape>()
+
         // BodyKind's ordinals, as constants for the hot loops.
-        const val STATIC = 0
-        const val DYNAMIC = 1
-        const val KINEMATIC = 2
+        internal const val STATIC = 0
+        internal const val DYNAMIC = 1
+        internal const val KINEMATIC = 2
     }
 }

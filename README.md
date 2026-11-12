@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **193 tests**, all green
+- 🧪 **209 tests**, all green
 
 ## ▶️ Run it
 
@@ -39,7 +39,7 @@ SDL3 3.4+ yourself.
 | `B` | show the broadphase's grid |
 | `F3` | klyph's frame stats |
 | 🖱️ left mouse | grab something and drag it 🖐️ |
-| 🖱️ right mouse | add the scene's own thing: a blob, a ball, a spring, a burst of grains |
+| 🖱️ right mouse | add the scene's own thing: a blob, a ball, a spring, a burst of grains, a shape |
 | `Esc` | quit |
 
 ---
@@ -111,11 +111,12 @@ at 60 FPS and then some. 🏖️
 
 ### 9 · 📦 Tumble
 
-**Bodies that turn.** Three bars tossed up with three different spins fly the same arc, because spin
-doesn't change a fall. A kinematic paddle goes round a circle exactly where it's told, and a static
-bar never moves.
+**Bodies that turn.** A circle, a box, a triangle, a capsule and a hammer of two boxes are tossed up
+with the same twist. They fly the same arc, because spin doesn't change a fall, but the ones that
+are hard to turn spin slowest. A kinematic paddle goes round a circle exactly where it's told, and a
+static bar never moves.
 
-<img src="docs/img/rigid-bodies.gif" alt="three bars tossed up spinning at different speeds, a paddle going round a circle" width="100%">
+<img src="docs/img/rigid-bodies.gif" alt="five shapes tossed up spinning at different speeds, a paddle going round a circle" width="100%">
 
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.

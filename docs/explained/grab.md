@@ -1,12 +1,12 @@
 # 🖐️ Grab
 
-⚡ **Click a particle and drag it: a soft pin pulls it towards the mouse, and never yanks hard enough to break anything.**
+⚡ **Click something and drag it: a soft pin pulls it towards the mouse, and never yanks hard enough to break anything.**
 
 <img src="../img/grab.gif" alt="a blob lifted off a rope bridge, swung from side to side by a hand, and dropped on a ledge" width="100%">
 
 ## 🧠 How it works
 
-- 👉 `world.grab(x, y)` takes hold of the nearest particle that can move, within reach, with a soft [📌 pin](constraints.md) 🖐️
+- 👉 `world.grab(x, y)` takes hold of the rigid body under the mouse by that point, or the nearest particle that can move, with a soft [📌 pin](constraints.md) 🖐️
 - 👉 `world.moveGrab(x, y)` moves the pin's point; the particle, and whatever it's tied to, follows 🎈
 - 👉 however far the mouse jumps, the pin pulls from at most `maxPull` away, so a fling drags a body quickly but never tears it 🛡️
 
@@ -15,18 +15,26 @@
 
 ```kotlin
 // mouse down
-world.grab(mouse.x, mouse.y)          // the particle it took, or -1 when nothing was in reach
+world.grab(mouse.x, mouse.y)          // the particle it took, or -1 for a body or nothing in reach
 // every frame the button is held
 world.moveGrab(mouse.x, mouse.y)
 // mouse up
 world.release()
 
 world.grabbed                         // which particle is held, or -1
+world.grabbedBody                     // which rigid body is held, or -1
+world.hand.heldX                      // where the point held is now
 world.hand.maxPull = 8f               // pull more gently
 ```
 
 **One hand.** There's one grab per world, like one mouse. Grabbing again lets go of the last one
 first.
+
+**Rigid bodies first.** A click inside a dynamic body's shape takes the body, by the point clicked,
+so a crate picked up by its corner hangs from that corner and swings. Its pin is solved by the hand
+itself: it pulls that point of the body, moving and turning it. The pin is as soft as `compliance`
+per unit of the body's mass, so a heavy crate follows the mouse as well as a light one. Static and
+kinematic bodies can't be grabbed.
 
 **It's just a pin.** The hand is an ordinary pin constraint with a little compliance, so it goes
 through the same solver as everything else. The world adds it on `grab`, removes it on `release`,

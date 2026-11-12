@@ -187,13 +187,12 @@ private val GRID_NAME = StringBuilder("broadphase on")
 
 private val HAND = Color(0xFFD36BFFu)
 
-/** The line from the grabbed particle to the mouse, and a dot on the particle. */
+/** The line from what's grabbed to the mouse, and a dot on the point held. */
 private fun drawHand(canvas: klyph.render.Canvas, debug: DebugDraw, world: klyph.physics.PhysicsWorld) {
-    val p = world.grabbed
-    if (p < 0) return
     val hand = world.hand
-    val x = world.particles.x(p)
-    val y = world.particles.y(p)
+    if (!hand.isHolding) return
+    val x = hand.heldX
+    val y = hand.heldY
     debug.line(canvas, x, y, hand.targetX, hand.targetY, 1f, HAND, debug.layer + 10)
     debug.square(canvas, x, y, 4f, HAND)
 }

@@ -6,7 +6,10 @@ import klyph.physics.Constraints
 import klyph.physics.Outline
 import klyph.physics.Particles
 import klyph.physics.PhysicsWorld
+import klyph.physics.RigidBodies
 import klyph.physics.Ring
+import klyph.physics.Shape
+import klyph.physics.ShapeKind
 import klyph.physics.Solid
 import klyph.physics.SolidGrid
 import klyph.physics.SolidShape
@@ -95,6 +98,108 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
             val bx = if (k == 0 || k == 1) hx else -hx
             val by = if (k == 0 || k == 3) -hy else hy
             line(canvas, x + c * ax - s * ay, y + s * ax + c * ay, x + c * bx - s * by, y + s * bx + c * by, OUTLINE, edge, layer + 1)
+        }
+    }
+
+    /**
+     * Fills every shape of rigid body [body] of [world] in [color] and outlines it, with a spoke on each
+     * round shape so its turning shows; with details, also marks its centre of mass.
+     */
+    fun rigidBody(canvas: Canvas, world: PhysicsWorld, body: Int, color: Color) {
+        val bodies = world.rigidBodies
+        val edge = color.darker()
+        for (i in 0 until bodies.shapeCount(body)) {
+            val shape = bodies.shape(body, i)
+            val n = outline(bodies, body, shape)
+            fillConvex(canvas, n, color)
+            for (k in 0 until n) {
+                val j = if (k + 1 == n) 0 else k + 1
+                line(canvas, outlineX[k], outlineY[k], outlineX[j], outlineY[j], OUTLINE, edge, layer + 1)
+            }
+            if (shape.kind == ShapeKind.CIRCLE) {
+                val cx = bodies.worldX(body, shape.vertexX(0), shape.vertexY(0))
+                val cy = bodies.worldY(body, shape.vertexX(0), shape.vertexY(0))
+                // along the body's own x axis, so it turns with it
+                val tipX = bodies.worldX(body, shape.vertexX(0) + shape.radius, shape.vertexY(0))
+                val tipY = bodies.worldY(body, shape.vertexX(0) + shape.radius, shape.vertexY(0))
+                line(canvas, cx, cy, tipX, tipY, OUTLINE, edge, layer + 1)
+            }
+        }
+        if (showDetails) rect(canvas, bodies.x(body) - CORE_DOT / 2f, bodies.y(body) - CORE_DOT / 2f, CORE_DOT, CORE_DOT, CORE, layer + 3)
+    }
+
+    private val outlineX = FloatArray(MAX_OUTLINE)
+    private val outlineY = FloatArray(MAX_OUTLINE)
+
+    /**
+     * Writes the outline of [shape], a shape of [body], in the world into [outlineX] and [outlineY], and
+     * returns how many points it has: a polygon's corners, or round ends made of short straight edges.
+     */
+    private fun outline(bodies: RigidBodies, body: Int, shape: Shape): Int {
+        val angle = bodies.angle(body)
+        return when (shape.kind) {
+            ShapeKind.POLYGON -> {
+                for (k in 0 until shape.vertexCount) {
+                    outlineX[k] = bodies.worldX(body, shape.vertexX(k), shape.vertexY(k))
+                    outlineY[k] = bodies.worldY(body, shape.vertexX(k), shape.vertexY(k))
+                }
+                shape.vertexCount
+            }
+            ShapeKind.CIRCLE -> {
+                val cx = bodies.worldX(body, shape.vertexX(0), shape.vertexY(0))
+                val cy = bodies.worldY(body, shape.vertexX(0), shape.vertexY(0))
+                arc(0, cx, cy, shape.radius, angle, 2f * PI_F, ROUND_STEPS)
+            }
+            ShapeKind.CAPSULE -> {
+                val ax = bodies.worldX(body, shape.vertexX(0), shape.vertexY(0))
+                val ay = bodies.worldY(body, shape.vertexX(0), shape.vertexY(0))
+                val bx = bodies.worldX(body, shape.vertexX(1), shape.vertexY(1))
+                val by = bodies.worldY(body, shape.vertexX(1), shape.vertexY(1))
+                // the segment's direction, then a half circle round each end
+                val along = atan2(by - ay, bx - ax)
+                val half = ROUND_STEPS / 2
+                val n = arc(0, bx, by, shape.radius, along - PI_F / 2f, PI_F, half)
+                arc(n, ax, ay, shape.radius, along + PI_F / 2f, PI_F, half)
+            }
+        }
+    }
+
+    /** Adds [steps] + 1 points from [from] round an arc of [sweep] radians about ([cx], [cy]); returns the new count. */
+    private fun arc(start: Int, cx: Float, cy: Float, r: Float, from: Float, sweep: Float, steps: Int): Int {
+        val full = sweep >= 2f * PI_F
+        val count = if (full) steps else steps + 1
+        for (k in 0 until count) {
+            val a = from + sweep * k / steps
+            outlineX[start + k] = cx + r * cos(a)
+            outlineY[start + k] = cy + r * sin(a)
+        }
+        return start + count
+    }
+
+    /** Fills the convex outline of [n] points in [outlineX] and [outlineY] row by row in [color]. */
+    private fun fillConvex(canvas: Canvas, n: Int, color: Color) {
+        var top = Float.MAX_VALUE
+        var bottom = -Float.MAX_VALUE
+        for (k in 0 until n) {
+            top = min(top, outlineY[k])
+            bottom = max(bottom, outlineY[k])
+        }
+        var y = floor(top / ROW) * ROW
+        while (y < bottom) {
+            val mid = y + ROW / 2f
+            var left = Float.MAX_VALUE
+            var right = -Float.MAX_VALUE
+            for (k in 0 until n) {
+                val j = if (k + 1 == n) 0 else k + 1
+                val y0 = outlineY[k]
+                val y1 = outlineY[j]
+                if ((y0 <= mid) == (y1 <= mid)) continue
+                val x = outlineX[k] + (mid - y0) / (y1 - y0) * (outlineX[j] - outlineX[k])
+                left = min(left, x)
+                right = max(right, x)
+            }
+            if (left < right) rect(canvas, left, y, right - left, ROW, color, layer)
+            y += ROW
         }
     }
 
@@ -347,6 +452,10 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     private fun Color.darker(): Color = Color(red * 0.6f, green * 0.6f, blue * 0.6f, alpha)
 
     companion object {
+        /** How many straight edges make a circle's outline; a capsule's two ends share as many. */
+        const val ROUND_STEPS = 24
+        private const val MAX_OUTLINE = ROUND_STEPS + 2
+
         /** Height of one row of a filled shape, in world units. */
         const val ROW = 1f
 
