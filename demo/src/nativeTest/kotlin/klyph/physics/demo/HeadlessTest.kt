@@ -167,7 +167,7 @@ class HeadlessTest {
     }
 
     @Test
-    fun inMachinesTheCarDrivesBothWaysTheShelfBreaksAtItsFourthCrateAndTheLiftGoesDownAndUp() {
+    fun inMachinesTheCarDrivesBothWaysTheShelfBreaksTheLiftGoesDownAndUpTheMillTurnsAndTheSeesawThrows() {
         val run = MachinesScene.create() as MachinesScene.Run
         val bodies = run.world.rigidBodies
         val joints = run.world.joints
@@ -176,6 +176,9 @@ class HeadlessTest {
         var lowest = 0f
         var rose = false
         var swinging = 0
+        var springGave = 0f
+        val ballFrom = bodies.y(run.ball)
+        var ballHighest = ballFrom
         val placeEvery = (MachinesScene.PLACE_EVERY / dt).toInt()
         repeat(MachinesScene.PLACED * placeEvery + 120) { step ->
             run.step(dt)
@@ -185,6 +188,8 @@ class HeadlessTest {
             if (down > lowest) lowest = down
             if (lowest > MachinesScene.LIFT_TRAVEL - 2f && down < lowest - 30f) rose = true
             if (kotlin.math.abs(bodies.angularVelocity(run.lower)) > 1f) swinging++
+            for (shock in run.shocks) springGave = maxOf(springGave, kotlin.math.abs(joints.position(shock)))
+            ballHighest = minOf(ballHighest, bodies.y(run.ball))
             // three crates on the shelf and it holds; the fourth breaks it
             if (step == (MachinesScene.PLACED) * placeEvery - 10) assertTrue(joints.isAlive(run.weld), "it bears three crates")
         }
@@ -194,6 +199,13 @@ class HeadlessTest {
         assertTrue(swinging > 300, "the pendulum keeps swinging: fast in $swinging steps")
         // the car is still on its wheels
         assertTrue(kotlin.math.abs(bodies.angle(run.chassis)) < 0.5f, "the car is upright: ${bodies.angle(run.chassis)}")
+        assertTrue(springGave > 1f, "its springs gave, on the bump and under its weight: $springGave")
+        for (shock in run.shocks) {
+            assertTrue(kotlin.math.abs(joints.position(shock)) <= MachinesScene.TRAVEL + 0.5f, "a strut stays in its travel: ${joints.position(shock)}")
+        }
+        // the motor turns the mill at its speed: the other way to its joint's angle, as its second end is the world
+        assertEquals(MachinesScene.MILL_SPEED, kotlin.math.abs(bodies.angularVelocity(run.mill)), 0.1f, "the mill turns")
+        assertTrue(run.heavy >= 0 && ballFrom - ballHighest > 60f, "the crate on the seesaw threw the ball ${ballFrom - ballHighest} up")
     }
 
     @Test
