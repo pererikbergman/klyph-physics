@@ -118,16 +118,26 @@ class HeadlessTest {
     }
 
     @Test
-    fun inStacksTheTowerAndPyramidStandAndEveryDominoFalls() {
+    fun inStacksTheTowerAndPyramidStandEveryDominoFallsAndTheBallKnocksTheTowerDown() {
         val run = StacksScene.create() as StacksScene.Run
         val bodies = run.world.rigidBodies
         val startX = (run.tower + run.pyramid).map { bodies.x(it) }
         val startY = (run.tower + run.pyramid).map { bodies.y(it) }
-        repeat(900) { run.step(dt) }
+        val held = (StacksScene.RELEASE_AT / dt).toInt() - 1
+        repeat(held) { run.step(dt) }
+        assertFalse(run.released, "the ball is still held out")
         for ((k, b) in (run.tower + run.pyramid).withIndex()) {
             assertEquals(startX[k], bodies.x(b), 1f, "box $b stays where it was stacked")
             assertEquals(startY[k], bodies.y(b), 1f, "box $b keeps its height")
         }
+        repeat(900 - held) { run.step(dt) }
+        val pyramidFrom = run.tower.size
+        for ((k, b) in run.pyramid.withIndex()) {
+            assertEquals(startX[pyramidFrom + k], bodies.x(b), 1f, "pyramid box $b stands: the ball misses it")
+            assertEquals(startY[pyramidFrom + k], bodies.y(b), 1f)
+        }
+        val top = run.tower.last()
+        assertTrue(bodies.y(top) > startY[run.tower.size - 1] + 60f, "the ball knocked the tower's top down: it's at ${bodies.y(top)}")
         for (d in run.dominoes) assertTrue(bodies.angle(d) > 0.6f, "domino $d fell: it's at ${bodies.angle(d)}")
     }
 
