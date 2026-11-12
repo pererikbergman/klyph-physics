@@ -128,7 +128,13 @@ internal class Coupling(private val world: PhysicsWorld) {
         val shapes = bodies.shapes[body]!!
         val m = manifold
         for (si in shapes.indices) {
-            if (!narrow.collidePoint(ps.x[p], ps.y[p], radius, shapes[si], bx, by, bodies.cos[body], bodies.sin[body], m)) continue
+            // a body of many shapes, such as a drum, has most of them far from any one particle
+            val shape = shapes[si]
+            val cx = bx + bodies.cos[body] * shape.boundX - bodies.sin[body] * shape.boundY
+            val cy = by + bodies.sin[body] * shape.boundX + bodies.cos[body] * shape.boundY
+            val near = shape.boundRadius + radius
+            if ((ps.x[p] - cx) * (ps.x[p] - cx) + (ps.y[p] - cy) * (ps.y[p] - cy) > near * near) continue
+            if (!narrow.collidePoint(ps.x[p], ps.y[p], radius, shape, bx, by, bodies.cos[body], bodies.sin[body], m)) continue
             val depth = -m.separation(0)
             if (depth <= 0f) continue
             // the normal points from the particle into the body: the particle goes back along it
@@ -161,6 +167,18 @@ internal class Coupling(private val world: PhysicsWorld) {
         val ring = soft.ring(s)
         val c = bodies.cos[body]
         val sn = bodies.sin[body]
+        // the outline's box: a corner outside it isn't inside the outline, and needn't be looked for
+        var left = Float.MAX_VALUE
+        var top = Float.MAX_VALUE
+        var right = -Float.MAX_VALUE
+        var bottom = -Float.MAX_VALUE
+        for (k in 0 until soft.ringCount(s)) {
+            val p = soft.particle(s, k)
+            left = min(left, ps.x[p])
+            top = min(top, ps.y[p])
+            right = max(right, ps.x[p])
+            bottom = max(bottom, ps.y[p])
+        }
         for (si in shapes.indices) {
             val shape = shapes[si]
             if (shape.radius > 0f || shape.vertexCount < 3) continue
@@ -169,7 +187,7 @@ internal class Coupling(private val world: PhysicsWorld) {
                 val ry = sn * shape.vx[k] + c * shape.vy[k]
                 val x = bodies.x[body] + rx
                 val y = bodies.y[body] + ry
-                if (!Outline.contains(ring, x, y)) continue
+                if (x < left || x > right || y < top || y > bottom || !Outline.contains(ring, x, y)) continue
                 nearestEdge(s, x, y)
                 val distance = sqrt(nearDistanceSquared)
                 if (distance < TOUCHING) continue
