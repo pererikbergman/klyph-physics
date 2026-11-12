@@ -73,8 +73,9 @@ fun App.installSandbox(
         if (keys.isJustPressed(Scancode.F1)) debug.view = debug.view.next()
         if (keys.isJustPressed(Scancode.B)) debug.showBroadphase = !debug.showBroadphase
         for ((i, key) in SCENE_KEYS.withIndex()) if (keys.isJustPressed(key)) sandbox.select(i)
-        if (keys.isJustPressed(LEFT_BRACKET)) sandbox.previous()
-        if (keys.isJustPressed(RIGHT_BRACKET)) sandbox.next()
+        // the arrows are where they are on every keyboard; the brackets are only on some
+        if (keys.isJustPressed(Scancode.LEFT) || keys.isJustPressed(LEFT_BRACKET)) sandbox.previous()
+        if (keys.isJustPressed(Scancode.RIGHT) || keys.isJustPressed(RIGHT_BRACKET)) sandbox.next()
         if (keys.isJustPressed(Scancode.R)) sandbox.reset()
         if (keys.isJustPressed(Scancode.SPACE)) sandbox.togglePause()
         if (keys.isJustPressed(Scancode.S)) sandbox.toggleSlowMotion()
@@ -167,7 +168,7 @@ fun App.installSandbox(
         )
         canvas.drawText(
             font,
-            "0-9 [ ] scene  R reset  Space pause  . step  S slow  F1 view  B grid  F3 stats",
+            "0-9 Left Right scene  R reset  Space pause  . step  S slow  F1 view  B grid  F3 stats",
             MARGIN,
             height - MARGIN - 16f,
             color = DIM,
