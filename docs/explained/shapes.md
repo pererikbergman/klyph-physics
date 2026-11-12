@@ -85,7 +85,7 @@ At the default density, a 32-unit crate weighs about 50, about as much as a blob
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `9` for **Tumble**: five shapes tossed with the same twist. The dot on
+`./gradlew :demo:run`, press `9` for **Tumble** ([`Tumble.kt`](../../demo/src/nativeMain/kotlin/klyph/physics/demo/Tumble.kt)): five shapes tossed with the same twist. The dot on
 each is its centre of mass. Grab one with the mouse: it hangs from the point you took it by.
 
 📸 `scripts/capture.sh 9 shapes --from 0 --to 3 --clean --crop 0,0.1,0.75,0.9`

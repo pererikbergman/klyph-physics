@@ -125,7 +125,7 @@ a row of dominoes topples one after another. Two contact points under each box k
 friction keeps it from sliding off the one below. Then a wrecking ball swings in and knocks the
 tower's top off. Right click to drop a box on them. 🎯
 
-<img src="docs/img/stacking.gif" alt="a tower and a pyramid of boxes standing while a row of dominoes topples" width="100%">
+<img src="docs/img/stacking.gif" alt="a tower and a pyramid of boxes standing while a row of dominoes topples, then a wrecking ball knocking the tower down" width="100%">
 
 ### 11 · 🤝 Crates and Blobs
 
@@ -133,7 +133,7 @@ tower's top off. Right click to drop a box on them. 🎯
 tower of crates and knocks it down. A heavy crate on a rope swings through three blobs and sweeps
 them away. A crate bounces on a trampoline of round particles. Each side moves the other. The 11th scene, so press `→` to reach it. 💥
 
-<img src="docs/img/coupling.gif" alt="a crate on a blob, a blob knocking down a tower of crates, a crate on a rope swinging through blobs" width="100%">
+<img src="docs/img/coupling.gif" alt="a crate on a blob, a blob knocking down a tower of crates, a crate bouncing on a trampoline, a crate on a rope swinging through blobs" width="100%">
 
 ### 12 · 🔩 Machines
 
@@ -142,7 +142,7 @@ back and forth over a bump on motorised wheels, each on a sprung strut. A welded
 crates and breaks at the fourth. A windmill turns on its motor. A lift on a slider carries a crate
 down and up, and a crate dropped on a seesaw throws a ball into the air. Press `→` to reach it, and `F1` twice to see the joints. 🏗️
 
-<img src="docs/img/joints.gif" alt="a double pendulum, a car on motorised wheels, a welded shelf breaking under crates, a lift on a slider" width="100%">
+<img src="docs/img/joints.gif" alt="a double pendulum, a car on sprung motorised wheels, a welded shelf breaking under crates, a windmill, a lift on a slider, a seesaw" width="100%">
 
 ### 13 · ⚖️ Joints
 
@@ -151,11 +151,15 @@ passed through the middle three to the last. A chain bridge of fourteen hinged p
 of ten bodies dropped on it, its elbows and knees bending only one way. Right click for another
 ragdoll. 🤸
 
+<img src="docs/img/cradle-and-bridge.gif" alt="a Newton's cradle passing its swing from the first ball to the last, and a ragdoll dropped on a chain bridge" width="100%">
+
 ### 14 · 🥁 Drum
 
 **Everything in one turning drum.** Blobs, crates and 240 grains of sand, carried up the side of a
 kinematic drum by its paddles until they tumble back down, pushing on each other all the way. Right
 click to drop a crate in. 🌀
+
+<img src="docs/img/drum.gif" alt="a turning drum carrying blobs, crates and sand up its side until they tumble back down" width="50%">
 
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.

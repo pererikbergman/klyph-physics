@@ -79,7 +79,7 @@ shapes with different spins and they fly the same arc. 🎯
 
 ## 🧪 Try it
 
-`./gradlew :demo:run`, press `9` for **Tumble**: five shapes tossed up with different spins come
+`./gradlew :demo:run`, press `9` for **Tumble** ([`Tumble.kt`](../../demo/src/nativeMain/kotlin/klyph/physics/demo/Tumble.kt)): five shapes tossed up with different spins come
 down together, and the paddle on the right goes round its circle exactly where it's told.
 
 📸 `scripts/capture.sh 9 rigid-bodies --from 0 --to 4 --clean`
