@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **264 tests**, all green
+- 🧪 **267 tests**, all green
 
 ## ▶️ Run it
 
@@ -122,7 +122,8 @@ static bar never moves. Right click to drop more in: the paddle knocks them abou
 
 **Held up by contacts alone.** A tower of ten boxes and a pyramid of eight rows stand still, while
 a row of dominoes topples one after another. Two contact points under each box keep it flat, and
-friction keeps it from sliding off the one below. Right click to drop a box on them. 🎯
+friction keeps it from sliding off the one below. Then a wrecking ball swings in and knocks the
+tower's top off. Right click to drop a box on them. 🎯
 
 <img src="docs/img/stacking.gif" alt="a tower and a pyramid of boxes standing while a row of dominoes topples" width="100%">
 
@@ -130,17 +131,31 @@ friction keeps it from sliding off the one below. Right click to drop a box on t
 
 **Soft meets rigid.** A crate rests on a big blob and squashes it a little. A blob is thrown at a
 tower of crates and knocks it down. A heavy crate on a rope swings through three blobs and sweeps
-them away. Each side moves the other. The 11th scene, so press `→` to reach it. 💥
+them away. A crate bounces on a trampoline of round particles. Each side moves the other. The 11th scene, so press `→` to reach it. 💥
 
 <img src="docs/img/coupling.gif" alt="a crate on a blob, a blob knocking down a tower of crates, a crate on a rope swinging through blobs" width="100%">
 
 ### 12 · 🔩 Machines
 
 **Bodies joined the way machines are.** A double pendulum swings wildly on two hinges. A car drives
-back and forth on motorised wheels. A welded shelf bears three crates and breaks at the fourth. A lift
-on a slider carries a crate down and up. Press `→` to reach it, and `F1` twice to see the joints. 🏗️
+back and forth over a bump on motorised wheels, each on a sprung strut. A welded shelf bears three
+crates and breaks at the fourth. A windmill turns on its motor. A lift on a slider carries a crate
+down and up, and a crate dropped on a seesaw throws a ball into the air. Press `→` to reach it, and `F1` twice to see the joints. 🏗️
 
 <img src="docs/img/joints.gif" alt="a double pendulum, a car on motorised wheels, a welded shelf breaking under crates, a lift on a slider" width="100%">
+
+### 13 · ⚖️ Joints
+
+**Bodies hung from each other.** A Newton's cradle: five balls on rods, the first let go, its swing
+passed through the middle three to the last. A chain bridge of fourteen hinged planks, and a ragdoll
+of ten bodies dropped on it, its elbows and knees bending only one way. Right click for another
+ragdoll. 🤸
+
+### 14 · 🥁 Drum
+
+**Everything in one turning drum.** Blobs, crates and 240 grains of sand, carried up the side of a
+kinematic drum by its paddles until they tumble back down, pushing on each other all the way. Right
+click to drop a crate in. 🌀
 
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.

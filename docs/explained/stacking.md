@@ -105,6 +105,7 @@ geometric mean of the two, restitution the larger.
 ## 🧪 Try it
 
 `./gradlew :demo:run`, press `0` for **Stacks**, then `F1` three times to see every contact: the
-tower and the pyramid stand, the dominoes fall one by one. Right click to drop a box on them. 🎯
+tower and the pyramid stand, the dominoes fall one by one, and at 2.5 s a wrecking ball swings into
+the tower. Right click to drop a box on them. 🎯
 
 📸 `scripts/capture.sh 10 stacking --from 0.5 --to 4 --view 3 --clean`

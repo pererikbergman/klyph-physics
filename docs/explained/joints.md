@@ -90,7 +90,9 @@ pulled harder than its `breakForce` is removed.
 ## 🧪 Try it
 
 `./gradlew :demo:run`, press `→` until **Machines**, the 12th scene, then `F1` twice for the joints:
-a double pendulum, a car on motorised wheels, a shelf that bears three crates and breaks at the
-fourth, a lift on a slider. Right click to drop crates on the lift. 🏗️
+a double pendulum, a car on motorised wheels with sprung struts, a shelf that bears three crates and
+breaks at the fourth, a windmill, a lift on a slider and a seesaw. Right click to drop crates on the
+lift. 🏗️ Press `→` once more for **Joints**: a Newton's cradle, and a ragdoll dropped on a chain
+bridge.
 
 📸 `scripts/capture.sh 12 joints --from 0 --to 7.5 --clean --view 2 --width 640`
