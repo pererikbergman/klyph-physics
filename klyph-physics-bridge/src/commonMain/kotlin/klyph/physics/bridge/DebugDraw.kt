@@ -3,6 +3,7 @@ package klyph.physics.bridge
 import klyph.math.Rect
 import klyph.physics.Broadphase
 import klyph.physics.Constraints
+import klyph.physics.Manifold
 import klyph.physics.Outline
 import klyph.physics.Particles
 import klyph.physics.PhysicsWorld
@@ -126,6 +127,24 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
             }
         }
         if (showDetails) rect(canvas, bodies.x(body) - CORE_DOT / 2f, bodies.y(body) - CORE_DOT / 2f, CORE_DOT, CORE_DOT, CORE, layer + 3)
+    }
+
+    /**
+     * Draws where two shapes touch, as [manifold] found it: each point as a dot on each shape's
+     * surface, joined, and a line from the second shape's along the normal, in [color].
+     */
+    fun manifold(canvas: Canvas, manifold: Manifold, color: Color = CONTACT) {
+        val top = layer + 7
+        for (i in 0 until manifold.count) {
+            val ax = manifold.pointAX(i)
+            val ay = manifold.pointAY(i)
+            val bx = manifold.pointBX(i)
+            val by = manifold.pointBY(i)
+            line(canvas, ax, ay, bx, by, EDGE, color, top)
+            line(canvas, bx, by, bx + manifold.normalX * NORMAL, by + manifold.normalY * NORMAL, EDGE, color, top)
+            rect(canvas, ax - 1f, ay - 1f, 2f, 2f, color, top)
+            rect(canvas, bx - 1f, by - 1f, 2f, 2f, color, top)
+        }
     }
 
     private val outlineX = FloatArray(MAX_OUTLINE)

@@ -24,6 +24,7 @@ Want more? Every page has the details further down.
 | 🔍 | [Debug views](debug-views.md) | see the solver work: stress, contacts, the grid |
 | 📦 | [Rigid bodies and rotation](rigid-bodies.md) | one thing that moves and turns |
 | 🔷 | [Shapes, mass and inertia](shapes.md) | what a body is made of, and how hard it is to turn |
+| ✂️ | [SAT and contact points](sat.md) | where two shapes touch, to the point |
 
 Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 

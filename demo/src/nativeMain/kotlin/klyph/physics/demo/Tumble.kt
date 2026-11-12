@@ -2,6 +2,8 @@ package klyph.physics.demo
 
 import klyph.math.Rect
 import klyph.physics.BodyKind
+import klyph.physics.Manifold
+import klyph.physics.Narrowphase
 import klyph.physics.PhysicsWorld
 import klyph.physics.Shape
 import klyph.physics.bridge.DebugDraw
@@ -17,7 +19,9 @@ import kotlin.math.sin
  * They fly the same arc, because spin doesn't change a fall, but they spin at different speeds: the
  * same twist turns a shape that's hard to turn, one with its mass far from its middle, more slowly.
  * The hammer turns about its centre of mass, the dot near its head. On the right, a kinematic paddle
- * goes round a circle, exactly where it's told, and a static bar never moves.
+ * goes round a circle, exactly where it's told, through a static bar that never moves. With `F1` on,
+ * the points where the two overlap show, as the narrowphase finds them: two where they lie flat on
+ * each other, one where a corner pokes in.
  */
 object TumbleScene : Scene {
     override val name = "Tumble"
@@ -36,7 +40,7 @@ object TumbleScene : Scene {
 
     /** The paddle's circle, and how long a lap takes, in seconds. */
     const val ORBIT_X = 540f
-    const val ORBIT_Y = 170f
+    const val ORBIT_Y = 220f
     const val ORBIT_RADIUS = 60f
     const val LAP = 4f
 
@@ -69,7 +73,9 @@ object TumbleScene : Scene {
 
         val tossed = IntArray(SHAPES.size) { i -> add(i, FIRST_X + i * GAP, TOSS_Y) }
         val paddle = world.rigidBody(Shape.box(60f, 10f), ORBIT_X + ORBIT_RADIUS, ORBIT_Y, kind = BodyKind.KINEMATIC)
-        val bar = world.rigidBody(Shape.box(100f, 12f), ORBIT_X, ORBIT_Y + ORBIT_RADIUS + 60f, angle = 0.3f, kind = BodyKind.STATIC)
+        val bar = world.rigidBody(Shape.box(100f, 12f), ORBIT_X, ORBIT_Y + ORBIT_RADIUS + 8f, kind = BodyKind.STATIC)
+        private val narrow = Narrowphase()
+        private val touch = Manifold()
 
         /** Adds shape [i] of [SHAPES] at ([x], [y]) and tosses it. */
         private fun add(i: Int, x: Float, y: Float): Int {
@@ -114,6 +120,16 @@ object TumbleScene : Scene {
             }
             debug.rigidBody(canvas, world, paddle, PADDLE)
             debug.rigidBody(canvas, world, bar, STATIC)
+            if (debug.showDetails) {
+                // nothing pushes them apart yet: this is only where they overlap
+                val p = paddle
+                val q = bar
+                val found = narrow.collide(
+                    bodies.shape(p, 0), bodies.x(p), bodies.y(p), bodies.angle(p),
+                    bodies.shape(q, 0), bodies.x(q), bodies.y(q), bodies.angle(q), touch,
+                )
+                if (found) debug.manifold(canvas, touch)
+            }
         }
 
         override val bodyCount get() = bodies.count
