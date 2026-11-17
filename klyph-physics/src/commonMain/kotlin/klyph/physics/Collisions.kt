@@ -77,6 +77,7 @@ internal class Collisions(private val world: PhysicsWorld) {
     /** One pass over every pair the broadphase found this step, and every body that collides with itself. */
     fun solve() {
         val bp = broadphase
+        val filtered = ps.anyFiltered
         if (bp.pairCount > 0) {
             measureBodies()
             for (i in 0 until bp.pairCount) {
@@ -84,6 +85,12 @@ internal class Collisions(private val world: PhysicsWorld) {
                 val b = bp.pairB(i)
                 val aIsBody = a and 1 == 1
                 val bIsBody = b and 1 == 1
+                if (filtered) {
+                    // a body's filter is its particles', all the same: its core's
+                    val pa = if (aIsBody) bodies.core(a shr 1) else a shr 1
+                    val pb = if (bIsBody) bodies.core(b shr 1) else b shr 1
+                    if (!Filter.collides(ps.category[pa], ps.mask[pa], ps.category[pb], ps.mask[pb])) continue
+                }
                 when {
                     aIsBody && bIsBody -> {
                         bodyAgainstBody(a shr 1, b shr 1)
@@ -159,9 +166,14 @@ internal class Collisions(private val world: PhysicsWorld) {
         val x = ps.x[p]
         val y = ps.y[p]
         val radius = max(ps.radius[p], SKIN)
-        if (x < left[body] - radius || x > right[body] + radius || y < top[body] - radius || y > bottom[body] + radius) return
+        // a body's own particle near another's skin touches it, for events: see [Events.TOUCH_SLOP]
+        val owner = ps.owner[p]
+        val reach = if (owner >= 0 && world.events.recording) radius + Events.TOUCH_SLOP else radius
+        if (x < left[body] - reach || x > right[body] + reach || y < top[body] - reach || y > bottom[body] + reach) return
         nearestEdge(body, x, y)
         val inside = Outline.contains(bodies.ring(body), x, y)
+        if (!inside && nearDistanceSquared >= reach * reach) return
+        if (owner >= 0 && world.events.recording) world.events.touch(TouchKind.SOFT_BODY, owner, TouchKind.SOFT_BODY, body)
         if (!inside && nearDistanceSquared >= radius * radius) return
         val distance = sqrt(nearDistanceSquared)
         val n = bodies.ringCount(body)

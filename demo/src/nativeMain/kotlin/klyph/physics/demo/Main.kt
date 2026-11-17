@@ -16,11 +16,12 @@ import klyph.platform.Sdl
  * a keyboard. `SANDBOX_RECORD=2:/tmp/frames` saves every second step as a numbered PNG (see
  * [Recording]), `SANDBOX_CLEAN=1` leaves only the title on screen, and `SANDBOX_DRAG=320,200` grabs
  * what is there and drags it about (see [ScriptedHand]). `scripts/capture.sh` uses them.
- * `SANDBOX_BENCH=600` opens no window: it times 600 steps of every scene and prints them (see [Bench]).
+ * `SANDBOX_BENCH=600` opens no window: it times 600 steps of every scene and prints them (see [Bench]), or
+ * only scene `SANDBOX_SCENE`.
  */
 fun main() {
     Sdl.environmentVariable("SANDBOX_BENCH")?.toIntOrNull()?.let { steps ->
-        Bench.run(steps)
+        Bench.run(steps, only = Sdl.environmentVariable("SANDBOX_SCENE")?.toIntOrNull())
         return
     }
     val config = AppConfig.fromEnvironment(AppConfig(title = "klyph-physics sandbox", width = 1280, height = 720, fixedRate = 60))

@@ -28,7 +28,8 @@ internal class Coupling(private val world: PhysicsWorld) {
     private val ps = world.particles
     private val soft = world.softBodies
     private val bodies = world.rigidBodies
-    private val narrow = Narrowphase()
+    // found a little apart too, as they touch for events: see [Events.TOUCH_SLOP]
+    private val narrow = Narrowphase().apply { margin = Events.TOUCH_SLOP }
     private val manifold = Manifold()
     private var active = false
 
@@ -116,6 +117,11 @@ internal class Coupling(private val world: PhysicsWorld) {
      * and the body back at the point it touched.
      */
     private fun particleAgainstBody(p: Int, body: Int) {
+        if ((ps.anyFiltered || bodies.anyFiltered) && !Filter.collides(ps.category[p], ps.mask[p], bodies.category[body], bodies.mask[body])) return
+        if (bodies.sensor[body]) {
+            senseParticle(p, body)
+            return
+        }
         val wp = ps.invMass[p]
         if (wp == 0f && bodies.invMass[body] == 0f || tiedTo[p] == body) return
         val x = ps.x[p]
@@ -123,7 +129,7 @@ internal class Coupling(private val world: PhysicsWorld) {
         val radius = max(ps.radius[p], SKIN)
         val bx = bodies.x[body]
         val by = bodies.y[body]
-        val reach = bodies.reach[body] + radius
+        val reach = bodies.reach[body] + radius + Events.TOUCH_SLOP
         if (x < bx - reach || x > bx + reach || y < by - reach || y > by + reach) return
         val shapes = bodies.shapes[body]!!
         val m = manifold
@@ -132,10 +138,11 @@ internal class Coupling(private val world: PhysicsWorld) {
             val shape = shapes[si]
             val cx = bx + bodies.cos[body] * shape.boundX - bodies.sin[body] * shape.boundY
             val cy = by + bodies.sin[body] * shape.boundX + bodies.cos[body] * shape.boundY
-            val near = shape.boundRadius + radius
+            val near = shape.boundRadius + radius + Events.TOUCH_SLOP
             if ((ps.x[p] - cx) * (ps.x[p] - cx) + (ps.y[p] - cy) * (ps.y[p] - cy) > near * near) continue
             if (!narrow.collidePoint(ps.x[p], ps.y[p], radius, shape, bx, by, bodies.cos[body], bodies.sin[body], m)) continue
             val depth = -m.separation(0)
+            if (ps.owner[p] >= 0 && depth > -Events.TOUCH_SLOP && world.events.recording) world.events.touch(TouchKind.RIGID_BODY, body, TouchKind.SOFT_BODY, ps.owner[p])
             if (depth <= 0f) continue
             disturb(body, p)
             // the normal points from the particle into the body: the particle goes back along it
@@ -159,11 +166,26 @@ internal class Coupling(private val world: PhysicsWorld) {
         }
     }
 
+    /** Notes that particle [p], or the soft body it's part of, is in sensor [body], if it is. */
+    private fun senseParticle(p: Int, body: Int) {
+        val radius = max(ps.radius[p], SKIN)
+        val bx = bodies.x[body]
+        val by = bodies.y[body]
+        for (shape in bodies.shapes[body]!!) {
+            if (!narrow.collidePoint(ps.x[p], ps.y[p], radius, shape, bx, by, bodies.cos[body], bodies.sin[body], manifold)) continue
+            if (manifold.separation(0) >= 0f) continue
+            val owner = ps.owner[p]
+            if (owner >= 0) world.events.sense(body, TouchKind.SOFT_BODY, owner) else world.events.sense(body, TouchKind.PARTICLE, p)
+            return
+        }
+    }
+
     /**
      * Pushes every sharp corner of rigid [body] that is inside soft body [s]'s outline out to the
      * outline's nearest edge, and that edge's two particles back.
      */
     private fun cornersAgainstSoftBody(body: Int, s: Int) {
+        if ((ps.anyFiltered || bodies.anyFiltered) && !Filter.collides(soft.category(s), soft.mask(s), bodies.category[body], bodies.mask[body])) return
         val shapes = bodies.shapes[body]!!
         val ring = soft.ring(s)
         val c = bodies.cos[body]
@@ -189,6 +211,11 @@ internal class Coupling(private val world: PhysicsWorld) {
                 val x = bodies.x[body] + rx
                 val y = bodies.y[body] + ry
                 if (x < left || x > right || y < top || y > bottom || !Outline.contains(ring, x, y)) continue
+                // a sensor's corner in a soft body has it in the sensor, even with none of its particles in
+                if (bodies.sensor[body]) {
+                    world.events.sense(body, TouchKind.SOFT_BODY, s)
+                    return
+                }
                 nearestEdge(s, x, y)
                 val distance = sqrt(nearDistanceSquared)
                 if (distance < TOUCHING) continue
@@ -210,6 +237,7 @@ internal class Coupling(private val world: PhysicsWorld) {
                 ps.y[a] -= wa * push * ny
                 ps.x[b] -= wb * push * nx
                 ps.y[b] -= wb * push * ny
+                world.events.touch(TouchKind.RIGID_BODY, body, TouchKind.SOFT_BODY, s)
             }
         }
     }

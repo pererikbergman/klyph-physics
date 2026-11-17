@@ -115,6 +115,17 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
      */
     fun hasSelfCollision(body: Int): Boolean = selfCollision[body]
 
+    /** Puts every particle of [body] in [category], colliding only with what's in [mask]: see [Filter]. */
+    fun setFilter(body: Int, category: Int, mask: Int) {
+        for (i in 0..ringCount(body)) world.particles.setFilter(particle(body, i), category, mask)
+    }
+
+    /** [body]'s collision category: see [Filter]. */
+    fun category(body: Int): Int = world.particles.category[core(body)]
+
+    /** The categories [body] collides with: see [Filter]. */
+    fun mask(body: Int): Int = world.particles.mask[core(body)]
+
     fun setSelfCollision(body: Int, on: Boolean) {
         selfCollision[body] = on
     }

@@ -41,7 +41,7 @@ enum class JointKind {
  * Each joint is an `Int` handle; a removed one's handle is reused. One whose body or particle has
  * been removed is skipped.
  */
-class Joints internal constructor(private val particles: Particles, private val bodies: RigidBodies) {
+class Joints internal constructor(private val particles: Particles, private val bodies: RigidBodies, private val events: Events? = null) {
     private val slots = Slots()
     private var kind = arrayOfNulls<JointKind>(8)
     private var bodyA = IntArray(8)
@@ -348,7 +348,10 @@ class Joints internal constructor(private val particles: Particles, private val 
         for (j in 0 until slots.end) {
             if (!slots.isAlive(j)) continue
             force[j] = abs(lambdaPoint[j]) / hh
-            if (force[j] > breakForce[j]) remove(j)
+            if (force[j] > breakForce[j]) {
+                remove(j)
+                events?.jointBroke(j)
+            }
         }
     }
 

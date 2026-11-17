@@ -31,6 +31,13 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     /** The soft body each particle belongs to, or -1 for a loose one. */
     internal var owner = IntArray(initialCapacity)
 
+    /** Each particle's collision category and mask: see [Filter]. */
+    internal var category = IntArray(initialCapacity)
+    internal var mask = IntArray(initialCapacity)
+
+    /** Whether any particle has ever been given a filter: until then, nobody need look. */
+    internal var anyFiltered = false
+
     /** Each particle's [Material], spread over three arrays. */
     internal var friction = FloatArray(initialCapacity)
     internal var staticFriction = FloatArray(initialCapacity)
@@ -82,6 +89,8 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         this.radius[p] = radius
         flags[p] = if (collides) ALIVE or COLLIDES else ALIVE
         owner[p] = -1
+        category[p] = Filter.DEFAULT
+        mask[p] = Filter.ALL
         contactDepth[p] = 0f
         setMaterial(p, material)
         contact[p] = 0
@@ -124,6 +133,23 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     }
 
     fun isBullet(p: Int): Boolean = flags[p] and BULLET != 0
+
+    /**
+     * Puts particle [p] in [category] and has it collide only with what's in [mask]: see [Filter]. For
+     * a soft body's particles, set the whole body's with [SoftBodyStore.setFilter].
+     */
+    fun setFilter(p: Int, category: Int, mask: Int) {
+        Filter.checkCategory(category)
+        this.category[p] = category
+        this.mask[p] = mask
+        if (category != Filter.DEFAULT || mask != Filter.ALL) anyFiltered = true
+    }
+
+    /** Particle [p]'s collision category: see [Filter]. */
+    fun category(p: Int): Int = category[p]
+
+    /** The categories particle [p] collides with: see [Filter]. */
+    fun mask(p: Int): Int = mask[p]
 
     /** Whether particle [p] is kept out of bodies and other particles that collide. See [add]. */
     fun collides(p: Int): Boolean = flags[p] and COLLIDES != 0
@@ -338,6 +364,8 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         contact = contact.copyOf(size)
         floorTag = floorTag.copyOf(size)
         owner = owner.copyOf(size)
+        category = category.copyOf(size)
+        mask = mask.copyOf(size)
         friction = friction.copyOf(size)
         staticFriction = staticFriction.copyOf(size)
         restitution = restitution.copyOf(size)

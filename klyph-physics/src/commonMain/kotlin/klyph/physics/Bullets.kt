@@ -48,7 +48,7 @@ internal class Bullets(private val world: PhysicsWorld) {
     fun sweepBodies() {
         val bs = bodies
         for (b in 0 until bs.end) {
-            if (!bs.bullet[b] || !bs.alive[b] || bs.kind[b] != RigidBodies.DYNAMIC || bs.asleep[b]) continue
+            if (!bs.bullet[b] || !bs.alive[b] || bs.kind[b] != RigidBodies.DYNAMIC || bs.asleep[b] || bs.sensor[b]) continue
             sweep(b)
         }
     }
@@ -105,7 +105,7 @@ internal class Bullets(private val world: PhysicsWorld) {
                 bp.pairB(i) -> bp.pairA(i)
                 else -> continue
             }
-            if (!bs.alive[other] || bs.bullet[other] || world.joints.connected(b, other)) continue
+            if (!bs.alive[other] || bs.bullet[other] || bs.sensor[other] || bs.filtered(b, other) || world.joints.connected(b, other)) continue
             if (candidateCount == candidates.size) {
                 candidates = candidates.copyOf(candidateCount * 2)
                 allowed = allowed.copyOf(candidateCount * 2)
@@ -115,7 +115,7 @@ internal class Bullets(private val world: PhysicsWorld) {
             candidates[candidateCount++] = other
         }
         val grid = world.solids
-        if (grid != null) {
+        if (grid != null && bs.mask[b] and Filter.SOLIDS != 0) {
             contacts.updateEdges(grid)
             val ed = contacts.edges
             val r = bs.reach[b] + RigidContacts.MARGIN
@@ -214,7 +214,7 @@ internal class Bullets(private val world: PhysicsWorld) {
         val grid = world.solids ?: return
         val step = grid.tileSize / 4f
         for (p in 0 until particles.end) {
-            if (particles.flags[p] and Particles.BULLET == 0 || particles.invMass[p] == 0f) continue
+            if (particles.flags[p] and Particles.BULLET == 0 || particles.invMass[p] == 0f || particles.mask[p] and Filter.SOLIDS == 0) continue
             val x0 = particles.prevX[p]
             val y0 = particles.prevY[p]
             val dx = particles.x[p] - x0

@@ -142,9 +142,11 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
         val tile = tileSize
         val x = particles.x
         val y = particles.y
+        val filtered = particles.anyFiltered
         for (p in 0 until particles.end) {
-            if (particles.invMass[p] == 0f) continue
-            val r = particles.radius[p]
+            if (particles.invMass[p] == 0f || filtered && particles.mask[p] and Filter.SOLIDS == 0) continue
+            // a soft body's particles look a little further, as near a solid they touch it, for events
+            val r = particles.radius[p] + if (events.recording && particles.owner[p] >= 0) Events.TOUCH_SLOP else 0f
             if (r == 0f) {
                 val solid = at(floor(x[p] / tile).toInt(), floor(y[p] / tile).toInt())
                 if (solid != null) push(particles, p, solid, events, restingMove)
@@ -171,6 +173,8 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
         val px = particles.x[p]
         val py = particles.y[p]
         val r = particles.radius[p]
+        val owner = particles.owner[p]
+        if (owner >= 0 && events.recording && solid.overlaps(px, py, r + Events.TOUCH_SLOP)) events.touch(TouchKind.SOFT_BODY, owner, TouchKind.SOLIDS, -1)
         if (!solid.overlaps(px, py, r)) return
         val exit = exitScratch
         when (solid.shape) {

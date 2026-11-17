@@ -21,7 +21,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     val softBodies = SoftBodyStore(this)
 
     /** What happened during the last step: which particles stood on a floor, and what it was tagged. */
-    val events = Events(particles)
+    val events = Events(particles, rigidBodies)
 
     /**
      * The level's walls, floors, slopes and moving solids, or `null` for none. Every particle is pushed
@@ -39,7 +39,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     private val collisions = Collisions(this)
 
     /** Hinges, sliders, welds and distance joints between rigid bodies: see [Joints]. */
-    val joints = Joints(particles, rigidBodies)
+    val joints = Joints(particles, rigidBodies, events)
 
     /** Particles held to points on rigid bodies: see [attach] and [Attachments]. */
     val attachments = Attachments(particles, rigidBodies)
@@ -111,11 +111,13 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
                 hand.solve(h)
                 // Grip just before the last pass, so collisions still have the last word over it.
                 if (pass == config.iterations - 1) particles.applyFriction(rigidBodies)
+                events.recording = pass == config.iterations - 1
                 collisions.solve()
                 coupling.solve()
                 solids?.collide(particles, events, restingMove)
                 rigidContacts.solve()
             }
+            rigidContacts.recordTouches(events)
             // a body woken from here on, by a joint breaking, waits for the next substep to move
             rigidBodies.inSubstep = false
             joints.endSubstep(h)
@@ -124,6 +126,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
         }
         constraints.tear()
         sleeping.update(dt)
+        events.endStep()
         stepCount++
     }
 
@@ -203,8 +206,9 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * ray, and the rigid body and shape, soft body or solid. Returns whether it hit anything.
      *
      * Rigid bodies are hit on their shapes, soft bodies on their outlines, and the solids on their open
-     * faces. Something the ray starts inside isn't hit: a ray from a surface going out doesn't hit
-     * that surface, so a reflected ray can start where the last one hit. Allocates nothing.
+     * faces; sensors aren't hit. Something the ray starts inside isn't hit: a ray from a surface going
+     * out doesn't hit that surface, so a reflected ray can start where the last one hit. Allocates
+     * nothing.
      */
     fun raycast(fromX: Float, fromY: Float, toX: Float, toY: Float, hit: RayHit, what: Int = Query.EVERYTHING): Boolean =
         queries.raycast(fromX, fromY, toX, toY, hit, what)

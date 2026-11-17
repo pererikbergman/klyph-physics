@@ -28,9 +28,11 @@ object Bench {
         return Result(scene.name, total / steps, slowest, run.particleCount)
     }
 
-    fun run(steps: Int) {
+    /** Times every scene, or only the [only]th, counting from 1 as the number keys do. */
+    fun run(steps: Int, only: Int? = null) {
         println("$steps steps a scene, after 60 to settle:")
-        for (scene in Scenes.all) {
+        for ((i, scene) in Scenes.all.withIndex()) {
+            if (only != null && i + 1 != only) continue
             val r = measure(scene, steps)
             val line = StringBuilder()
             line.append("  ").append(r.scene.padEnd(18))

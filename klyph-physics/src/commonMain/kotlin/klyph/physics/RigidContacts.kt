@@ -154,6 +154,7 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
             bs.asleep[q] && bs.isMoving(p) -> q
             else -> return
         }
+        if (bs.sensor[p] || bs.sensor[q] || bs.filtered(p, q)) return
         if (world.joints.connected(p, q)) return
         val shapesP = bs.shapes[p]!!
         val shapesQ = bs.shapes[q]!!
@@ -162,6 +163,37 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
                 bs.wake(sleeper)
                 return
             }
+        }
+    }
+
+    /**
+     * Notes whether sensor [p] or [q] has the other in it, overlapping, not just near. Two sensors don't
+     * notice each other. Asleep or not, they're looked at, so nothing leaves a sensor by falling asleep.
+     */
+    private fun sense(p: Int, q: Int) {
+        val bs = bodies
+        if (bs.sensor[p] && bs.sensor[q]) return
+        val sensor = if (bs.sensor[p]) p else q
+        val other = if (sensor == p) q else p
+        for (sp in bs.shapes[p]!!) for (sq in bs.shapes[q]!!) {
+            if (!narrow.collide(sp, bs.x[p], bs.y[p], bs.cos[p], bs.sin[p], sq, bs.x[q], bs.y[q], bs.cos[q], bs.sin[q], manifold)) continue
+            for (k in 0 until manifold.count) {
+                if (manifold.separation(k) < 0f) {
+                    world.events.sense(sensor, TouchKind.RIGID_BODY, other)
+                    return
+                }
+            }
+        }
+    }
+
+    /** Records in [events] the pairs whose contacts pushed this substep, or are within [Events.TOUCH_SLOP]: they touch. */
+    internal fun recordTouches(events: Events) {
+        for (c in 0 until count) {
+            if (lambdaN[c] <= 0f) {
+                measure(c)
+                if (mGap > Events.TOUCH_SLOP) continue
+            }
+            if (b[c] < 0) events.touch(TouchKind.RIGID_BODY, a[c], TouchKind.SOLIDS, -1) else events.touch(TouchKind.RIGID_BODY, a[c], TouchKind.RIGID_BODY, b[c])
         }
     }
 
@@ -232,6 +264,7 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         val moving = grid.dynamic
         for (body in 0 until bodies.end) {
             if (!bodies.isAlive(body) || bodies.kind[body] != RigidBodies.DYNAMIC) continue
+            if (bodies.sensor[body] || bodies.mask[body] and Filter.SOLIDS == 0) continue
             // a sleeping body only wakes if a moving solid reaches it: the still ones it slept on
             if (bodies.asleep[body] && !touchesMovingSolid(body, moving)) continue
             val reach = bodies.reach[body] + MARGIN
@@ -278,6 +311,11 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
 
     private fun bodyAgainstBody(p: Int, q: Int) {
         if (!bodies.isAlive(p) || !bodies.isAlive(q)) return
+        if (bodies.filtered(p, q)) return
+        if (bodies.sensor[p] || bodies.sensor[q]) {
+            sense(p, q)
+            return
+        }
         if (bodies.invMass[p] == 0f && bodies.invMass[q] == 0f) return
         if (world.joints.connected(p, q)) return
         val shapesP = bodies.shapes[p]!!
