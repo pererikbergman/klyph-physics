@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **308 tests**, all green
+- 🧪 **327 tests**, all green
 
 ## ▶️ Run it
 
@@ -179,6 +179,15 @@ thing that isn't a mirror, which lights up. Each bounce is a new ray from where 
 what's inside, and it glows. Right click to drop a crate or a blob. 🎯 [🔦 Raycasts and queries](docs/explained/queries.md)
 
 <img src="docs/img/laser.gif" alt="a red laser beam bouncing between mirrors, ending on crates, blobs and walls, with crates and a blob glowing in a bin" width="100%">
+
+### 17 · 🚦 Sorter
+
+**A sorting machine made of filters.** Red and blue balls, crates and blobs slide down a ramp. Red
+things are filtered to pass through its red part and fall into the red bin; blue ones slide over and
+fall through the blue part. A sensor over each bin counts what comes in, and a flash marks every
+touch that begins. Right click to drop more. 🎯 [🚦 Filters, sensors and events](docs/explained/filters.md)
+
+<img src="docs/img/sorter.gif" alt="red and blue things sliding down a ramp, falling through the part of their own colour into their own bin" width="100%">
 
 Every scene's step, timed without a window on the release build:
 `SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.

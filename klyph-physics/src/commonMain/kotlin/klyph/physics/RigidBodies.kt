@@ -69,6 +69,16 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     // Bullets: whether each body is swept from where it was to where it is every substep, so it
     // can't pass through anything, and how thin it is at its thinnest, which says how finely.
     internal var bullet = BooleanArray(initialCapacity)
+
+    /** Each body's collision category and mask: see [Filter]. */
+    internal var category = IntArray(initialCapacity)
+    internal var mask = IntArray(initialCapacity)
+
+    /** Whether any body has ever been given a filter: until then, nobody need look. */
+    internal var anyFiltered = false
+
+    /** Whether each body is a sensor: see [setSensor]. */
+    internal var sensor = BooleanArray(initialCapacity)
     internal var thickness = FloatArray(initialCapacity)
 
     /** How many bodies are asleep. */
@@ -139,6 +149,9 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         asleep[b] = false
         stillFor[b] = 0f
         bullet[b] = false
+        category[b] = Filter.DEFAULT
+        mask[b] = Filter.ALL
+        sensor[b] = false
         thickness[b] = 0f
         shapes[b] = NO_SHAPES
         reach[b] = 0f
@@ -193,6 +206,41 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     fun isBullet(b: Int): Boolean = bullet[b]
+
+    /**
+     * Puts body [b] in [category] and has it collide only with what's in [mask]: see [Filter]. It
+     * wakes, as what it rested on may no longer hold it.
+     */
+    fun setFilter(b: Int, category: Int, mask: Int) {
+        Filter.checkCategory(category)
+        this.category[b] = category
+        this.mask[b] = mask
+        if (category != Filter.DEFAULT || mask != Filter.ALL) anyFiltered = true
+        if (alive[b]) wake(b)
+    }
+
+    /** Body [b]'s collision category: see [Filter]. */
+    fun category(b: Int): Int = category[b]
+
+    /** The categories body [b] collides with: see [Filter]. */
+    fun mask(b: Int): Int = mask[b]
+
+    /**
+     * Makes body [b] a sensor, or not. A sensor never pushes or is pushed: it only notices what's in it,
+     * and [Events.sensorsEntered] and [Events.sensorsExited] say what came and went. It notices rigid
+     * bodies, soft bodies and loose particles its [Filter] lets it collide with, but not the solids or
+     * other sensors, and raycasts pass through it. It moves as its kind says, so a dynamic sensor
+     * falls; most are static, or kinematic to carry them about.
+     */
+    fun setSensor(b: Int, isSensor: Boolean) {
+        sensor[b] = isSensor
+        if (alive[b]) wake(b)
+    }
+
+    fun isSensor(b: Int): Boolean = sensor[b]
+
+    /** Whether bodies [p] and [q] are let collide by their filters: see [Filter]. */
+    internal fun filtered(p: Int, q: Int): Boolean = anyFiltered && !Filter.collides(category[p], mask[p], category[q], mask[q])
 
     /** Makes body [b] grip and bounce like [material]. */
     fun setMaterial(b: Int, material: Material) {
@@ -542,6 +590,9 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         alive = alive.copyOf(size)
         asleep = asleep.copyOf(size)
         bullet = bullet.copyOf(size)
+        category = category.copyOf(size)
+        mask = mask.copyOf(size)
+        sensor = sensor.copyOf(size)
         thickness = thickness.copyOf(size)
         stillFor = stillFor.copyOf(size)
         island = island.copyOf(size)

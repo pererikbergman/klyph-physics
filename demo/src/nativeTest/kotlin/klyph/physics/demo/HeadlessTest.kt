@@ -332,6 +332,22 @@ class HeadlessTest {
     }
 
     @Test
+    fun inSorterEveryRedThingEndsInTheRedBinAndEveryBlueOneInTheBlue() {
+        val run = SorterScene.create() as SorterScene.Run
+        repeat(1500) { run.step(dt) }
+        assertEquals(0, run.wrongBin, "nothing came into the wrong bin's sensor")
+        assertTrue(run.redInRed >= 8 && run.blueInBlue >= 8, "the bins filled: red ${run.redInRed}, blue ${run.blueInBlue}")
+        assertTrue(run.touchesBegun > 50, "and things touched: ${run.touchesBegun}")
+        val divider = SorterScene.DIVIDER * Scenes.TILE
+        for (item in run.items) {
+            val x = run.itemX(item)
+            val y = run.itemY(item)
+            // what has fallen off the ramp is in its own colour's bin
+            if (y > SorterScene.BIN_TOP) assertTrue(if (item.red) x < divider else x > divider, "a ${if (item.red) "red" else "blue"} ${item.kind} is in the wrong bin, at ($x, $y)")
+        }
+    }
+
+    @Test
     fun allThirtyBodiesInTheBlobPileGetThroughTheFunnelIntoTheBin() {
         val run = PileScene.create() as PileScene.Run
         repeat(PileScene.COUNT * PileScene.EVERY + 600) { run.step(dt) }

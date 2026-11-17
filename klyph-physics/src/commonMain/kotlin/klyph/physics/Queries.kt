@@ -166,7 +166,7 @@ internal class Queries(private val world: PhysicsWorld) {
     private fun rayRigid(ox: Float, oy: Float, dx: Float, dy: Float, hit: RayHit) {
         val bs = world.rigidBodies
         for (b in 0 until bs.end) {
-            if (!bs.alive[b]) continue
+            if (!bs.alive[b] || bs.sensor[b]) continue
             val shapes = bs.shapes[b] ?: continue
             // a circle round the body that the ray, as far as it still goes, misses
             if (!segmentNearCircle(ox, oy, dx * hit.fraction, dy * hit.fraction, bs.x[b], bs.y[b], bs.reach[b])) continue
