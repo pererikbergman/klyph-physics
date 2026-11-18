@@ -105,7 +105,7 @@ object BulletsScene : Scene {
         private var time = 0f
         private var fired = 0
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             time += dt
             if (time >= (fired + 1) * FIRE_EVERY) {
                 // up and down a little, shot to shot, so they hit the panes all along
@@ -113,7 +113,6 @@ object BulletsScene : Scene {
                 fire(cos(aim), sin(aim))
             }
             repeat(SPARKS_PER_STEP) { spark() }
-            world.step(dt)
         }
 
         /** Fires a bullet from the gun along ([dx], [dy]), a unit long: a ball, then a box, by turns. */

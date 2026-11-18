@@ -95,8 +95,6 @@ object SandScene : Scene {
             }
         }
 
-        override fun step(dt: Float) = world.step(dt)
-
         private var scoops = 0
 
         override fun spawn(x: Float, y: Float) {

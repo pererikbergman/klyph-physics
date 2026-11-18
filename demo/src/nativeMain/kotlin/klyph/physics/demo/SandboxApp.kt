@@ -6,6 +6,8 @@ import klyph.app.deltaSeconds
 import klyph.math.Rect
 import klyph.physics.bridge.DebugDraw
 import klyph.physics.bridge.DebugView
+import klyph.physics.bridge.addPhysics
+import klyph.physics.bridge.physics
 import klyph.platform.Color
 import klyph.platform.MouseButton
 import klyph.platform.Scancode
@@ -79,7 +81,7 @@ fun App.installSandbox(
         if (keys.isJustPressed(Scancode.R)) sandbox.reset()
         if (keys.isJustPressed(Scancode.SPACE)) sandbox.togglePause()
         if (keys.isJustPressed(Scancode.S)) sandbox.toggleSlowMotion()
-        if (keys.isJustPressed(PERIOD)) sandbox.stepOnce(app.time.fixedDelta.inWholeNanoseconds / 1e9f)
+        if (keys.isJustPressed(PERIOD)) sandbox.stepOnce(app.time.fixedSeconds)
 
         val mouse = app.input.mouse
         val at = mouse.worldPosition
@@ -93,21 +95,34 @@ fun App.installSandbox(
         addSystem(Phase.UPDATE) { app ->
             hand?.drive(sandbox)
             val start = TimeSource.Monotonic.markNow()
-            sandbox.fixedStep(app.time.fixedDelta.inWholeNanoseconds / 1e9f)
+            sandbox.fixedStep(app.time.fixedSeconds)
             val millis = start.elapsedNow().inWholeNanoseconds / 1e6f
             stepMillis += (millis - stepMillis) * SMOOTHING
             recording.fileAfter(sandbox.stepCount)?.let { app.window.capture(it) }
         }
     }
 
+    // The physics runs on addPhysics, as in a game: the sandbox steers and spawns in a fixed-step system
+    // added before it, and reads what happened in one added after. While recording it stays paused,
+    // and the recording steps the sandbox itself, once a frame.
+    var stepStart = TimeSource.Monotonic.markNow()
     addSystem(Phase.FIXED_UPDATE) { app ->
-        if (recording != null) return@addSystem
-        val start = TimeSource.Monotonic.markNow()
-        hand?.drive(sandbox)
-        if (sandbox.fixedStep(app.time.deltaSeconds)) {
-            val millis = start.elapsedNow().inWholeNanoseconds / 1e6f
-            stepMillis += (millis - stepMillis) * SMOOTHING
+        val physics = app.physics
+        if (recording != null) {
+            physics.isPaused = true
+            return@addSystem
         }
+        stepStart = TimeSource.Monotonic.markNow()
+        hand?.drive(sandbox)
+        physics.isPaused = !sandbox.beginStep(app.time.fixedSeconds)
+        physics.world = sandbox.run.world
+    }
+    addPhysics(sandbox.run.world)
+    addSystem(Phase.FIXED_UPDATE) { app ->
+        if (app.physics.isPaused) return@addSystem
+        sandbox.endStep(app.time.fixedSeconds)
+        val millis = stepStart.elapsedNow().inWholeNanoseconds / 1e6f
+        stepMillis += (millis - stepMillis) * SMOOTHING
     }
 
     addSystem(Phase.RENDER) { app ->
@@ -121,10 +136,8 @@ fun App.installSandbox(
         val viewWidth = camera.visibleWidth
         val viewHeight = camera.visibleHeight
         run.draw(canvas, debug, Rect(camera.x - viewWidth / 2f, camera.y - viewHeight / 2f, viewWidth, viewHeight))
-        run.world?.let { world ->
-            debug.overlay(canvas, world)
-            drawHand(canvas, debug, world)
-        }
+        debug.overlay(canvas, run.world)
+        drawHand(canvas, debug, run.world)
 
         title.clear()
         title.append(sandbox.index + 1).append('/').append(sandbox.sceneCount).append("  ").append(sandbox.scene.name)
@@ -145,7 +158,7 @@ fun App.installSandbox(
         stat(numbers.append("particles ").append(run.particleCount))
         numbers.clear()
         stat(numbers.append("bodies ").append(run.bodyCount))
-        val sleeping = run.world?.rigidBodies?.sleepingCount ?: 0
+        val sleeping = run.world.rigidBodies.sleepingCount
         if (sleeping > 0) {
             numbers.clear()
             stat(numbers.append("asleep ").append(sleeping))
@@ -228,3 +241,6 @@ internal fun StringBuilder.appendFixed(value: Float, decimals: Int): StringBuild
     }
     return this
 }
+
+/** The fixed step in seconds. */
+private val klyph.app.Time.fixedSeconds: Float get() = fixedDelta.inWholeNanoseconds / 1e9f

@@ -73,7 +73,7 @@ object ClothScene : Scene {
             ball = w.particles.add(440f + (NET_COLS - 1) * SPACING / 2f, 40f, mass = BALL_MASS, radius = BALL_RADIUS, collides = true)
         }
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             if (steps > 0 && steps % EVERY == 0) build()
             steps++
             seconds += dt
@@ -84,7 +84,6 @@ object ClothScene : Scene {
                 val flutter = 400f * sin(seconds * 9f - world.particles.x(p) * 0.08f)
                 world.setVelocity(p, world.velocityX(p) + gust * dt * 4f, world.velocityY(p) + flutter * dt * 4f)
             }
-            world.step(dt)
         }
 
         override fun spawn(x: Float, y: Float) {

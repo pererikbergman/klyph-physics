@@ -130,7 +130,7 @@ object CratesAndBlobsScene : Scene {
         /** Blobs dropped with a right click. */
         private val spawned = ArrayList<Int>()
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             time += dt
             if (!thrown && time >= THROW_AT) {
                 thrown = true
@@ -140,7 +140,6 @@ object CratesAndBlobsScene : Scene {
             if (jumper < 0 && time >= JUMP_AT) {
                 jumper = world.rigidBody(Shape.box(TOWER_CRATE, TOWER_CRATE), (TRAMPOLINE_LEFT + TRAMPOLINE_RIGHT) / 2f, JUMPER_Y)
             }
-            world.step(dt)
         }
 
         override fun spawn(x: Float, y: Float) {

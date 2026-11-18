@@ -57,9 +57,14 @@ object StressScene : Scene {
         private val grains = world.particles.count
         private val average = StringBuilder()
 
-        override fun step(dt: Float) {
-            val start = TimeSource.Monotonic.markNow()
-            world.step(dt)
+        /** When this step's physics began, to time it. */
+        private var start = TimeSource.Monotonic.markNow()
+
+        override fun beforeStep(dt: Float) {
+            start = TimeSource.Monotonic.markNow()
+        }
+
+        override fun afterStep(dt: Float) {
             millis[next] = start.elapsedNow().inWholeNanoseconds / 1e6f
             next = (next + 1) % HISTORY
         }

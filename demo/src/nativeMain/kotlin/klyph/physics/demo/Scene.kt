@@ -21,13 +21,27 @@ interface Scene {
     fun create(): SceneRun
 }
 
-/** A scene that is running: the physics it owns, moved one fixed step at a time. */
+/**
+ * A scene that is running: the physics it owns, moved one fixed step at a time. A step is the run's
+ * own [beforeStep], then the [world]'s step, then its [afterStep]: in the app `addPhysics` takes the
+ * middle, as it would in a game.
+ */
 interface SceneRun {
-    /** Advances the run's physics by one fixed step of [dt] seconds. */
-    fun step(dt: Float)
+    /** The run's physics. A run may swap it for a new one in [beforeStep]. */
+    val world: PhysicsWorld
 
-    /** The world the mouse grabs things in, or `null` for a run with none. */
-    val world: PhysicsWorld? get() = null
+    /** What the run does each fixed step of [dt] seconds before the physics moves: steering, spawning, motors. */
+    fun beforeStep(dt: Float) {}
+
+    /** What the run does after the physics moved: reading what happened, such as hits and sensors. */
+    fun afterStep(dt: Float) {}
+
+    /** One whole fixed step of [dt] seconds, without an app: [beforeStep], the world's step, [afterStep]. */
+    fun step(dt: Float) {
+        beforeStep(dt)
+        world.step(dt)
+        afterStep(dt)
+    }
 
     /** Adds this scene's own kind of thing at ([x], [y]), such as a blob or a ball: what a right click does. */
     fun spawn(x: Float, y: Float) {}

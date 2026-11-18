@@ -47,7 +47,7 @@ object FountainScene : Scene {
 
         override val particleCount: Int get() = world.particles.count
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             val ps = world.particles
             for (p in 0 until ps.end) if (ps.isAlive(p) && ps.y(p) > bottom) ps.remove(p)
             repeat(PER_STEP) {
@@ -56,7 +56,6 @@ object FountainScene : Scene {
                 val p = ps.add(nozzleX + random.nextFloat() * 4f - 2f, nozzleY, radius = 1f)
                 world.setVelocity(p, cos(angle) * speed, sin(angle) * speed)
             }
-            world.step(dt)
         }
 
         /** A burst of grains flying out every way from ([x], [y]). */

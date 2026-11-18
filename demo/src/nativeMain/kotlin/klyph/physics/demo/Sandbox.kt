@@ -70,19 +70,19 @@ class Sandbox(private val scenes: List<Scene>) {
      * it if one is near enough, and returns whether it took anything. The left mouse button.
      */
     fun grab(x: Float, y: Float): Boolean {
-        val world = run.world ?: return false
+        val world = run.world
         world.grab(x, y)
         return world.hand.isHolding
     }
 
     /** Moves the hand to ([x], [y]): the grabbed particle follows. The mouse, while the button is down. */
     fun moveGrab(x: Float, y: Float) {
-        run.world?.moveGrab(x, y)
+        run.world.moveGrab(x, y)
     }
 
     /** Lets go. The left mouse button coming up. */
     fun release() {
-        run.world?.release()
+        run.world.release()
     }
 
     /** Adds the current scene's kind of thing at ([x], [y]). The right mouse button. */
@@ -96,10 +96,30 @@ class Sandbox(private val scenes: List<Scene>) {
 
     /** Called once per fixed step of [dt] seconds; returns whether the physics moved. */
     fun fixedStep(dt: Float): Boolean {
+        if (!beginStep(dt)) return false
+        run.world.step(dt)
+        endStep(dt)
+        return true
+    }
+
+    /**
+     * The sandbox's part of a fixed step of [dt] seconds, before the world is stepped, for when
+     * something else steps it, such as `addPhysics`. Returns whether the physics moves this step: not
+     * while paused, and only one step in [SLOW_MOTION_FACTOR] in slow motion. If it does, the scene has
+     * steered and spawned for the step, and [run]'s world, which it may have swapped, should be stepped
+     * and then [endStep] called.
+     */
+    fun beginStep(dt: Float): Boolean {
         if (isPaused) return false
         if (isSlowMotion && slowTicks++ % SLOW_MOTION_FACTOR != 0) return false
-        advance(dt)
+        run.beforeStep(dt)
         return true
+    }
+
+    /** The sandbox's part of a fixed step of [dt] seconds after the world was stepped: see [beginStep]. */
+    fun endStep(dt: Float) {
+        run.afterStep(dt)
+        stepCount++
     }
 
     private fun advance(dt: Float) {

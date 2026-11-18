@@ -94,11 +94,10 @@ object SpringsScene : Scene {
         override val particleCount: Int get() = ps.count
         override val bodyCount: Int get() = 8
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             seconds += dt
             val angle = seconds * 2f
             cs.movePin(chasePin, pinCenterX + cos(angle) * 40f, TOP + 70f + sin(angle) * 40f)
-            world.step(dt)
         }
 
         override fun spawn(x: Float, y: Float) {

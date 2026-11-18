@@ -100,7 +100,7 @@ object StacksScene : Scene {
         private val hold = world.joints.weld(ball, Joints.WORLD, bodies.x(ball), bodies.y(ball))
         val released get() = !world.joints.isAlive(hold)
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             time += dt
             if (!pushed && time >= PUSH_AT) {
                 pushed = true
@@ -110,7 +110,6 @@ object StacksScene : Scene {
                 bodies.setVelocity(d, PUSH_SPIN * DOMINO_HEIGHT / 2f, 0f)
             }
             if (!released && time >= RELEASE_AT) world.joints.remove(hold)
-            world.step(dt)
         }
 
         override fun spawn(x: Float, y: Float) {

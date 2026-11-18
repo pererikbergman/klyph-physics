@@ -76,7 +76,7 @@ object BlobGardenScene : Scene {
         val hopTimer = FloatArray(blobs.size) { 0.6f + it * 0.3f }
         var seconds = 0f
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             seconds += dt
             // The crusher swings between 10 and 18 tiles down: at its lowest a tile above the floor, low enough to squash a blob flat.
             val top = 14 * t + 4 * t * sin(seconds * PI.toFloat() / 2f)
@@ -92,7 +92,9 @@ object BlobGardenScene : Scene {
                     hopTimer[i] = HOP_SECONDS
                 }
             }
-            world.step(dt)
+        }
+
+        override fun afterStep(dt: Float) {
             for (blob in blobs) if (bodies.touched(blob, PAD)) launch(blob, 0f, -BOUNCE_SPEED)
         }
 

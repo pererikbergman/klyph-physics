@@ -95,7 +95,7 @@ class HeadlessTest {
             val run = scene.create()
             repeat(600) {
                 run.step(dt)
-                if (it % 60 == 59) checkWorld("${scene.name} at step ${it + 1}", run.world ?: fail("${scene.name} has no world"))
+                if (it % 60 == 59) checkWorld("${scene.name} at step ${it + 1}", run.world)
             }
         }
     }
@@ -103,7 +103,7 @@ class HeadlessTest {
     @Test
     fun everySandGrainStaysInTheHourglassAndMostOfThemPourThrough() {
         val run = SandScene.create()
-        val world = run.world!!
+        val world = run.world
         repeat(900) { run.step(dt) }
         val ps = world.particles
         val left = (SandScene.LEFT_WALL + 1) * Scenes.TILE

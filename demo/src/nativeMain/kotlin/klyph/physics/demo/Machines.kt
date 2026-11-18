@@ -199,7 +199,7 @@ object MachinesScene : Scene {
             joints.setMotor(slider, -LIFT_SPEED, LIFT_FORCE)
         }
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             time += dt
             // the car turns back at either wall
             val x = bodies.x(chassis)
@@ -222,7 +222,6 @@ object MachinesScene : Scene {
             val trip = LIFT_TRAVEL / LIFT_SPEED + 0.5f
             val down = (time / trip).toInt() % 2 == 0
             joints.setMotor(slider, if (down) -LIFT_SPEED else LIFT_SPEED, LIFT_FORCE)
-            world.step(dt)
         }
 
         override fun spawn(x: Float, y: Float) {

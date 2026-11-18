@@ -141,10 +141,12 @@ object SorterScene : Scene {
             return b
         }
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             time += dt
             if (time >= (dropped + 1) * DROP_EVERY) drop(DROP_X + (dropped % 5 - 2) * 6f, DROP_Y)
-            world.step(dt)
+        }
+
+        override fun afterStep(dt: Float) {
             for (k in flashAge.indices) flashAge[k] += dt
             count(world.events.sensorsEntered)
             flash(world.events.contactsBegun)
