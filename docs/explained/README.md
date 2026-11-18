@@ -32,6 +32,7 @@ Want more? Every page has the details further down.
 | 🚀 | [Fast things and tunnelling](tunnelling.md) | bullets at 5 000 units a second never pass a one-unit wall |
 | 🔦 | [Raycasts and queries](queries.md) | the first thing along a line, everything at a point or in a box |
 | 🚦 | [Filters, sensors and events](filters.md) | who collides with whom, zones that notice, and what touched |
+| 🏎️ | [Making it fast](performance.md) | 5 000 grains, 1 000 crates and 50 blobs in 19 ms, on one thread |
 
 Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 

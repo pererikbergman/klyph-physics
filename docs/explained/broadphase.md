@@ -14,7 +14,7 @@
 <summary>🤓 the details</summary>
 
 ```kotlin
-val bp = Broadphase(cellSize = 16f)
+val bp = Broadphase()          // cells sized to the boxes at every build; or Broadphase(cellSize = 16f)
 
 // once per step:
 bp.clear()
@@ -27,6 +27,16 @@ for (i in 0 until bp.pairCount) {
     // narrowphase: do they really touch? 🔍
 }
 ```
+
+**Cells that fit** 📏: by default the cells are sized anew at every `build`, as wide as the average
+box's longer side. A heap of sand gets cells a grain wide, a stack of crates cells a crate wide.
+Fixed at 32, a cell held 140 grains, so every one was compared with every other: about 10 000 checks
+a cell.
+
+**Passive boxes** 💤: `add(..., passive = true)` files a box that's never compared with another
+passive one. They're filed after the rest of their cell, so the comparing stops where they start.
+`Broadphase(activeWithActive = false)` doesn't pair the others with each other either. The rigid–soft
+broadphase uses both: it files 5 000 grains and 1 000 crates, and wants only grain–crate pairs.
 
 **No edge to the world** 🌍: a cell `(col, row)` goes into a bucket by a hash,
 `(col · 73856093 xor row · 19349663) and mask`. The table has at least one bucket per filing,
@@ -54,11 +64,11 @@ negative coordinates. Same pairs as comparing everything with everything, none t
 
 | knob | default | turn it up 🔼 | turn it down 🔽 |
 |---|---|---|---|
-| `cellSize` | `16` | fewer filings, but more boxes per cell to compare | big boxes get filed under many cells 🐌 |
+| `cellSize` | `AUTO`: the average box | fewer filings, but more boxes per cell to compare | big boxes get filed under many cells 🐌 |
 | motion in `addMoving` | the step's move | catches faster things, more pairs | misses what a fast thing will hit 👻 |
 
-**Rule of thumb** 👍: a cell about the size of your typical box, plus a step's motion. In the demo,
-a tile.
+**Rule of thumb** 👍: a cell about the size of your typical box, plus a step's motion. `AUTO` does
+that for you, every step.
 
 ## 💥 Gotchas
 

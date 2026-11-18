@@ -104,6 +104,66 @@ class BroadphaseTest {
     }
 
     @Test
+    fun twoPassiveBoxesAreNeverAPair() {
+        bp.add(1, 0f, 0f, 9f, 9f)
+        bp.add(2, 1f, 1f, 8f, 8f, passive = true)
+        bp.add(3, 2f, 2f, 7f, 7f, passive = true)
+        bp.build()
+        assertEquals(setOf(1 to 2, 1 to 3), pairs())
+    }
+
+    @Test
+    fun withoutActiveWithActiveEveryPairIsOneOfEach() {
+        val b = Broadphase(cellSize = 10f, activeWithActive = false)
+        b.add(1, 0f, 0f, 9f, 9f)
+        b.add(2, 1f, 1f, 8f, 8f)
+        b.add(3, 2f, 2f, 7f, 7f, passive = true)
+        b.add(4, 3f, 3f, 6f, 6f, passive = true)
+        b.build()
+        assertEquals(setOf(1 to 3, 1 to 4, 2 to 3, 2 to 4), (0 until b.pairCount).map { b.pairA(it) to b.pairB(it) }.toSet())
+    }
+
+    @Test
+    fun autoCellsAreAsWideAsTheAverageBoxsLongerSide() {
+        val b = Broadphase()
+        assertTrue(b.isAuto)
+        b.add(1, 0f, 0f, 4f, 2f)
+        b.add(2, 10f, 10f, 12f, 18f)
+        b.build()
+        assertEquals(6f, b.cellSize)
+    }
+
+    @Test
+    fun withAutoCellsAndPassiveBoxesItStillFindsWhatBruteForceFinds() {
+        val random = Random(43)
+        repeat(20) { scene ->
+            val activeWithActive = scene % 2 == 0
+            val b = Broadphase(activeWithActive = activeWithActive)
+            val n = 50 + random.nextInt(400)
+            // grains and crates: many small boxes, a few big ones, in any order, a third passive
+            val boxes = Array(n) {
+                val x = random.nextFloat() * 300f
+                val y = random.nextFloat() * 300f
+                val size = if (random.nextInt(10) == 0) 10f + random.nextFloat() * 30f else 1f + random.nextFloat() * 3f
+                floatArrayOf(x, y, x + size, y + size)
+            }
+            val passive = BooleanArray(n) { random.nextInt(3) == 0 }
+            for (i in 0 until n) b.add(i, boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], passive[i])
+            b.build()
+            val expected = mutableSetOf<Pair<Int, Int>>()
+            for (i in 0 until n) for (j in i + 1 until n) {
+                if (passive[i] && passive[j]) continue
+                if (!activeWithActive && !passive[i] && !passive[j]) continue
+                val p = boxes[i]
+                val q = boxes[j]
+                if (p[0] <= q[2] && q[0] <= p[2] && p[1] <= q[3] && q[1] <= p[3]) expected += i to j
+            }
+            assertEquals(expected.size, b.pairCount, "scene $scene: no pair twice")
+            assertEquals(expected, (0 until b.pairCount).map { b.pairA(it) to b.pairB(it) }.toSet(), "scene $scene")
+        }
+    }
+
+    @Test
     fun theSameBoxesGiveTheSamePairsInTheSameOrder() {
         fun run(): List<Pair<Int, Int>> {
             val b = Broadphase(cellSize = 8f)
@@ -116,7 +176,9 @@ class BroadphaseTest {
     }
 
     @Test
-    fun aCellNeedsASize() {
-        assertFailsWith<IllegalArgumentException> { Broadphase(cellSize = 0f) }
+    fun aCellNeedsASizeOrAuto() {
+        assertFailsWith<IllegalArgumentException> { Broadphase(cellSize = -1f) }
+        assertFailsWith<IllegalArgumentException> { Broadphase(cellSize = Float.NaN) }
+        assertTrue(Broadphase(cellSize = Broadphase.AUTO).isAuto)
     }
 }

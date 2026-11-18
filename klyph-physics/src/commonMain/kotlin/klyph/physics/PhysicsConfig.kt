@@ -24,10 +24,11 @@ data class PhysicsConfig(
      */
     val maxStep: Float = 4f,
     /**
-     * The side of a cell of the broadphase that finds which bodies might touch, in units. About the
-     * size of a body works best; see the broadphase page.
+     * The side of a cell of the broadphases that find which things might touch, in units, or
+     * [Broadphase.AUTO], the default, to size the cells at every step to what's in them. About the size
+     * of a body works best; see the broadphase page.
      */
-    val cellSize: Float = 32f,
+    val cellSize: Float = Broadphase.AUTO,
     /**
      * Slower than this into a surface, in units per second, nothing bounces, whatever its restitution:
      * resting things settle instead of buzzing. Gravity alone reaches it in a fall of under a unit.
@@ -49,7 +50,7 @@ data class PhysicsConfig(
         require(iterations >= 1) { "iterations is $iterations: there must be at least one" }
         require(damping >= 0f && damping.isFinite()) { "damping is $damping: it must be finite and not negative" }
         require(maxStep > 0f) { "maxStep is $maxStep: it must be more than 0" }
-        require(cellSize > 0f) { "cellSize is $cellSize: it must be more than 0" }
+        require(cellSize >= 0f && cellSize.isFinite()) { "cellSize is $cellSize: it must be more than 0, or Broadphase.AUTO" }
         require(bounceSpeed >= 0f) { "bounceSpeed is $bounceSpeed: it must not be negative" }
         require(timeToSleep > 0f) { "timeToSleep is $timeToSleep: it must be more than 0" }
         require(sleepSpeed >= 0f && sleepSpeed.isFinite()) { "sleepSpeed is $sleepSpeed: it must be finite and not negative" }

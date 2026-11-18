@@ -240,7 +240,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     fun isSensor(b: Int): Boolean = sensor[b]
 
     /** Whether bodies [p] and [q] are let collide by their filters: see [Filter]. */
-    internal fun filtered(p: Int, q: Int): Boolean = anyFiltered && !Filter.collides(category[p], mask[p], category[q], mask[q])
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun filtered(p: Int, q: Int): Boolean = anyFiltered && !Filter.collides(category[p], mask[p], category[q], mask[q])
 
     /** Makes body [b] grip and bounce like [material]. */
     fun setMaterial(b: Int, material: Material) {
@@ -519,7 +520,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * the push over its mass, and turned by the push's torque over its inertia. A positional impulse,
      * the solver's one way of moving a body.
      */
-    internal fun shove(b: Int, px: Float, py: Float, rx: Float, ry: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun shove(b: Int, px: Float, py: Float, rx: Float, ry: Float) {
         val w = invMass[b]
         if (w == 0f) return
         val turn = (rx * py - ry * px) * invInertia[b]
@@ -553,7 +555,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * its centre: along by the impulse over its mass, and its spin by the impulse's torque over its
      * inertia. The velocity pass's one way of changing a body's speed.
      */
-    internal fun kick(b: Int, ix: Float, iy: Float, rx: Float, ry: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun kick(b: Int, ix: Float, iy: Float, rx: Float, ry: Float) {
         val w = invMass[b]
         if (w == 0f) return
         vx[b] += ix * w
@@ -565,7 +568,8 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * How hard body [b] is to move at ([rx], [ry]) from its centre along the unit ([nx], [ny]): its
      * inverse mass plus what turning adds. A push there moves the point by the push times this.
      */
-    internal fun inverseMassAt(b: Int, rx: Float, ry: Float, nx: Float, ny: Float): Float {
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun inverseMassAt(b: Int, rx: Float, ry: Float, nx: Float, ny: Float): Float {
         val turn = rx * ny - ry * nx
         return invMass[b] + turn * turn * invInertia[b]
     }

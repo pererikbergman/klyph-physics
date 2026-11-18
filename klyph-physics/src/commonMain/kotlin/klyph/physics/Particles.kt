@@ -226,7 +226,8 @@ class Particles internal constructor(initialCapacity: Int = 64) {
      * [hold] (its friction and static friction), against particle [a], the edge from [a] to [b] at [t],
      * or nothing that moves when [a] is -1. Pushes add up over the substep; the rest is the last one's.
      */
-    internal fun touch(p: Int, nx: Float, ny: Float, depth: Float, grip: Float, hold: Float, a: Int, b: Int, t: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun touch(p: Int, nx: Float, ny: Float, depth: Float, grip: Float, hold: Float, a: Int, b: Int, t: Float) {
         contactDepth[p] += depth
         contact[p] = contact[p] or Events.TOUCHING
         contactNx[p] = nx

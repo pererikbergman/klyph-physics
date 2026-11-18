@@ -64,8 +64,10 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private var feature = IntArray(64)
     private var slipped = BooleanArray(64)
 
-    // The last substep's contacts, as much of them as [add] needs to carry their anchors on, and a
-    // table to find one by what makes it the same: open addressing, each slot a contact plus one, 0 for empty.
+    // The last substep's contacts, as much of them as [add] and [keep] need, swapped with this
+    // substep's at the start of each rather than copied, and a table to find one by what makes it the
+    // same, built only once a contact is found anew: open addressing, each slot a contact plus one, 0
+    // for empty.
     private var oldCount = 0
     private var oldA = IntArray(64)
     private var oldB = IntArray(64)
@@ -75,11 +77,58 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private var oldF1y = FloatArray(64)
     private var oldF2x = FloatArray(64)
     private var oldF2y = FloatArray(64)
-    private var oldHeld = BooleanArray(64)
+    private var oldLambdaN = FloatArray(64)
+    private var oldSlipped = BooleanArray(64)
     private var table = IntArray(128)
+    private var tableBuilt = false
 
     // The other point of a two-point contact, solved together with this one, or -1.
     private var twin = IntArray(64)
+
+    // Each contact's normal in its first body's frame, so a contact kept for another substep turns
+    // with it, and the last substep's, with its points and twin, for [keep].
+    private var nlx = FloatArray(64)
+    private var nly = FloatArray(64)
+    private var oldR1x = FloatArray(64)
+    private var oldR1y = FloatArray(64)
+    private var oldR2x = FloatArray(64)
+    private var oldR2y = FloatArray(64)
+    private var oldNlx = FloatArray(64)
+    private var oldNly = FloatArray(64)
+    private var oldTwin = IntArray(64)
+
+    // Each pair of bodies looked at closely this substep: its contacts, `pairN` of them from
+    // `pairFirst`, and where the second body was from the first when they were last found by the
+    // narrowphase: across, down and turned. The last substep's pairs, and a table to find one by its
+    // two bodies, as for the contacts. None are kept from one step to the next.
+    private var pairCount = 0
+    private var pairP = IntArray(64)
+    private var pairQ = IntArray(64)
+    private var pairFirst = IntArray(64)
+    private var pairN = IntArray(64)
+    private var pairX = FloatArray(64)
+    private var pairY = FloatArray(64)
+    private var pairTurn = FloatArray(64)
+    private var oldPairCount = 0
+    private var oldPairP = IntArray(64)
+    private var oldPairQ = IntArray(64)
+    private var oldPairFirst = IntArray(64)
+    private var oldPairN = IntArray(64)
+    private var oldPairX = FloatArray(64)
+    private var oldPairY = FloatArray(64)
+    private var oldPairTurn = FloatArray(64)
+    private var pairTable = IntArray(128)
+    private var newStep = true
+
+    // Whether there are joints at all, so that two bodies a joint connects needn't be looked for otherwise.
+    private var anyJoints = false
+
+    /** How many pairs of bodies kept last substep's contacts this substep, rather than look again. */
+    internal var keptCount = 0
+        private set
+
+    /** Whether a pair that has hardly moved keeps its contacts: off, every pair is looked at closely, for tests to compare. */
+    internal var keeping = true
 
     // How hard the velocity pass's dynamic friction has struck each contact so far this substep, along
     // its tangent: a pair's on its first point.
@@ -115,6 +164,7 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
 
     /** Files every body with a shape in the [broadphase], each grown by how far it will move in [dt] seconds. */
     internal fun beginStep(dt: Float) {
+        newStep = true
         val bp = broadphase
         bp.clear()
         val bs = bodies
@@ -135,10 +185,14 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     internal fun find() {
         remember()
         count = 0
+        pairCount = 0
+        keptCount = 0
         val bp = broadphase
+        val pairs = bp.pairs
+        anyJoints = world.joints.count > 0
         // first wake what's been hit, so the bodies it wakes find their contacts with each other too
-        if (bodies.sleepingCount > 0) for (i in 0 until bp.pairCount) wakeIfHit(bp.pairA(i), bp.pairB(i))
-        for (i in 0 until bp.pairCount) bodyAgainstBody(bp.pairA(i), bp.pairB(i))
+        if (bodies.sleepingCount > 0) for (i in 0 until bp.pairCount) wakeIfHit(pairs[2 * i], pairs[2 * i + 1])
+        for (i in 0 until bp.pairCount) bodyAgainstBody(pairs[2 * i], pairs[2 * i + 1])
         findAgainstSolids()
     }
 
@@ -206,44 +260,207 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * found again holds on at the same two points.
      */
     private fun remember() {
-        val n = count
-        if (oldA.size < n) {
-            val size = a.size
-            oldA = IntArray(size)
-            oldB = IntArray(size)
-            oldShapeKey = IntArray(size)
-            oldFeature = IntArray(size)
-            oldF1x = FloatArray(size)
-            oldF1y = FloatArray(size)
-            oldF2x = FloatArray(size)
-            oldF2y = FloatArray(size)
-            oldHeld = BooleanArray(size)
-        }
+        a = oldA.also { oldA = a }
+        b = oldB.also { oldB = b }
+        shapeKey = oldShapeKey.also { oldShapeKey = shapeKey }
+        feature = oldFeature.also { oldFeature = feature }
+        f1x = oldF1x.also { oldF1x = f1x }
+        f1y = oldF1y.also { oldF1y = f1y }
+        f2x = oldF2x.also { oldF2x = f2x }
+        f2y = oldF2y.also { oldF2y = f2y }
+        r1x = oldR1x.also { oldR1x = r1x }
+        r1y = oldR1y.also { oldR1y = r1y }
+        r2x = oldR2x.also { oldR2x = r2x }
+        r2y = oldR2y.also { oldR2y = r2y }
+        nlx = oldNlx.also { oldNlx = nlx }
+        nly = oldNly.also { oldNly = nly }
+        twin = oldTwin.also { oldTwin = twin }
+        lambdaN = oldLambdaN.also { oldLambdaN = lambdaN }
+        slipped = oldSlipped.also { oldSlipped = slipped }
+        oldCount = count
+        tableBuilt = false
+        rememberPairs()
+    }
+
+    /**
+     * Whether last substep's contact [o] held on: it pushed, or its twin did, and didn't slip. The same
+     * contact found again holds on at the same two points.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun held(o: Int): Boolean {
+        val t = oldTwin[o]
+        return (oldLambdaN[o] > 0f || t >= 0 && oldLambdaN[t] > 0f) && !oldSlipped[o]
+    }
+
+    /** Files last substep's contacts by what makes them the same, for [recall]. */
+    private fun buildTable() {
+        val n = oldCount
         var size = table.size
         while (size < 2 * n) size *= 2
         if (size != table.size) table = IntArray(size) else table.fill(0)
         val mask = size - 1
         for (c in 0 until n) {
-            oldA[c] = a[c]
-            oldB[c] = b[c]
-            oldShapeKey[c] = shapeKey[c]
-            oldFeature[c] = feature[c]
-            oldF1x[c] = f1x[c]
-            oldF1y[c] = f1y[c]
-            oldF2x[c] = f2x[c]
-            oldF2y[c] = f2y[c]
-            val t = twin[c]
-            oldHeld[c] = (lambdaN[c] > 0f || t >= 0 && lambdaN[t] > 0f) && !slipped[c]
-            var slot = hash(a[c], b[c], shapeKey[c], feature[c]) and mask
+            var slot = hash(oldA[c], oldB[c], oldShapeKey[c], oldFeature[c]) and mask
             while (table[slot] != 0) slot = (slot + 1) and mask
             table[slot] = c + 1
         }
-        oldCount = n
+        tableBuilt = true
+    }
+
+    /** Keeps this substep's pairs for the next to look up, unless a new step begins: then none. */
+    private fun rememberPairs() {
+        val n = if (newStep) 0 else pairCount
+        newStep = false
+        pairP = oldPairP.also { oldPairP = pairP }
+        pairQ = oldPairQ.also { oldPairQ = pairQ }
+        pairFirst = oldPairFirst.also { oldPairFirst = pairFirst }
+        pairN = oldPairN.also { oldPairN = pairN }
+        pairX = oldPairX.also { oldPairX = pairX }
+        pairY = oldPairY.also { oldPairY = pairY }
+        pairTurn = oldPairTurn.also { oldPairTurn = pairTurn }
+        var size = pairTable.size
+        while (size < 2 * n) size *= 2
+        if (size != pairTable.size) pairTable = IntArray(size) else pairTable.fill(0)
+        val mask = size - 1
+        for (k in 0 until n) {
+            var slot = hash(oldPairP[k], oldPairQ[k], 0, 0) and mask
+            while (pairTable[slot] != 0) slot = (slot + 1) and mask
+            pairTable[slot] = k + 1
+        }
+        oldPairCount = n
+    }
+
+    /** The last substep's pair of [p] and [q], or -1. */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun recallPair(p: Int, q: Int): Int {
+        if (oldPairCount == 0) return -1
+        val mask = pairTable.size - 1
+        var slot = hash(p, q, 0, 0) and mask
+        while (true) {
+            val k = pairTable[slot] - 1
+            if (k < 0) return -1
+            if (oldPairP[k] == p && oldPairQ[k] == q) return k
+            slot = (slot + 1) and mask
+        }
+    }
+
+    /** Notes that [p] and [q] were looked at, with the contacts from [first] on, and where [q] was from [p] when last found. */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun addPair(p: Int, q: Int, first: Int, x: Float, y: Float, turn: Float) {
+        if (pairCount == pairP.size) growPairs()
+        val k = pairCount++
+        pairP[k] = p
+        pairQ[k] = q
+        pairFirst[k] = first
+        pairN[k] = count - first
+        pairX[k] = x
+        pairY[k] = y
+        pairTurn[k] = turn
+    }
+
+    /** Doubles the room for pairs, this substep's and the last's alike, as they're swapped. */
+    private fun growPairs() {
+        val size = pairP.size * 2
+        pairP = pairP.copyOf(size)
+        pairQ = pairQ.copyOf(size)
+        pairFirst = pairFirst.copyOf(size)
+        pairN = pairN.copyOf(size)
+        pairX = pairX.copyOf(size)
+        pairY = pairY.copyOf(size)
+        pairTurn = pairTurn.copyOf(size)
+        oldPairP = oldPairP.copyOf(size)
+        oldPairQ = oldPairQ.copyOf(size)
+        oldPairFirst = oldPairFirst.copyOf(size)
+        oldPairN = oldPairN.copyOf(size)
+        oldPairX = oldPairX.copyOf(size)
+        oldPairY = oldPairY.copyOf(size)
+        oldPairTurn = oldPairTurn.copyOf(size)
+    }
+
+    /**
+     * Makes last substep's contacts of [p] and [q], pair [k], this substep's: the same points on the
+     * same bodies, the normal turned with [p], as if found again. Only for a pair that has hardly moved
+     * against each other since its contacts were last found by the narrowphase, so they'd be found the
+     * same; where they were then is kept, so a pair creeping a little each substep is looked at again.
+     */
+    @Suppress("NOTHING_TO_INLINE") // a call costs more than the copying: see the performance page
+    private inline fun keep(p: Int, q: Int, k: Int) {
+        val first = count
+        val oldFirst = oldPairFirst[k]
+        val n = oldPairN[k]
+        val bs = bodies
+        val friction = Material.mixFriction(bs.friction[p], bs.friction[q])
+        val staticFriction = Material.mixFriction(bs.staticFriction[p], bs.staticFriction[q])
+        val restitution = Material.mixRestitution(bs.restitution[p], bs.restitution[q])
+        val cosP = bs.cos[p]
+        val sinP = bs.sin[p]
+        val cosQ = bs.cos[q]
+        val sinQ = bs.sin[q]
+        val vxP = bs.vx[p]
+        val vyP = bs.vy[p]
+        val omegaP = bs.omega[p]
+        val vxQ = bs.vx[q]
+        val vyQ = bs.vy[q]
+        val omegaQ = bs.omega[q]
+        for (o in oldFirst until oldFirst + n) {
+            if (count == a.size) grow()
+            val c = count++
+            a[c] = p
+            b[c] = q
+            r1x[c] = oldR1x[o]
+            r1y[c] = oldR1y[o]
+            r2x[c] = oldR2x[o]
+            r2y[c] = oldR2y[o]
+            val lx = oldNlx[o]
+            val ly = oldNly[o]
+            nlx[c] = lx
+            nly[c] = ly
+            val cx = cosP * lx - sinP * ly
+            val cy = sinP * lx + cosP * ly
+            nx[c] = cx
+            ny[c] = cy
+            shapeKey[c] = oldShapeKey[o]
+            feature[c] = oldFeature[o]
+            slipped[c] = false
+            if (held(o)) {
+                f1x[c] = oldF1x[o]
+                f1y[c] = oldF1y[o]
+                f2x[c] = oldF2x[o]
+                f2y[c] = oldF2y[o]
+            } else {
+                f1x[c] = r1x[c]
+                f1y[c] = r1y[c]
+                f2x[c] = r2x[c]
+                f2y[c] = r2y[c]
+            }
+            lambdaN[c] = 0f
+            lambdaT[c] = 0f
+            twin[c] = -1
+            grip[c] = friction
+            hold[c] = staticFriction
+            bounce[c] = restitution
+            // each point from its body's centre, in the world, and how fast the two close
+            val wax = cosP * r1x[c] - sinP * r1y[c]
+            val way = sinP * r1x[c] + cosP * r1y[c]
+            val wbx = cosQ * r2x[c] - sinQ * r2y[c]
+            val wby = sinQ * r2x[c] + cosQ * r2y[c]
+            val vx = vxQ - omegaQ * wby - (vxP - omegaP * way)
+            val vy = vyQ + omegaQ * wbx - (vyP + omegaP * wax)
+            speedIn[c] = vx * cx + vy * cy
+        }
+        for (o in oldFirst until oldFirst + n) {
+            val t = oldTwin[o]
+            if (t > o) pair(first + (o - oldFirst), first + (t - oldFirst))
+        }
+        addPair(p, q, first, oldPairX[k], oldPairY[k], oldPairTurn[k])
+        keptCount++
     }
 
     /** The last substep's contact between [p] and [q] by the same shapes and feature, or -1. */
-    private fun recall(p: Int, q: Int, shapes: Int, id: Int): Int {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun recall(p: Int, q: Int, shapes: Int, id: Int): Int {
         if (oldCount == 0) return -1
+        if (!tableBuilt) buildTable()
         val mask = table.size - 1
         var slot = hash(p, q, shapes, id) and mask
         while (true) {
@@ -254,7 +471,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         }
     }
 
-    private fun hash(p: Int, q: Int, shapes: Int, id: Int): Int =
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun hash(p: Int, q: Int, shapes: Int, id: Int): Int =
         (p * 73_856_093) xor (q * 19_349_663) xor (shapes * 83_492_791) xor (id * -1_640_531_535)
 
     private fun findAgainstSolids() {
@@ -309,17 +527,23 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         return false
     }
 
-    private fun bodyAgainstBody(p: Int, q: Int) {
-        if (!bodies.isAlive(p) || !bodies.isAlive(q)) return
-        if (bodies.filtered(p, q)) return
-        if (bodies.sensor[p] || bodies.sensor[q]) {
+    /**
+     * Finds the contacts of [p] and [q], a pair from the broadphase: last substep's again, if the two
+     * have hardly moved against each other since, or else by looking closely. Inline, so the loop over
+     * every pair in [find] pays for one call only where it looks closely: in Kotlin/Native, every call
+     * sets up a frame for what it holds, and this is the commonest path of all.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun bodyAgainstBody(p: Int, q: Int) {
+        val bs = bodies
+        if (!bs.alive[p] || !bs.alive[q]) return
+        if (bs.filtered(p, q)) return
+        if (bs.sensor[p] || bs.sensor[q]) {
             sense(p, q)
             return
         }
-        if (bodies.invMass[p] == 0f && bodies.invMass[q] == 0f) return
-        if (world.joints.connected(p, q)) return
-        val shapesP = bodies.shapes[p]!!
-        val shapesQ = bodies.shapes[q]!!
+        if (bs.invMass[p] == 0f && bs.invMass[q] == 0f) return
+        if (anyJoints && world.joints.connected(p, q)) return
         // Speculative: a pair that moved more than the margin this substep, and more than half the
         // thinner of the two, so far it could be past the middle of it, is looked at where it was at
         // the start of it, as far apart as it moved, so the normal is the one from the side it came
@@ -331,6 +555,31 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         val thinner = minOf(bodies.thickness[p], bodies.thickness[q])
         val speculative = moved > MARGIN && moved > thinner / 2f &&
             !bodies.bullet[p] && !bodies.bullet[q] && turnedLittle(p) && turnedLittle(q)
+        // where q is from p: if that's hardly changed since they were last looked at, nor are their contacts
+        val dqx = bodies.x[q] - bodies.x[p]
+        val dqy = bodies.y[q] - bodies.y[p]
+        val relX = bodies.cos[p] * dqx + bodies.sin[p] * dqy
+        val relY = -bodies.sin[p] * dqx + bodies.cos[p] * dqy
+        val relTurn = bodies.angle[q] - bodies.angle[p]
+        if (!speculative && keeping) {
+            val k = recallPair(p, q)
+            if (k >= 0 && abs(relX - oldPairX[k]) < KEEP_MOVE && abs(relY - oldPairY[k]) < KEEP_MOVE && abs(relTurn - oldPairTurn[k]) < KEEP_TURN) {
+                keep(p, q, k)
+                return
+            }
+        }
+        lookClosely(p, q, speculative, moved, relX, relY, relTurn)
+    }
+
+    /**
+     * Finds the contacts of [p] and [q] with the narrowphase: [speculative]ly, from where they were at
+     * the start of the substep, if they've [moved] that far together. Notes where [q] was from [p], for
+     * [keep], unless speculatively.
+     */
+    private fun lookClosely(p: Int, q: Int, speculative: Boolean, moved: Float, relX: Float, relY: Float, relTurn: Float) {
+        val shapesP = bodies.shapes[p]!!
+        val shapesQ = bodies.shapes[q]!!
+        val first = count
         if (speculative) {
             narrow.margin = MARGIN + moved
             prevCosP = cos(bodies.prevAngle[p])
@@ -367,6 +616,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
             if (speculative) narrow.margin = MARGIN + moved
         }
         narrow.margin = MARGIN
+        // found speculatively, from where they were, they're looked at again next substep
+        if (!speculative) addPair(p, q, first, relX, relY, relTurn)
     }
 
     // The turns of the two bodies [bodyAgainstBody] looks at, at the start of the substep.
@@ -375,10 +626,12 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private var prevCosQ = 1f
     private var prevSinQ = 0f
 
-    private fun turnedLittle(b: Int): Boolean = abs(bodies.angle[b] - bodies.prevAngle[b]) < MAX_SPECULATIVE_TURN
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun turnedLittle(b: Int): Boolean = abs(bodies.angle[b] - bodies.prevAngle[b]) < MAX_SPECULATIVE_TURN
 
     /** How far body [b] moved this substep, its farthest point: along, and round as it turned. */
-    private fun moved(b: Int): Float {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun moved(b: Int): Float {
         val dx = bodies.x[b] - bodies.prevX[b]
         val dy = bodies.y[b] - bodies.prevY[b]
         return sqrt(dx * dx + dy * dy) + abs(bodies.angle[b] - bodies.prevAngle[b]) * bodies.reach[b]
@@ -608,7 +861,7 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         feature[c] = id
         slipped[c] = false
         val old = recall(p, q, shapes, id)
-        if (old >= 0 && oldHeld[old]) {
+        if (old >= 0 && held(old)) {
             f1x[c] = oldF1x[old]
             f1y[c] = oldF1y[old]
             f2x[c] = oldF2x[old]
@@ -621,6 +874,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         }
         this.nx[c] = nx
         this.ny[c] = ny
+        nlx[c] = bs.cos[p] * nx + bs.sin[p] * ny
+        nly[c] = -bs.sin[p] * nx + bs.cos[p] * ny
         lambdaN[c] = 0f
         lambdaT[c] = 0f
         twin[c] = -1
@@ -632,12 +887,13 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
 
     /** Lets every edge contact of the last substep be found as new: the edges were numbered afresh. */
     private fun forgetEdges() {
-        for (k in 0 until oldCount) if (oldB[k] < 0 && oldFeature[k] and KIND != ON_SOLID) oldHeld[k] = false
+        for (k in 0 until oldCount) if (oldB[k] < 0 && oldFeature[k] and KIND != ON_SOLID) oldSlipped[k] = true
     }
 
 
     /** Makes contacts [c] and [d], two points on the same two bodies along the same normal, be solved together. */
-    private fun pair(c: Int, d: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun pair(c: Int, d: Int) {
         twin[c] = d
         twin[d] = c
     }
@@ -677,7 +933,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private var mGap = 0f
 
     /** Measures contact [c] where its bodies are now, into the `m` fields: negative [mGap] is overlap. */
-    private fun measure(c: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun measure(c: Int) {
         val bs = bodies
         val p = a[c]
         val q = b[c]
@@ -703,7 +960,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Pushes contact [c]'s two points apart along its normal, if they overlap, until they don't. */
-    private fun solveOne(c: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun solveOne(c: Int) {
         measure(c)
         if (mGap >= 0f) return
         val p = a[c]
@@ -717,7 +975,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * Pushes the two points of contacts [c] and [d] apart at once: the pushes, neither pulling, that
      * leave both just touching, or one just touching and the other clear.
      */
-    private fun solvePair(c: Int, d: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun solvePair(c: Int, d: Int) {
         measure(c)
         val g1 = mGap
         val c1x = mw1x
@@ -753,7 +1012,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * how far a unit push at each moves each point apart, through each body's mass and turning: the
      * `k` fields. The same numbers say how fast a unit impulse makes them part.
      */
-    private fun pairResponse(c: Int, c1x: Float, c1y: Float, c2x: Float, c2y: Float, d1x: Float, d1y: Float, d2x: Float, d2y: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun pairResponse(c: Int, c1x: Float, c1y: Float, c2x: Float, c2y: Float, d1x: Float, d1y: Float, d2x: Float, d2y: Float) {
         val bs = bodies
         val p = a[c]
         val q = b[c]
@@ -779,7 +1039,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * point already past where it should be is left there: both pushing and both just there, or one
      * pushing and the other clear. False when the two points are as good as one, and can't be told apart.
      */
-    private fun pairPushes(g1: Float, g2: Float, allowPull: Boolean): Boolean {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun pairPushes(g1: Float, g2: Float, allowPull: Boolean): Boolean {
         l1 = 0f
         l2 = 0f
         if (k11 <= 0f || k22 <= 0f) return true
@@ -803,7 +1064,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Pushes contact [c]'s bodies apart by [amount] along its normal, at its points [w1x], [w1y] and [w2x], [w2y] from their centres. */
-    private fun push(c: Int, amount: Float, w1x: Float, w1y: Float, w2x: Float, w2y: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun push(c: Int, amount: Float, w1x: Float, w1y: Float, w2x: Float, w2y: Float) {
         lambdaN[c] += amount
         val n1 = nx[c]
         val n2 = ny[c]
@@ -823,7 +1085,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * Measures how far contact [c]'s friction anchor on A is from its anchor on B along the surface,
      * into the `s` fields, with the points it's held at, from each body's centre.
      */
-    private fun slide(c: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun slide(c: Int) {
         val bs = bodies
         val p = a[c]
         val q = b[c]
@@ -853,7 +1116,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * other this substep, while the push that takes is under its static friction times the push holding
      * them on.
      */
-    private fun staticFriction(c: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun staticFriction(c: Int) {
         slide(c)
         hold(c, c, lambdaN[c], slideX, slideY, sw1x, sw1y, sw2x, sw2y)
     }
@@ -864,7 +1128,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * them on. Held at both, the face can neither slide nor tip; and one corner holding hardly at all,
      * where the other carries the weight, still holds its share.
      */
-    private fun staticFrictionPair(c: Int, d: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun staticFrictionPair(c: Int, d: Int) {
         val pushed = lambdaN[c] + lambdaN[d]
         slide(c)
         hold(c, c, pushed, slideX, slideY, sw1x, sw1y, sw2x, sw2y)
@@ -880,7 +1145,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * [kept] has pushed that way so far this substep, is under its static friction times [pushed], the
      * push holding it on.
      */
-    private fun hold(c: Int, kept: Int, pushed: Float, dx: Float, dy: Float, w1x: Float, w1y: Float, w2x: Float, w2y: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun hold(c: Int, kept: Int, pushed: Float, dx: Float, dy: Float, w1x: Float, w1y: Float, w2x: Float, w2y: Float) {
         val slide = sqrt(dx * dx + dy * dy)
         if (slide < 1e-6f) return
         val ux = dx / slide
@@ -944,7 +1210,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private var vLeaving = 0f
 
     /** Measures how fast contact [c]'s points part along its normal now, into the `v` fields. */
-    private fun leaving(c: Int) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun leaving(c: Int) {
         val bs = bodies
         val p = a[c]
         val q = b[c]
@@ -956,12 +1223,15 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Whether contact [c] hit, faster than [bounceSpeed], and how fast it should leave: the speed it came in at times its bounce. */
-    private fun isHit(c: Int, bounceSpeed: Float): Boolean = -speedIn[c] > bounceSpeed
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun isHit(c: Int, bounceSpeed: Float): Boolean = -speedIn[c] > bounceSpeed
 
-    private fun leaveAt(c: Int, bounceSpeed: Float): Float = if (isHit(c, bounceSpeed)) -bounce[c] * speedIn[c] else 0f
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun leaveAt(c: Int, bounceSpeed: Float): Float = if (isHit(c, bounceSpeed)) -bounce[c] * speedIn[c] else 0f
 
     /** Sets how fast contact [c]'s points part: exactly, for a hit, and else at least not closing in. */
-    private fun bounce(c: Int, bounceSpeed: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun bounce(c: Int, bounceSpeed: Float) {
         leaving(c)
         val change = leaveAt(c, bounceSpeed) - vLeaving
         if (change < 1e-6f && !(isHit(c, bounceSpeed) && change < -1e-6f)) return
@@ -978,7 +1248,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * box gripping a slope tips on its downhill corner, the uphill one lifts, and with only one corner
      * holding on, it slips.
      */
-    private fun bouncePair(c: Int, d: Int, bounceSpeed: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun bouncePair(c: Int, d: Int, bounceSpeed: Float) {
         leaving(c)
         val g1 = vLeaving - leaveAt(c, bounceSpeed)
         val c1x = vw1x
@@ -998,7 +1269,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Strikes contact [c]'s bodies apart with the impulse [amount] along its normal, at its points [w1x], [w1y] and [w2x], [w2y] from their centres. */
-    private fun kick(c: Int, amount: Float, w1x: Float, w1y: Float, w2x: Float, w2y: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun kick(c: Int, amount: Float, w1x: Float, w1y: Float, w2x: Float, w2y: Float) {
         bodies.kick(a[c], -amount * nx[c], -amount * ny[c], w1x, w1y)
         if (b[c] >= 0) bodies.kick(b[c], amount * nx[c], amount * ny[c], w2x, w2y)
     }
@@ -1008,13 +1280,15 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * so that, with what it has struck them already this substep, the friction is no more than its
      * friction times the impulse its push gave over [h], either way.
      */
-    private fun dynamicFriction(c: Int, h: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun dynamicFriction(c: Int, h: Float) {
         leaving(c)
         strike(c, grip[c] * lambdaN[c] / h, vw1x, vw1y, vw2x, vw2y)
     }
 
     /** [dynamicFriction] for the two points of a face on a face: one strike, between them, up to what both their pushes allow. */
-    private fun dynamicFrictionPair(c: Int, d: Int, h: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun dynamicFrictionPair(c: Int, d: Int, h: Float) {
         leaving(c)
         val c1x = vw1x
         val c1y = vw1y
@@ -1029,7 +1303,8 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
      * from their centres, to stop the points sliding past each other there, keeping what [slip] adds
      * up to within [most] either way.
      */
-    private fun strike(c: Int, most: Float, w1x: Float, w1y: Float, w2x: Float, w2y: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun strike(c: Int, most: Float, w1x: Float, w1y: Float, w2x: Float, w2y: Float) {
         val bs = bodies
         val p = a[c]
         val q = b[c]
@@ -1050,13 +1325,15 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
 
 
     /** How fast B's point, [w2x], [w2y] from its centre, moves past A's, [w1x], [w1y] from its, along x; B is still for an edge. */
-    private fun relativeVelocityX(p: Int, q: Int, w1y: Float, w2y: Float): Float {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun relativeVelocityX(p: Int, q: Int, w1y: Float, w2y: Float): Float {
         val bs = bodies
         val own = -(bs.vx[p] - bs.omega[p] * w1y)
         return if (q >= 0) own + bs.vx[q] - bs.omega[q] * w2y else own
     }
 
-    private fun relativeVelocityY(p: Int, q: Int, w1x: Float, w2x: Float): Float {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun relativeVelocityY(p: Int, q: Int, w1x: Float, w2x: Float): Float {
         val bs = bodies
         val own = -(bs.vy[p] + bs.omega[p] * w1x)
         return if (q >= 0) own + bs.vy[q] + bs.omega[q] * w2x else own
@@ -1087,11 +1364,39 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         slipped = slipped.copyOf(size)
         twin = twin.copyOf(size)
         slip = slip.copyOf(size)
+        nlx = nlx.copyOf(size)
+        nly = nly.copyOf(size)
+        // last substep's too, as they're swapped with these
+        oldA = oldA.copyOf(size)
+        oldB = oldB.copyOf(size)
+        oldShapeKey = oldShapeKey.copyOf(size)
+        oldFeature = oldFeature.copyOf(size)
+        oldF1x = oldF1x.copyOf(size)
+        oldF1y = oldF1y.copyOf(size)
+        oldF2x = oldF2x.copyOf(size)
+        oldF2y = oldF2y.copyOf(size)
+        oldR1x = oldR1x.copyOf(size)
+        oldR1y = oldR1y.copyOf(size)
+        oldR2x = oldR2x.copyOf(size)
+        oldR2y = oldR2y.copyOf(size)
+        oldNlx = oldNlx.copyOf(size)
+        oldNly = oldNly.copyOf(size)
+        oldTwin = oldTwin.copyOf(size)
+        oldLambdaN = oldLambdaN.copyOf(size)
+        oldSlipped = oldSlipped.copyOf(size)
     }
 
     companion object {
         /** Shapes nearer than this make a contact already, so one that closes in during the substep is caught. */
         const val MARGIN = 0.5f
+
+        /**
+         * Two bodies that have moved less than this against each other, in units across and down and in
+         * radians turned, since their contacts were last found keep them: found again, they'd be the
+         * same, within a fiftieth of the [MARGIN] they're found at.
+         */
+        const val KEEP_MOVE = MARGIN / 50f
+        const val KEEP_TURN = 0.002f
 
         /** Turned more than this in a substep, in radians, a body's contacts are found where it is, not speculatively. */
         const val MAX_SPECULATIVE_TURN = 0.2f
