@@ -17,15 +17,18 @@ import kotlin.math.sqrt
  */
 class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     private val slots = Slots()
-    private var start = IntArray(8)
-    private var ringCounts = IntArray(8)
+    internal var start = IntArray(8)
+        private set
+    internal var ringCounts = IntArray(8)
+        private set
     private var linkStart = IntArray(8)
     private var areaOf = IntArray(8)
     private var tunings = arrayOfNulls<SoftBodyTuning>(8)
     private var rings = arrayOfNulls<BodyRing>(8)
     private var selfCollision = BooleanArray(8)
     private var thickness = FloatArray(8)
-    private var particlePool = IntArray(64)
+    internal var particlePool = IntArray(64)
+        private set
     private var particleUsed = 0
     private var linkPool = IntArray(64)
     private var linkUsed = 0

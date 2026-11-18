@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **327 tests**, all green
+- 🧪 **336 tests**, all green
 
 ## ▶️ Run it
 
@@ -189,8 +189,18 @@ touch that begins. Right click to drop more. 🎯 [🚦 Filters, sensors and eve
 
 <img src="docs/img/sorter.gif" alt="red and blue things sliding down a ramp, falling through the part of their own colour into their own bin" width="100%">
 
-Every scene's step, timed without a window on the release build:
-`SANDBOX_BENCH=600 ./gradlew :demo:runRelease`. Sand, the heaviest, takes about 6 ms a step.
+### 18 · 💪 Stress
+
+**The world the performance targets are measured on.** A block of 1 000 crates on the left, 5 000
+grains of sand heaped on the right, and 50 blobs dropped onto it, at 8 substeps. The graph in the
+corner is how long each of the last 120 steps took: green while it fits in a 60 FPS frame. About 19 ms
+a step on one thread, on an M-series Mac. Right click to drop more crates, a blob or more sand. 🎯
+[🏎️ Making it fast](docs/explained/performance.md)
+
+<img src="docs/img/stress.gif" alt="a block of a thousand crates, fifty blobs dropping onto a heap of sand, and a bar graph of each step's time" width="100%">
+
+Every scene's step, timed without a window on the release build: `scripts/bench.sh`. Of the sandbox
+scenes, Sand is the heaviest, at about 3 ms a step.
 
 More scenes land with every milestone. 🚀
 
@@ -215,7 +225,7 @@ what breaks it. 👉 [**docs/explained**](docs/explained/README.md)
 ./gradlew allTests                                  # the engine's tests
 ./gradlew :demo:macosArm64Test                      # the sandbox's tests (a 10-minute garden run included)
 scripts/capture.sh 1 blob-garden --from 1 --to 7    # re-record the GIF above
-SANDBOX_BENCH=600 ./gradlew :demo:runRelease        # time every scene's step
+scripts/bench.sh                                    # time every scene's step, and the stress world
 ```
 
 ## 🚧 Status

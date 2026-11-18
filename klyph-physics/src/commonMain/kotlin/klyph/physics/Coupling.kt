@@ -24,7 +24,7 @@ import kotlin.math.sqrt
  */
 internal class Coupling(private val world: PhysicsWorld) {
     /** Every rigid body, soft body and colliding particle of this step, by box: see [id]. */
-    val broadphase = Broadphase(world.config.cellSize)
+    val broadphase = Broadphase(world.config.cellSize, activeWithActive = false)
     private val ps = world.particles
     private val soft = world.softBodies
     private val bodies = world.rigidBodies
@@ -76,11 +76,11 @@ internal class Coupling(private val world: PhysicsWorld) {
                 r = max(r, max(x, toX) + grow)
                 b = max(b, max(y, toY) + grow)
             }
-            bp.add(id(s, SOFT), l - MARGIN, t - MARGIN, r + MARGIN, b + MARGIN)
+            bp.add(id(s, SOFT), l - MARGIN, t - MARGIN, r + MARGIN, b + MARGIN, passive = true)
         }
         for (p in 0 until ps.end) {
             if (!ps.isAlive(p) || !ps.collides(p) || ps.owner[p] >= 0) continue
-            bp.addMoving(id(p, PARTICLE), ps.x[p], ps.y[p], (ps.x[p] - ps.prevX[p]) * ahead, (ps.y[p] - ps.prevY[p]) * ahead, max(ps.radius[p], SKIN) + MARGIN)
+            bp.addMoving(id(p, PARTICLE), ps.x[p], ps.y[p], (ps.x[p] - ps.prevX[p]) * ahead, (ps.y[p] - ps.prevY[p]) * ahead, max(ps.radius[p], SKIN) + MARGIN, passive = true)
         }
         if (bp.count > 1) bp.build()
         active = bp.pairCount > 0

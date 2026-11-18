@@ -1,5 +1,6 @@
 package klyph.physics
 
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -41,6 +42,7 @@ internal class Collisions(private val world: PhysicsWorld) {
     private var nearX = 0f
     private var nearY = 0f
     private var nearDistanceSquared = 0f
+    private var nearInside = false
 
     /** Files every body and colliding particle in the broadphase, grown by the [dt] seconds ahead. */
     fun beginStep(dt: Float) {
@@ -71,34 +73,94 @@ internal class Collisions(private val world: PhysicsWorld) {
             if (!ps.isAlive(p) || !ps.collides(p) || ps.owner[p] >= 0) continue
             bp.addMoving(particleId(p), ps.x[p], ps.y[p], (ps.x[p] - ps.prevX[p]) * ahead, (ps.y[p] - ps.prevY[p]) * ahead, ps.radius[p] + MARGIN)
         }
-        if (bp.count > 1) bp.build()
+        grainCount = 0
+        otherCount = 0
+        if (bp.count > 1) {
+            bp.build()
+            sortPairs(ahead)
+        }
+    }
+
+    // This step's pairs, sorted once: two loose particles that can meet this step, most of a heap of
+    // sand, solved in a loop of their own; and the rest, with a body. Filtered pairs are left out.
+    private var grainA = IntArray(64)
+    private var grainB = IntArray(64)
+    private var grainCount = 0
+    private var otherA = IntArray(64)
+    private var otherB = IntArray(64)
+    private var otherCount = 0
+
+    /**
+     * Sorts the broadphase's pairs into [grainA] and the rest, leaving out those filtered apart, and
+     * two loose particles that can't meet this step: further apart than their radii, the [MARGIN] each
+     * and how far each will move. Their boxes overlap at the corners, where their circles don't: in a
+     * heap of sand, most of the pairs.
+     */
+    private fun sortPairs(ahead: Float) {
+        val bp = broadphase
+        val pairs = bp.pairs
+        val filtered = ps.anyFiltered
+        val x = ps.x
+        val y = ps.y
+        val prevX = ps.prevX
+        val prevY = ps.prevY
+        val radius = ps.radius
+        if (grainA.size < bp.pairCount) {
+            grainA = IntArray(bp.pairCount)
+            grainB = IntArray(bp.pairCount)
+        }
+        for (i in 0 until bp.pairCount) {
+            val a = pairs[2 * i]
+            val b = pairs[2 * i + 1]
+            val aIsBody = a and 1 == 1
+            val bIsBody = b and 1 == 1
+            if (filtered) {
+                // a body's filter is its particles', all the same: its core's
+                val pa = if (aIsBody) bodies.core(a shr 1) else a shr 1
+                val pb = if (bIsBody) bodies.core(b shr 1) else b shr 1
+                if (!Filter.collides(ps.category[pa], ps.mask[pa], ps.category[pb], ps.mask[pb])) continue
+            }
+            if (aIsBody || bIsBody) {
+                if (otherCount == otherA.size) {
+                    otherA = otherA.copyOf(otherCount * 2)
+                    otherB = otherB.copyOf(otherCount * 2)
+                }
+                otherA[otherCount] = a
+                otherB[otherCount] = b
+                otherCount++
+                continue
+            }
+            val pa = a shr 1
+            val pb = b shr 1
+            val moveA = (abs(x[pa] - prevX[pa]) + abs(y[pa] - prevY[pa])) * ahead
+            val moveB = (abs(x[pb] - prevX[pb]) + abs(y[pb] - prevY[pb])) * ahead
+            val reach = radius[pa] + radius[pb] + 2f * MARGIN + moveA + moveB
+            val dx = x[pb] - x[pa]
+            val dy = y[pb] - y[pa]
+            if (dx * dx + dy * dy > reach * reach) continue
+            grainA[grainCount] = pa
+            grainB[grainCount] = pb
+            grainCount++
+        }
     }
 
     /** One pass over every pair the broadphase found this step, and every body that collides with itself. */
     fun solve() {
-        val bp = broadphase
-        val filtered = ps.anyFiltered
-        if (bp.pairCount > 0) {
+        if (grainCount > 0) solveGrains()
+        if (otherCount > 0) {
             measureBodies()
-            for (i in 0 until bp.pairCount) {
-                val a = bp.pairA(i)
-                val b = bp.pairB(i)
+            for (i in 0 until otherCount) {
+                val a = otherA[i]
+                val b = otherB[i]
                 val aIsBody = a and 1 == 1
                 val bIsBody = b and 1 == 1
-                if (filtered) {
-                    // a body's filter is its particles', all the same: its core's
-                    val pa = if (aIsBody) bodies.core(a shr 1) else a shr 1
-                    val pb = if (bIsBody) bodies.core(b shr 1) else b shr 1
-                    if (!Filter.collides(ps.category[pa], ps.mask[pa], ps.category[pb], ps.mask[pb])) continue
-                }
                 when {
                     aIsBody && bIsBody -> {
                         bodyAgainstBody(a shr 1, b shr 1)
                         bodyAgainstBody(b shr 1, a shr 1)
                     }
                     aIsBody -> particleAgainstBody(b shr 1, a shr 1)
-                    bIsBody -> particleAgainstBody(a shr 1, b shr 1)
-                    else -> particleAgainstParticle(a shr 1, b shr 1)
+                    else -> particleAgainstBody(a shr 1, b shr 1)
                 }
             }
         }
@@ -117,8 +179,8 @@ internal class Collisions(private val world: PhysicsWorld) {
         val core = bodies.core(body)
         val x = ps.x[core]
         val y = ps.y[core]
-        if (Outline.contains(bodies.ring(body), x, y)) return
         nearestEdge(body, x, y)
+        if (nearInside) return
         val distance = sqrt(nearDistanceSquared)
         if (distance < TOUCHING) return
         separate(core, body, (nearX - x) / distance, (nearY - y) / distance, distance + SKIN)
@@ -171,7 +233,7 @@ internal class Collisions(private val world: PhysicsWorld) {
         val reach = if (owner >= 0 && world.events.recording) radius + Events.TOUCH_SLOP else radius
         if (x < left[body] - reach || x > right[body] + reach || y < top[body] - reach || y > bottom[body] + reach) return
         nearestEdge(body, x, y)
-        val inside = Outline.contains(bodies.ring(body), x, y)
+        val inside = nearInside
         if (!inside && nearDistanceSquared >= reach * reach) return
         if (owner >= 0 && world.events.recording) world.events.touch(TouchKind.SOFT_BODY, owner, TouchKind.SOFT_BODY, body)
         if (!inside && nearDistanceSquared >= radius * radius) return
@@ -213,7 +275,8 @@ internal class Collisions(private val world: PhysicsWorld) {
     }
 
     /** Remembers particle [p]'s push against the point at [t] of the edge from [a] to [b] ([b] -1: particle [a]), for its grip. */
-    private fun touch(p: Int, a: Int, b: Int, t: Float, nx: Float, ny: Float, depth: Float) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun touch(p: Int, a: Int, b: Int, t: Float, nx: Float, ny: Float, depth: Float) {
         val grip = Material.mixFriction(ps.friction[p], ps.friction[a])
         val hold = Material.mixFriction(ps.staticFriction[p], ps.staticFriction[a])
         ps.touch(p, nx, ny, depth, grip, hold, a, b, t)
@@ -223,7 +286,8 @@ internal class Collisions(private val world: PhysicsWorld) {
      * Moves particle [p] and the point `s·a + t·b` apart by [amount] along the unit ([ux], [uy]): [p]
      * one way, [a] and [b] the other, each by its share of the inverse mass. [b] may be -1.
      */
-    private fun shift(p: Int, a: Int, b: Int, s: Float, t: Float, ux: Float, uy: Float, amount: Float): Boolean {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun shift(p: Int, a: Int, b: Int, s: Float, t: Float, ux: Float, uy: Float, amount: Float): Boolean {
         val wp = ps.invMass[p]
         val wa = ps.invMass[a] * s
         val wb = if (b < 0) 0f else ps.invMass[b] * t
@@ -246,35 +310,53 @@ internal class Collisions(private val world: PhysicsWorld) {
      * [nearestEdge], sharing the move between the particle and the edge's two ends by inverse mass, the
      * ends by how near the point is to each. Returns whether anything could move.
      */
-    private fun separate(p: Int, body: Int, nx: Float, ny: Float, depth: Float): Boolean {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun separate(p: Int, body: Int, nx: Float, ny: Float, depth: Float): Boolean {
         val n = bodies.ringCount(body)
         val a = bodies.particle(body, nearEdge)
         val b = bodies.particle(body, if (nearEdge + 1 == n) 0 else nearEdge + 1)
         return shift(p, a, b, 1f - nearT, nearT, nx, ny, depth)
     }
 
-    /** Two colliding particles closer than their radii, pushed apart along the line between them. */
-    private fun particleAgainstParticle(a: Int, b: Int) {
-        val dx = ps.x[b] - ps.x[a]
-        val dy = ps.y[b] - ps.y[a]
-        val reach = ps.radius[a] + ps.radius[b]
-        val distanceSquared = dx * dx + dy * dy
-        if (distanceSquared >= reach * reach || distanceSquared < TOUCHING * TOUCHING) return
-        val wa = ps.invMass[a]
-        val wb = ps.invMass[b]
-        val w = wa + wb
-        if (w == 0f) return
-        val distance = sqrt(distanceSquared)
-        val nx = dx / distance
-        val ny = dy / distance
-        val push = (reach - distance) / w
-        ps.x[a] -= wa * push * nx
-        ps.y[a] -= wa * push * ny
-        ps.x[b] += wb * push * nx
-        ps.y[b] += wb * push * ny
-        if (wb > 0f && ny < MIN_FLOOR_NORMAL_Y) world.events.recordFloor(b, 0)
-        if (wa > 0f && -ny < MIN_FLOOR_NORMAL_Y) world.events.recordFloor(a, 0)
-        touch(b, a, -1, 0f, nx, ny, reach - distance)
+    /**
+     * Pushes apart every two loose particles of [grainA] closer than their radii, along the line
+     * between them. A loop of its own, with the arrays it reads at hand: there are thousands of them.
+     */
+    private fun solveGrains() {
+        val x = ps.x
+        val y = ps.y
+        val radius = ps.radius
+        val invMass = ps.invMass
+        val friction = ps.friction
+        val staticFriction = ps.staticFriction
+        val contact = ps.contact
+        val ga = grainA
+        val gb = grainB
+        for (i in 0 until grainCount) {
+            val a = ga[i]
+            val b = gb[i]
+            val dx = x[b] - x[a]
+            val dy = y[b] - y[a]
+            val reach = radius[a] + radius[b]
+            val distanceSquared = dx * dx + dy * dy
+            if (distanceSquared >= reach * reach || distanceSquared < TOUCHING * TOUCHING) continue
+            val wa = invMass[a]
+            val wb = invMass[b]
+            val w = wa + wb
+            if (w == 0f) continue
+            val distance = sqrt(distanceSquared)
+            val nx = dx / distance
+            val ny = dy / distance
+            val push = (reach - distance) / w
+            x[a] -= wa * push * nx
+            y[a] -= wa * push * ny
+            x[b] += wb * push * nx
+            y[b] += wb * push * ny
+            // a push that lifts stands it on a floor: what Events.recordFloor does, without the call
+            if (wb > 0f && ny < MIN_FLOOR_NORMAL_Y) contact[b] = contact[b] or Events.NOW
+            if (wa > 0f && -ny < MIN_FLOOR_NORMAL_Y) contact[a] = contact[a] or Events.NOW
+            ps.touch(b, nx, ny, reach - distance, Material.mixFriction(friction[b], friction[a]), Material.mixFriction(staticFriction[b], staticFriction[a]), a, -1, 0f)
+        }
     }
 
     /** Keeps each ring particle of [body] at least its self-thickness away from the edges it isn't on. */
@@ -317,29 +399,49 @@ internal class Collisions(private val world: PhysicsWorld) {
 
     /** Finds the edge of [body]'s outline nearest ([x], [y]), into the near- fields. */
     private fun nearestEdge(body: Int, x: Float, y: Float) {
-        val n = bodies.ringCount(body)
-        nearDistanceSquared = Float.MAX_VALUE
+        val n = bodies.ringCounts[body]
+        val pool = bodies.particlePool
+        val first = bodies.start[body]
+        val px = ps.x
+        val py = ps.y
+        var best = Float.MAX_VALUE
+        // and, in the same sweep, whether the point is inside, as Outline.contains finds it
+        var winding = 0
+        var a = pool[first]
         for (e in 0 until n) {
-            val a = bodies.particle(body, e)
-            val b = bodies.particle(body, if (e + 1 == n) 0 else e + 1)
-            val t = closest(x, y, a, b)
-            val qx = ps.x[a] + (ps.x[b] - ps.x[a]) * t
-            val qy = ps.y[a] + (ps.y[b] - ps.y[a]) * t
+            val b = pool[first + if (e + 1 == n) 0 else e + 1]
+            val ax = px[a]
+            val ay = py[a]
+            val ex = px[b] - ax
+            val ey = py[b] - ay
+            val lengthSquared = ex * ex + ey * ey
+            val t = if (lengthSquared == 0f) 0f else (((x - ax) * ex + (y - ay) * ey) / lengthSquared).coerceIn(0f, 1f)
+            val qx = ax + ex * t
+            val qy = ay + ey * t
             val dx = x - qx
             val dy = y - qy
             val d = dx * dx + dy * dy
-            if (d < nearDistanceSquared) {
-                nearDistanceSquared = d
+            if (d < best) {
+                best = d
                 nearEdge = e
                 nearT = t
                 nearX = qx
                 nearY = qy
             }
+            val by = py[b]
+            if ((ay <= y) != (by <= y)) {
+                val crossingX = ax + (y - ay) / (by - ay) * ex
+                if (crossingX > x) winding += if (by > ay) 1 else -1
+            }
+            a = b
         }
+        nearDistanceSquared = best
+        nearInside = winding != 0
     }
 
     /** How far along the edge from particle [a] to [b] the point nearest ([x], [y]) is, from 0 to 1. */
-    private fun closest(x: Float, y: Float, a: Int, b: Int): Float {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun closest(x: Float, y: Float, a: Int, b: Int): Float {
         val ex = ps.x[b] - ps.x[a]
         val ey = ps.y[b] - ps.y[a]
         val lengthSquared = ex * ex + ey * ey

@@ -38,8 +38,10 @@ data class Material(
         /** A lot of grip. */
         val RUBBER = Material(friction = 0.9f, staticFriction = 1.2f)
 
-        internal fun mixFriction(a: Float, b: Float): Float = sqrt(a * b)
+        @Suppress("NOTHING_TO_INLINE")
+        internal inline fun mixFriction(a: Float, b: Float): Float = if (a == b) a else sqrt(a * b)
 
-        internal fun mixRestitution(a: Float, b: Float): Float = max(a, b)
+        @Suppress("NOTHING_TO_INLINE")
+        internal inline fun mixRestitution(a: Float, b: Float): Float = max(a, b)
     }
 }

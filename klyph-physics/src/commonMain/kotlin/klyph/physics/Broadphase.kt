@@ -14,15 +14,35 @@ import kotlin.math.min
  * table, so the world can be any size. Each box is filed under every cell it covers, the filings are
  * sorted by bucket into one array by counting, and only boxes filed under the same cell are compared.
  * Two boxes that share several cells are only compared in the top-left one, so no pair comes twice.
+ * Boxes added as passive are never compared with each other: they're filed after the rest of their
+ * cell, so the comparing stops where they start. With [activeWithActive] false, the others aren't
+ * paired with each other either, only with the passive.
+ *
+ * A [cellSize] of [AUTO], the default, sizes the cells anew at every [build] to the boxes in it: as
+ * wide as the average box's longer side. Then a heap of sand gets cells a grain wide, and a stack of
+ * crates cells a crate wide, and neither has to be tuned.
  */
-class Broadphase(val cellSize: Float = 16f, initialCapacity: Int = 64) {
+class Broadphase(
+    cellSize: Float = AUTO,
+    initialCapacity: Int = 64,
+    /** Whether two boxes that aren't passive are paired: false, and every pair is one of each. */
+    val activeWithActive: Boolean = true,
+) {
     init {
-        require(cellSize > 0f) { "cellSize is $cellSize: it must be more than 0" }
+        require(cellSize >= 0f && cellSize.isFinite()) { "cellSize is $cellSize: it must be more than 0, or AUTO" }
     }
 
-    private val inverseCell = 1f / cellSize
+    /** Whether the cells are sized to the boxes at every [build]. */
+    val isAuto: Boolean = cellSize == AUTO
+
+    /** The side of a cell: as given, or with [AUTO] as the last [build] chose. */
+    var cellSize: Float = if (isAuto) DEFAULT_CELL else cellSize
+        private set
+
+    private var inverseCell = 1f / this.cellSize
 
     private var ids = IntArray(initialCapacity)
+    private var passive = BooleanArray(initialCapacity)
     private var minX = FloatArray(initialCapacity)
     private var minY = FloatArray(initialCapacity)
     private var maxX = FloatArray(initialCapacity)
@@ -43,7 +63,9 @@ class Broadphase(val cellSize: Float = 16f, initialCapacity: Int = 64) {
     private var filed = IntArray(FILED_INTS * initialCapacity)
     private var filedBox = FloatArray(4 * initialCapacity)
 
-    private var pairs = IntArray(2 * initialCapacity)
+    /** The candidate pairs, two ids each, for loops that can't afford a call a pair: see [pairA]. */
+    internal var pairs = IntArray(2 * initialCapacity)
+        private set
 
     /** How many boxes were added since the last [clear]. */
     var count: Int = 0
@@ -64,11 +86,15 @@ class Broadphase(val cellSize: Float = 16f, initialCapacity: Int = 64) {
         filedCount = 0
     }
 
-    /** Adds a box from ([left], [top]) to ([right], [bottom]) for the thing called [id]. */
-    fun add(id: Int, left: Float, top: Float, right: Float, bottom: Float) {
+    /**
+     * Adds a box from ([left], [top]) to ([right], [bottom]) for the thing called [id]. Two [passive]
+     * boxes are never paired, nor even compared: a box is paired only with one that isn't passive.
+     */
+    fun add(id: Int, left: Float, top: Float, right: Float, bottom: Float, passive: Boolean = false) {
         if (count == ids.size) grow()
         val e = count++
         ids[e] = id
+        this.passive[e] = passive
         minX[e] = min(left, right)
         minY[e] = min(top, bottom)
         maxX[e] = max(left, right)
@@ -80,13 +106,19 @@ class Broadphase(val cellSize: Float = 16f, initialCapacity: Int = 64) {
      * move by ([dx], [dy]). Growing the box by the motion means a fast thing finds what it will hit
      * before it gets there, with one build per step.
      */
-    fun addMoving(id: Int, x: Float, y: Float, dx: Float, dy: Float, radius: Float) {
-        add(id, min(x, x + dx) - radius, min(y, y + dy) - radius, max(x, x + dx) + radius, max(y, y + dy) + radius)
+    fun addMoving(id: Int, x: Float, y: Float, dx: Float, dy: Float, radius: Float, passive: Boolean = false) {
+        add(id, min(x, x + dx) - radius, min(y, y + dy) - radius, max(x, x + dx) + radius, max(y, y + dy) + radius, passive)
     }
 
     /** Files every box under its cells and finds every pair of boxes that overlap. */
     fun build() {
         val n = count
+        if (isAuto && n > 0) {
+            var sum = 0f
+            for (e in 0 until n) sum += max(maxX[e] - minX[e], maxY[e] - minY[e])
+            cellSize = max(sum / n, MIN_CELL)
+            inverseCell = 1f / cellSize
+        }
         var total = 0
         for (e in 0 until n) {
             col0[e] = cell(minX[e])
@@ -109,29 +141,35 @@ class Broadphase(val cellSize: Float = 16f, initialCapacity: Int = 64) {
 
         // A counting sort: count each bucket's filings, add the counts up so start[b] is where bucket b
         // ends, then file each box just before its bucket's end, last box first. That leaves start[b]
-        // where bucket b begins, and start[b + 1] where it ends, with its boxes in the order they came.
+        // where bucket b begins, and start[b + 1] where it ends, with its boxes in the order they came:
+        // the passive ones last, as they're filed first.
         start.fill(0, 0, buckets)
         for (e in 0 until n) {
             for (row in row0[e]..row1[e]) for (col in col0[e]..col1[e]) start[bucket(col, row)]++
         }
         for (b in 1 until buckets) start[b] += start[b - 1]
         start[buckets] = total
-        for (e in n - 1 downTo 0) {
-            for (row in row1[e] downTo row0[e]) for (col in col1[e] downTo col0[e]) {
-                val k = --start[bucket(col, row)]
-                val i = FILED_INTS * k
-                filed[i] = e
-                filed[i + 1] = col
-                filed[i + 2] = row
-                filed[i + 3] = col0[e]
-                filed[i + 4] = row0[e]
-                filedBox[4 * k] = minX[e]
-                filedBox[4 * k + 1] = minY[e]
-                filedBox[4 * k + 2] = maxX[e]
-                filedBox[4 * k + 3] = maxY[e]
-            }
-        }
+        for (e in n - 1 downTo 0) if (passive[e]) file(e)
+        for (e in n - 1 downTo 0) if (!passive[e]) file(e)
         findPairs(buckets)
+    }
+
+    /** Files box [e] under each of its cells, just before where its bucket's filings so far begin. */
+    private fun file(e: Int) {
+        for (row in row1[e] downTo row0[e]) for (col in col1[e] downTo col0[e]) {
+            val k = --start[bucket(col, row)]
+            val i = FILED_INTS * k
+            filed[i] = e
+            filed[i + 1] = col
+            filed[i + 2] = row
+            filed[i + 3] = col0[e]
+            filed[i + 4] = row0[e]
+            filed[i + 5] = if (passive[e]) 1 else 0
+            filedBox[4 * k] = minX[e]
+            filedBox[4 * k + 1] = minY[e]
+            filedBox[4 * k + 2] = maxX[e]
+            filedBox[4 * k + 3] = maxY[e]
+        }
     }
 
     /**
@@ -146,6 +184,8 @@ class Broadphase(val cellSize: Float = 16f, initialCapacity: Int = 64) {
             val end = start[bucket + 1]
             for (k in start[bucket] until end - 1) {
                 val i = FILED_INTS * k
+                // the passive come last in a bucket: from here on, none is paired with another
+                if (f[i + 5] == 1) break
                 val col = f[i + 1]
                 val row = f[i + 2]
                 val left = box[4 * k]
@@ -154,6 +194,7 @@ class Broadphase(val cellSize: Float = 16f, initialCapacity: Int = 64) {
                 val bottom = box[4 * k + 3]
                 for (m in k + 1 until end) {
                     val j = FILED_INTS * m
+                    if (!activeWithActive && f[j + 5] == 0) continue
                     // another cell that landed in the same bucket
                     if (f[j + 1] != col || f[j + 2] != row) continue
                     // not the top-left cell the two share: they meet there too, and are compared there
@@ -201,13 +242,22 @@ class Broadphase(val cellSize: Float = 16f, initialCapacity: Int = 64) {
 
     fun bottom(e: Int): Float = maxY[e]
 
-    private companion object {
-        const val FILED_INTS = 5
+    companion object {
+        /** A [cellSize] that sizes the cells to the boxes at every [build]. */
+        const val AUTO = 0f
+
+        private const val DEFAULT_CELL = 16f
+
+        /** The smallest cell [AUTO] chooses, so a heap of points isn't cut finer than a unit. */
+        private const val MIN_CELL = 1f
+
+        private const val FILED_INTS = 6
     }
 
     private fun grow() {
         val size = ids.size * 2
         ids = ids.copyOf(size)
+        passive = passive.copyOf(size)
         minX = minX.copyOf(size)
         minY = minY.copyOf(size)
         maxX = maxX.copyOf(size)

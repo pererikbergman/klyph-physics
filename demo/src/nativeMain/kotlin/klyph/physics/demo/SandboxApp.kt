@@ -92,7 +92,10 @@ fun App.installSandbox(
     if (recording != null) {
         addSystem(Phase.UPDATE) { app ->
             hand?.drive(sandbox)
+            val start = TimeSource.Monotonic.markNow()
             sandbox.fixedStep(app.time.fixedDelta.inWholeNanoseconds / 1e9f)
+            val millis = start.elapsedNow().inWholeNanoseconds / 1e6f
+            stepMillis += (millis - stepMillis) * SMOOTHING
             recording.fileAfter(sandbox.stepCount)?.let { app.window.capture(it) }
         }
     }

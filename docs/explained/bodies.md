@@ -63,7 +63,7 @@ half an edge away from the body's own other edges, for things that fold.
 | `collides` on `particles.add` | `false` | a grain: hits bodies and other grains | a ghost: only hits solids 👻 |
 | `radius` | `0` | a bigger grain, a wider gap | a point |
 | `setSelfCollision(body, on)` | off | a folding skin can't pass through itself | cheaper: no check of every dot against every edge |
-| `PhysicsConfig.cellSize` | `32` | for big bodies | for small ones. about one body wide is best |
+| `PhysicsConfig.cellSize` | `AUTO`: the average body | for big bodies | for small ones. about one body wide is best |
 
 ## 💥 Gotchas
 
