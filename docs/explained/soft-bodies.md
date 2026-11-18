@@ -58,13 +58,15 @@ and nearest points work on world bodies too.
 
 ## 🎛️ The knobs
 
-| knob | default (demo) | turn it up 🔼 | turn it down 🔽 |
+| knob | default | turn it up 🔼 | turn it down 🔽 |
 |---|---|---|---|
 | `coreMass` | `34` | sags, slumps, punches through gaps 🪨 | floaty, springy, gets stuck on edges 🎈 |
 | `radius` | `13.3` | a bigger blob | a smaller blob |
 | `arcSegments`, `baseSegments` | `14`, `8` | smoother skin, more to compute | blockier, cheaper |
 | `heightScale` | `1.3` | a taller dome | flatter |
 | `SoftBodyTuning` | see [🧮 XPBD](xpbd.md) | | |
+
+The defaults are the demo's dome, `Scenes.dome()`. `SoftBodies.semiDisc` only has one of its own: `heightScale = 1`.
 
 ## 💥 Gotchas
 

@@ -84,7 +84,8 @@ The longer version, for those who want it: the maths, the code, the why.
   [`scripts/capture.sh`](../../scripts/capture.sh), so it's real physics, never a drawing.
 - 3️⃣ **Three bullets**, max. If it doesn't fit, it goes in 🤓 the details.
 - ✂️ **Short sentences.** One idea each.
-- 🎛️ **Every knob** that the code has goes in the table, with what turning it does.
+- 🎛️ **Every knob** that the code has goes in the table, with what turning it does. A knob you don't
+  turn up or down, such as a switch or a call, gets `| knob | default | what it does |` instead.
 - 💥 **Every gotcha** that bit us goes in, even the embarrassing ones.
 - 🚢 **A page ships with its feature**, in the same PR. Never after.
 
@@ -92,11 +93,16 @@ The longer version, for those who want it: the maths, the code, the why.
 
 ```
 scripts/capture.sh <scene> <name> [--from S] [--to S] [--details] [--view N] [--grid] [--clean]
-                   [--slow] [--crop X,Y,W,H] [--width W] [--drag X,Y]
+                   [--slow] [--crop X,Y,W,H] [--width W] [--drag X,Y] [--release]
+scripts/capture.sh --example <name> [--from S] [--to S] [--crop X,Y,W,H] [--width W]
 ```
 
 It runs the scene, records it, and writes `docs/img/<name>.gif` and `docs/img/<name>.png`.
 The physics steps once per frame while it records, so the same command always gives the same
 picture. 🎯 Use `--clean` for the docs (no stats on screen), `--view 1` to `3` for the
 [🔍 debug views](debug-views.md) (`--details` is `--view 3`), `--grid` for the broadphase, `--slow` for
-half speed, `--crop` for a close-up and `--drag` for a scripted mouse. Every page ends with the 📸 command that made its GIF.
+half speed, `--crop` for a close-up and `--drag` for a scripted mouse. `--release` records the release
+build, for a scene that shows how long its steps take, and `--example` records the README's example
+on `addPhysics` instead of a scene: that one runs on klyph's clock, as a game does, so it can come out a
+little different each time. Every page ends with the 📸 command that made its GIF, and
+`scripts/check-explainers.py` checks every page against this template.
