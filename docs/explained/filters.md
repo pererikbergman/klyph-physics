@@ -6,8 +6,7 @@
 
 ## 🧠 How it works
 
-- 👉 everything has a **category**, what it is, and a **mask**, what it collides with 🎭
-- 👉 two things collide only if each one's mask has the other's category 🤝
+- 👉 everything has a **category**, what it is, and a **mask**, what it collides with: two things collide only if each one's mask has the other's category 🎭
 - 👉 a **sensor** never pushes or is pushed: it only notices what's in it 👀
 - 👉 **events** say what began and stopped touching, what came into and left a sensor, and which joints broke 📣
 

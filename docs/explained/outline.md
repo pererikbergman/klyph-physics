@@ -37,10 +37,10 @@ that goes exactly through a dot counts it once, never twice.
 
 ## 🎛️ The knobs
 
-| knob | what it does |
-|---|---|
-| `left`, `right` arrays | at least `ring.ringCount` long. you own them, so nothing allocates |
-| `DebugDraw` row height | `1` world unit. smaller is smoother and costs more draw calls |
+| knob | default | what it does |
+|---|---|---|
+| `left`, `right` arrays | yours | at least `ring.ringCount` long. you own them, so nothing allocates |
+| `DebugDraw` row height | `1` world unit | smaller is smoother and costs more draw calls |
 
 ## 💥 Gotchas
 

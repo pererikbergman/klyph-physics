@@ -8,8 +8,7 @@
 
 - 👉 a **raycast** finds the first thing a line hits: where, the surface's normal, how far along, and what it was 🎯
 - 👉 a **point query** finds everything a point is inside; a **box query** everything that reaches into a box 📦
-- 👉 rigid bodies by their shapes, soft bodies by their outlines, the level by its open faces 🧱
-- 👉 you own the result, so asking allocates nothing ♻️
+- 👉 rigid bodies by their shapes, soft bodies by their outlines, the level by its open faces. You own the result, so asking allocates nothing ♻️
 
 <details>
 <summary>🤓 the details</summary>

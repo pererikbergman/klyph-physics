@@ -8,11 +8,12 @@
 
 - 👉 `DebugDraw.view` is one of four levels, and each one adds to the last: **off**, **bodies**, **constraints**, **everything** 🧅
 - 👉 constraints are coloured by **stress**: 🔵 blue squeezed, ⚪ grey at rest, 🔴 red stretched. You see where the solver is working hardest 🔥
-- 👉 contacts are a dot where a particle touched and a short line along the push: 🟡 yellow on a floor, 🩵 cyan on anything else 👣
-- 👉 rigid bodies show their centre, their joints, how fast they're going and where they touch: 🟢 green where friction holds, 🟠 orange where it slides 🧱
+- 👉 contacts are a dot where something touched and a short line along the push: 🟡 a particle on a floor, 🩵 on anything else, 🟢 a rigid contact whose friction holds, 🟠 one that slides 👣
 
 <details>
 <summary>🤓 the details</summary>
+
+Rigid bodies show their centre, their joints, how fast they're going and where they touch. 🧱
 
 ```kotlin
 val debug = DebugDraw(assets.whitePixel, assets.defaultFont)
