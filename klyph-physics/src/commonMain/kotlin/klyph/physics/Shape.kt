@@ -10,7 +10,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /** What a [Shape] is. Every one is a convex core, a point, a segment or a polygon, grown by a radius. */
-enum class ShapeKind {
+public enum class ShapeKind {
     /** A point grown by its radius. */
     CIRCLE,
 
@@ -34,29 +34,31 @@ enum class ShapeKind {
  * next, has a unit normal pointing out. A shape never changes once made, so any number of bodies can
  * share one.
  */
-class Shape private constructor(
-    val kind: ShapeKind,
+public class Shape private constructor(
+    /** Whether it is a circle, a capsule or a polygon. */
+    public val kind: ShapeKind,
     internal val vx: FloatArray,
     internal val vy: FloatArray,
     /** How far the shape reaches out from its core: a circle's or capsule's radius, 0 for a polygon. */
-    val radius: Float,
+    public val radius: Float,
 ) {
     /** How many points the core has: 1 for a circle, 2 for a capsule, 3 or more for a polygon. */
-    val vertexCount: Int get() = vx.size
+    public val vertexCount: Int get() = vx.size
 
     // The unit normal of each edge, pointing out: a capsule's two edges are its segment, both ways.
     internal val nx = FloatArray(if (vx.size > 1) vx.size else 0)
     internal val ny = FloatArray(nx.size)
 
     /** How much space the shape covers, in units squared. */
-    val area: Float
+    public val area: Float
 
     /** The middle of the shape, by area: where a body made of it alone balances. */
-    val centroidX: Float
-    val centroidY: Float
+    public val centroidX: Float
+    /** The middle of the shape by area, down: see [centroidX]. */
+    public val centroidY: Float
 
     /** How hard the shape is to turn about its [centroidX], [centroidY], for a density of 1: its moment of inertia. */
-    val inertia: Float
+    public val inertia: Float
 
     /**
      * A circle around the whole shape, in the body's frame: the middle of its core's points and how far
@@ -154,20 +156,22 @@ class Shape private constructor(
     }
 
     /** Point [i] of the core, in the body's units. */
-    fun vertexX(i: Int): Float = vx[i]
+    public fun vertexX(i: Int): Float = vx[i]
 
-    fun vertexY(i: Int): Float = vy[i]
+    /** Where core point [i] is, down: see [vertexX]. */
+    public fun vertexY(i: Int): Float = vy[i]
 
     /** The unit normal of edge [i], from point [i] to the next, pointing out. A circle has none. */
-    fun normalX(i: Int): Float = nx[i]
+    public fun normalX(i: Int): Float = nx[i]
 
-    fun normalY(i: Int): Float = ny[i]
+    /** Which way edge [i] faces, down: see [normalX]. */
+    public fun normalY(i: Int): Float = ny[i]
 
     /**
      * How far the point ([x], [y]), in the body's units, is outside the shape: negative inside, by
      * how deep, at least where the core is near; 0 on its edge.
      */
-    fun distance(x: Float, y: Float): Float {
+    public fun distance(x: Float, y: Float): Float {
         val n = vx.size
         if (n >= 3) {
             // Inside the core: as deep as the nearest edge.
@@ -185,26 +189,26 @@ class Shape private constructor(
     }
 
     /** Whether the point ([x], [y]), in the body's units, is inside the shape. */
-    fun contains(x: Float, y: Float): Boolean = distance(x, y) <= 0f
+    public fun contains(x: Float, y: Float): Boolean = distance(x, y) <= 0f
 
     /** This shape, moved by ([dx], [dy]). */
     internal fun moved(dx: Float, dy: Float): Shape =
         Shape(kind, FloatArray(vx.size) { vx[it] + dx }, FloatArray(vy.size) { vy[it] + dy }, radius)
 
-    companion object {
+    public companion object {
         /** The most points a polygon may have. */
-        const val MAX_VERTICES = 16
+        public const val MAX_VERTICES: Int = 16
 
         private const val PI_F = PI.toFloat()
 
         /** A circle of [radius] centred on ([x], [y]). */
-        fun circle(radius: Float, x: Float = 0f, y: Float = 0f): Shape {
+        public fun circle(radius: Float, x: Float = 0f, y: Float = 0f): Shape {
             require(radius > 0f && radius.isFinite()) { "a circle's radius is $radius: it must be finite and more than 0" }
             return Shape(ShapeKind.CIRCLE, floatArrayOf(x), floatArrayOf(y), radius)
         }
 
         /** A box [width] by [height] centred on ([x], [y]), turned by [angle] radians. */
-        fun box(width: Float, height: Float, x: Float = 0f, y: Float = 0f, angle: Float = 0f): Shape {
+        public fun box(width: Float, height: Float, x: Float = 0f, y: Float = 0f, angle: Float = 0f): Shape {
             require(width > 0f && height > 0f && width.isFinite() && height.isFinite()) { "a box is $width by $height: both must be finite and more than 0" }
             val hx = width / 2f
             val hy = height / 2f
@@ -224,7 +228,7 @@ class Shape private constructor(
          * A pill [length] long between its two caps' centres, and [radius] round, centred on ([x],
          * [y]) and lying along x, turned by [angle] radians. End to end it is `length + 2 · radius`.
          */
-        fun capsule(length: Float, radius: Float, x: Float = 0f, y: Float = 0f, angle: Float = 0f): Shape {
+        public fun capsule(length: Float, radius: Float, x: Float = 0f, y: Float = 0f, angle: Float = 0f): Shape {
             require(length > 0f && length.isFinite()) { "a capsule's length is $length: it must be finite and more than 0; for none, make a circle" }
             require(radius > 0f && radius.isFinite()) { "a capsule's radius is $radius: it must be finite and more than 0; for none, make a box" }
             val hx = cos(angle) * length / 2f
@@ -237,7 +241,7 @@ class Shape private constructor(
          * is a triangle. They may go round either way. A dent, a crossing, or points in a line are
          * refused: a concave shape is made of several convex ones, as a compound body.
          */
-        fun polygon(vararg points: Float): Shape {
+        public fun polygon(vararg points: Float): Shape {
             require(points.size % 2 == 0) { "a polygon's points come as x and y in turn, but ${points.size} numbers were given" }
             val n = points.size / 2
             require(n in 3..MAX_VERTICES) { "a polygon needs 3 to $MAX_VERTICES points, not $n" }

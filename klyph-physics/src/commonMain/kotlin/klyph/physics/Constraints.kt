@@ -19,7 +19,7 @@ import kotlin.math.sqrt
  *
  * A constraint on a particle that has been removed is skipped. Removed constraints' handles are reused.
  */
-class Constraints internal constructor(private val particles: Particles) {
+public class Constraints internal constructor(private val particles: Particles) {
     // Distances and ropes.
     private var linkA = IntArray(16)
     private var linkB = IntArray(16)
@@ -61,62 +61,73 @@ class Constraints internal constructor(private val particles: Particles) {
     private val bends = Slots()
 
     /** How many links have torn since the world began: see [setTear]. */
-    var tornCount: Int = 0
+    public var tornCount: Int = 0
         private set
 
     /** How many distance and rope constraints are alive. */
-    val linkCount: Int get() = links.count
+    public val linkCount: Int get() = links.count
 
-    val pinCount: Int get() = pins.count
+    /** How many pins there are. */
+    public val pinCount: Int get() = pins.count
 
-    val areaCount: Int get() = areas.count
+    /** How many area constraints there are. */
+    public val areaCount: Int get() = areas.count
 
-    val bendCount: Int get() = bends.count
+    /** How many bends there are. */
+    public val bendCount: Int get() = bends.count
 
     /**
      * Keeps particles [a] and [b] [rest] apart, pushing and pulling, and returns its handle. Without a
      * [rest], it's as far apart as they are now.
      */
-    fun distance(a: Int, b: Int, compliance: Float = 0f, rest: Float = Float.NaN): Int =
+    public fun distance(a: Int, b: Int, compliance: Float = 0f, rest: Float = Float.NaN): Int =
         addLink(a, b, compliance, rest, 0)
 
     /** Like [distance], but only pulls: closer than [rest] it goes slack. */
-    fun rope(a: Int, b: Int, compliance: Float = 0f, rest: Float = Float.NaN): Int =
+    public fun rope(a: Int, b: Int, compliance: Float = 0f, rest: Float = Float.NaN): Int =
         addLink(a, b, compliance, rest, ROPE)
 
-    fun isRope(link: Int): Boolean = linkFlags[link] and ROPE != 0
+    /** Whether [link] is a rope: it only pulls, and goes slack when its ends come closer. */
+    public fun isRope(link: Int): Boolean = linkFlags[link] and ROPE != 0
 
-    fun linkA(link: Int): Int = linkA[link]
+    /** [link]'s first particle. */
+    public fun linkA(link: Int): Int = linkA[link]
 
-    fun linkB(link: Int): Int = linkB[link]
+    /** [link]'s second particle. */
+    public fun linkB(link: Int): Int = linkB[link]
 
-    fun restLength(link: Int): Float = linkRest[link]
+    /** How long [link] wants to be. */
+    public fun restLength(link: Int): Float = linkRest[link]
 
     /** How far [link] is from its rest length right now, as a share of it: 0 at rest, 0.1 stretched by a tenth. */
-    fun strain(link: Int): Float = currentDistance(linkA[link], linkB[link]) / linkRest[link] - 1f
+    public fun strain(link: Int): Float = currentDistance(linkA[link], linkB[link]) / linkRest[link] - 1f
 
-    fun isLinkAlive(link: Int): Boolean = links.isAlive(link)
+    /** Whether [link] is still there: not removed and not torn. */
+    public fun isLinkAlive(link: Int): Boolean = links.isAlive(link)
 
     /** One past the highest link handle: loop `0 until linkEnd` and skip what isn't [isLinkAlive]. */
-    val linkEnd: Int get() = links.end
+    public val linkEnd: Int get() = links.end
 
-    fun removeLink(link: Int) = links.remove(link)
+    /** Removes [link]. Removing one that is already gone does nothing. */
+    public fun removeLink(link: Int) {
+        links.remove(link)
+    }
 
     /**
      * Makes [link] break once it's stretched past [stretch] times its rest length, at the end of a
      * step; 0 never breaks it. A bend across the two particles it joined breaks with it, so a torn
      * rope or cloth comes apart cleanly instead of hanging on by its bends.
      */
-    fun setTear(link: Int, stretch: Float) {
+    public fun setTear(link: Int, stretch: Float) {
         require(stretch == 0f || stretch > 1f) { "tear stretch is $stretch: it must be over 1, or 0 for never" }
         linkTear[link] = stretch
     }
 
     /** The stretch [link] breaks at, or 0 when it never does. */
-    fun tearAt(link: Int): Float = linkTear[link]
+    public fun tearAt(link: Int): Float = linkTear[link]
 
     /** Holds particle [p] at ([x], [y]), by default where it is now, and returns its handle. */
-    fun pin(p: Int, x: Float = particles.x(p), y: Float = particles.y(p), compliance: Float = 0f): Int {
+    public fun pin(p: Int, x: Float = particles.x(p), y: Float = particles.y(p), compliance: Float = 0f): Int {
         requireParticle(p)
         requireCompliance(compliance)
         val pin = pins.take()
@@ -130,30 +141,36 @@ class Constraints internal constructor(private val particles: Particles) {
     }
 
     /** Moves the point [pin] holds its particle at. */
-    fun movePin(pin: Int, x: Float, y: Float) {
+    public fun movePin(pin: Int, x: Float, y: Float) {
         pinX[pin] = x
         pinY[pin] = y
     }
 
-    fun pinnedParticle(pin: Int): Int = pinParticle[pin]
+    /** The particle [pin] holds. */
+    public fun pinnedParticle(pin: Int): Int = pinParticle[pin]
 
     /** The point [pin] holds its particle at. */
-    fun pinX(pin: Int): Float = pinX[pin]
+    public fun pinX(pin: Int): Float = pinX[pin]
 
-    fun pinY(pin: Int): Float = pinY[pin]
+    /** Where [pin] holds its particle, down: see [pinX]. */
+    public fun pinY(pin: Int): Float = pinY[pin]
 
-    fun isPinAlive(pin: Int): Boolean = pins.isAlive(pin)
+    /** Whether [pin] is still there. */
+    public fun isPinAlive(pin: Int): Boolean = pins.isAlive(pin)
 
-    fun removePin(pin: Int) = pins.remove(pin)
+    /** Removes [pin], letting its particle go. Removing one that is already gone does nothing. */
+    public fun removePin(pin: Int) {
+        pins.remove(pin)
+    }
 
     /** One past the highest pin handle. */
-    val pinEnd: Int get() = pins.end
+    public val pinEnd: Int get() = pins.end
 
     /**
      * Keeps the area inside the closed ring of particles [ring], in order, at [rest], and returns its
      * handle. Without a [rest], it's the area the ring has now.
      */
-    fun area(ring: IntArray, compliance: Float = 0f, rest: Float = Float.NaN): Int {
+    public fun area(ring: IntArray, compliance: Float = 0f, rest: Float = Float.NaN): Int {
         require(ring.size >= 3) { "an area needs a ring of at least 3 particles, not ${ring.size}" }
         for (p in ring) requireParticle(p)
         requireCompliance(compliance)
@@ -177,30 +194,35 @@ class Constraints internal constructor(private val particles: Particles) {
     }
 
     /** The area inside [area]'s ring right now. */
-    fun currentArea(area: Int): Float = signedArea(area) * areaSign[area]
+    public fun currentArea(area: Int): Float = signedArea(area) * areaSign[area]
 
-    fun restArea(area: Int): Float = areaRest[area]
+    /** The area [area] wants its ring to cover, in units squared. */
+    public fun restArea(area: Int): Float = areaRest[area]
 
-    fun isAreaAlive(area: Int): Boolean = areas.isAlive(area)
+    /** Whether [area] is still there. */
+    public fun isAreaAlive(area: Int): Boolean = areas.isAlive(area)
 
     /** One past the highest area handle. */
-    val areaEnd: Int get() = areas.end
+    public val areaEnd: Int get() = areas.end
 
     /** Whether particle [p] is part of [area]'s ring. */
     /** How many particles [area]'s ring has. */
-    fun ringSize(area: Int): Int = areaLength[area]
+    public fun ringSize(area: Int): Int = areaLength[area]
 
     /** The [i]th particle of [area]'s ring, in the order it was given. */
-    fun ringParticle(area: Int, i: Int): Int = ringParticles[areaStart[area] + i]
+    public fun ringParticle(area: Int, i: Int): Int = ringParticles[areaStart[area] + i]
 
-    fun ringContains(area: Int, p: Int): Boolean {
+    /** Whether particle [p] is one of [area]'s ring. */
+    public fun ringContains(area: Int, p: Int): Boolean {
         val start = areaStart[area]
         for (k in 0 until areaLength[area]) if (ringParticles[start + k] == p) return true
         return false
     }
 
     /** Removes [area]. Its handle is reused, but the room its ring took is not. */
-    fun removeArea(area: Int) = areas.remove(area)
+    public fun removeArea(area: Int) {
+        areas.remove(area)
+    }
 
     /**
      * Keeps the angle at particle [b], from [a] through [b] to [c], at [rest], and returns its handle.
@@ -208,7 +230,7 @@ class Constraints internal constructor(private val particles: Particles) {
      * clockwise on screen (y grows down), so a bend can be held curled one way. Without a [rest], it's
      * the angle they make now. Its [compliance] is per radian: how far it turns per unit of torque.
      */
-    fun bend(a: Int, b: Int, c: Int, compliance: Float = 0f, rest: Float = Float.NaN): Int {
+    public fun bend(a: Int, b: Int, c: Int, compliance: Float = 0f, rest: Float = Float.NaN): Int {
         requireParticle(a)
         requireParticle(b)
         requireParticle(c)
@@ -226,25 +248,33 @@ class Constraints internal constructor(private val particles: Particles) {
     }
 
     /** The angle [bend]'s line turns at its middle particle right now, in radians from -π to π. */
-    fun bendAngle(bend: Int): Float = angle(bendA[bend], bendB[bend], bendC[bend])
+    public fun bendAngle(bend: Int): Float = angle(bendA[bend], bendB[bend], bendC[bend])
 
-    fun restAngle(bend: Int): Float = bendRest[bend]
+    /** The angle [bend] wants at its middle particle, in radians. */
+    public fun restAngle(bend: Int): Float = bendRest[bend]
 
-    fun bendA(bend: Int): Int = bendA[bend]
+    /** [bend]'s first particle. */
+    public fun bendA(bend: Int): Int = bendA[bend]
 
-    fun bendB(bend: Int): Int = bendB[bend]
+    /** [bend]'s middle particle, the one it bends at. */
+    public fun bendB(bend: Int): Int = bendB[bend]
 
-    fun bendC(bend: Int): Int = bendC[bend]
+    /** [bend]'s last particle. */
+    public fun bendC(bend: Int): Int = bendC[bend]
 
-    fun isBendAlive(bend: Int): Boolean = bends.isAlive(bend)
+    /** Whether [bend] is still there. */
+    public fun isBendAlive(bend: Int): Boolean = bends.isAlive(bend)
 
     /** One past the highest bend handle. */
-    val bendEnd: Int get() = bends.end
+    public val bendEnd: Int get() = bends.end
 
-    fun removeBend(bend: Int) = bends.remove(bend)
+    /** Removes [bend]. Removing one that is already gone does nothing. */
+    public fun removeBend(bend: Int) {
+        bends.remove(bend)
+    }
 
     /** Removes every constraint. */
-    fun clear() {
+    public fun clear() {
         links.clear()
         pins.clear()
         areas.clear()

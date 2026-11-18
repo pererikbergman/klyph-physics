@@ -22,21 +22,21 @@ import kotlin.math.min
  * wide as the average box's longer side. Then a heap of sand gets cells a grain wide, and a stack of
  * crates cells a crate wide, and neither has to be tuned.
  */
-class Broadphase(
+public class Broadphase(
     cellSize: Float = AUTO,
     initialCapacity: Int = 64,
     /** Whether two boxes that aren't passive are paired: false, and every pair is one of each. */
-    val activeWithActive: Boolean = true,
+    public val activeWithActive: Boolean = true,
 ) {
     init {
         require(cellSize >= 0f && cellSize.isFinite()) { "cellSize is $cellSize: it must be more than 0, or AUTO" }
     }
 
     /** Whether the cells are sized to the boxes at every [build]. */
-    val isAuto: Boolean = cellSize == AUTO
+    public val isAuto: Boolean = cellSize == AUTO
 
     /** The side of a cell: as given, or with [AUTO] as the last [build] chose. */
-    var cellSize: Float = if (isAuto) DEFAULT_CELL else cellSize
+    public var cellSize: Float = if (isAuto) DEFAULT_CELL else cellSize
         private set
 
     private var inverseCell = 1f / this.cellSize
@@ -68,19 +68,19 @@ class Broadphase(
         private set
 
     /** How many boxes were added since the last [clear]. */
-    var count: Int = 0
+    public var count: Int = 0
         private set
 
     /** How many candidate pairs the last [build] found. */
-    var pairCount: Int = 0
+    public var pairCount: Int = 0
         private set
 
     /** How many times boxes were filed under a cell in the last [build]: one per cell each box covers. */
-    var filedCount: Int = 0
+    public var filedCount: Int = 0
         private set
 
     /** Forgets every box and pair, keeping the memory for the next step. */
-    fun clear() {
+    public fun clear() {
         count = 0
         pairCount = 0
         filedCount = 0
@@ -90,7 +90,7 @@ class Broadphase(
      * Adds a box from ([left], [top]) to ([right], [bottom]) for the thing called [id]. Two [passive]
      * boxes are never paired, nor even compared: a box is paired only with one that isn't passive.
      */
-    fun add(id: Int, left: Float, top: Float, right: Float, bottom: Float, passive: Boolean = false) {
+    public fun add(id: Int, left: Float, top: Float, right: Float, bottom: Float, passive: Boolean = false) {
         if (count == ids.size) grow()
         val e = count++
         ids[e] = id
@@ -106,12 +106,12 @@ class Broadphase(
      * move by ([dx], [dy]). Growing the box by the motion means a fast thing finds what it will hit
      * before it gets there, with one build per step.
      */
-    fun addMoving(id: Int, x: Float, y: Float, dx: Float, dy: Float, radius: Float, passive: Boolean = false) {
+    public fun addMoving(id: Int, x: Float, y: Float, dx: Float, dy: Float, radius: Float, passive: Boolean = false) {
         add(id, min(x, x + dx) - radius, min(y, y + dy) - radius, max(x, x + dx) + radius, max(y, y + dy) + radius, passive)
     }
 
     /** Files every box under its cells and finds every pair of boxes that overlap. */
-    fun build() {
+    public fun build() {
         val n = count
         if (isAuto && n > 0) {
             var sum = 0f
@@ -209,10 +209,10 @@ class Broadphase(
     }
 
     /** The id of the first of candidate pair [i]: the one added earlier. */
-    fun pairA(i: Int): Int = pairs[2 * i]
+    public fun pairA(i: Int): Int = pairs[2 * i]
 
     /** The id of the second of candidate pair [i]. */
-    fun pairB(i: Int): Int = pairs[2 * i + 1]
+    public fun pairB(i: Int): Int = pairs[2 * i + 1]
 
     private fun addPair(a: Int, b: Int) {
         if (2 * pairCount + 2 > pairs.size) pairs = pairs.copyOf(pairs.size * 2)
@@ -232,19 +232,23 @@ class Broadphase(
     private fun bucket(col: Int, row: Int): Int = ((col * 73_856_093) xor (row * 19_349_663)) and mask
 
     /** The box of entry [e] in the order boxes were added, for drawing: its id, then its edges. */
-    fun id(e: Int): Int = ids[e]
+    public fun id(e: Int): Int = ids[e]
 
-    fun left(e: Int): Float = minX[e]
+    /** The left edge of filed box [e], as filed: [addMoving] grows a box by its move. */
+    public fun left(e: Int): Float = minX[e]
 
-    fun top(e: Int): Float = minY[e]
+    /** The top edge of filed box [e], as filed: [addMoving] grows a box by its move. */
+    public fun top(e: Int): Float = minY[e]
 
-    fun right(e: Int): Float = maxX[e]
+    /** The right edge of filed box [e], as filed: [addMoving] grows a box by its move. */
+    public fun right(e: Int): Float = maxX[e]
 
-    fun bottom(e: Int): Float = maxY[e]
+    /** The bottom edge of filed box [e], as filed: [addMoving] grows a box by its move. */
+    public fun bottom(e: Int): Float = maxY[e]
 
-    companion object {
+    public companion object {
         /** A [cellSize] that sizes the cells to the boxes at every [build]. */
-        const val AUTO = 0f
+        public const val AUTO: Float = 0f
 
         private const val DEFAULT_CELL = 16f
 

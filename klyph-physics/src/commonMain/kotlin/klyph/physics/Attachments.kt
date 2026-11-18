@@ -9,7 +9,7 @@ import kotlin.math.sqrt
  * and turning it. 0 is a firm hold. Each is an `Int` handle; a removed one's handle is reused, and
  * one whose particle or body has been removed is skipped.
  */
-class Attachments internal constructor(private val particles: Particles, private val bodies: RigidBodies) {
+public class Attachments internal constructor(private val particles: Particles, private val bodies: RigidBodies) {
     private val slots = Slots()
 
     // The particle, the body, the point on the body from its centre of mass in its own frame, how
@@ -22,15 +22,16 @@ class Attachments internal constructor(private val particles: Particles, private
     private var lambda = FloatArray(8)
 
     /** One past the highest handle in use: loop `0 until end` and skip what isn't [isAlive]. */
-    val end: Int get() = slots.end
+    public val end: Int get() = slots.end
 
-    val count: Int get() = slots.count
+    /** How many attachments there are. */
+    public val count: Int get() = slots.count
 
     /**
      * Holds particle [p] to rigid body [b] at the point where [p] is now, as softly as [compliance], and
      * returns the attachment's handle.
      */
-    fun attach(p: Int, b: Int, compliance: Float = 0f): Int {
+    public fun attach(p: Int, b: Int, compliance: Float = 0f): Int {
         require(particles.isAlive(p)) { "particle $p is not alive" }
         require(bodies.isAlive(b)) { "body $b is not alive" }
         require(compliance >= 0f) { "compliance is $compliance: it must not be negative" }
@@ -59,19 +60,24 @@ class Attachments internal constructor(private val particles: Particles, private
     }
 
     /** Lets go: attachment [a] no longer holds its particle. */
-    fun remove(a: Int) = slots.remove(a)
+    public fun remove(a: Int) {
+        slots.remove(a)
+    }
 
-    fun isAlive(a: Int): Boolean = slots.isAlive(a)
+    /** Whether attachment [a] is still there. */
+    public fun isAlive(a: Int): Boolean = slots.isAlive(a)
 
     /** The particle attachment [a] holds, and the body it holds it to. */
-    fun particle(a: Int): Int = particle[a]
+    public fun particle(a: Int): Int = particle[a]
 
-    fun body(a: Int): Int = body[a]
+    /** The rigid body attachment [a] ties its particle to. */
+    public fun body(a: Int): Int = body[a]
 
     /** Where attachment [a] holds its particle: the point on its body, in the world now. */
-    fun pointX(a: Int): Float = bodies.worldX(body[a], localX[a], localY[a])
+    public fun pointX(a: Int): Float = bodies.worldX(body[a], localX[a], localY[a])
 
-    fun pointY(a: Int): Float = bodies.worldY(body[a], localX[a], localY[a])
+    /** Where attachment [a]'s point on its body is now, down: see [pointX]. */
+    public fun pointY(a: Int): Float = bodies.worldY(body[a], localX[a], localY[a])
 
     /** Forgets how hard each has pulled: the start of a substep. */
     internal fun beginSubstep() {

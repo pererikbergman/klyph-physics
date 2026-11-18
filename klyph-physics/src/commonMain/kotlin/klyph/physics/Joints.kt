@@ -8,7 +8,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /** What a joint holds: see [Joints]. */
-enum class JointKind {
+public enum class JointKind {
     /** Two points held together, free to turn about them: a wheel on its axle, a door on its hinge. */
     HINGE,
 
@@ -41,7 +41,7 @@ enum class JointKind {
  * Each joint is an `Int` handle; a removed one's handle is reused. One whose body or particle has
  * been removed is skipped.
  */
-class Joints internal constructor(private val particles: Particles, private val bodies: RigidBodies, private val events: Events? = null) {
+public class Joints internal constructor(private val particles: Particles, private val bodies: RigidBodies, private val events: Events? = null) {
     private val slots = Slots()
     private var kind = arrayOfNulls<JointKind>(8)
     private var bodyA = IntArray(8)
@@ -81,22 +81,23 @@ class Joints internal constructor(private val particles: Particles, private val 
     private var onBody = IntArray(8)
 
     /** One past the highest handle in use: loop `0 until end` and skip what isn't [isAlive]. */
-    val end: Int get() = slots.end
+    public val end: Int get() = slots.end
 
-    val count: Int get() = slots.count
+    /** How many joints there are. */
+    public val count: Int get() = slots.count
 
     /**
      * Holds body [a] and [b] together at the world point ([x], [y]), free to turn about it. [b] is a
      * body, [WORLD] or a [particle].
      */
-    fun hinge(a: Int, b: Int, x: Float, y: Float): Int = add(JointKind.HINGE, a, b, x, y, x, y)
+    public fun hinge(a: Int, b: Int, x: Float, y: Float): Int = add(JointKind.HINGE, a, b, x, y, x, y)
 
     /**
      * Lets body [b] slide against [a] only along the axis ([axisX], [axisY]) through the world point
      * ([x], [y]), as the two lie now, and not turn against it. [b] is a body, [WORLD] or a [particle]:
      * a bead on a wire.
      */
-    fun slider(a: Int, b: Int, x: Float, y: Float, axisX: Float, axisY: Float): Int {
+    public fun slider(a: Int, b: Int, x: Float, y: Float, axisX: Float, axisY: Float): Int {
         val axis = sqrt(axisX * axisX + axisY * axisY)
         require(axis > 0f) { "the axis ($axisX, $axisY) has no direction" }
         val j = add(JointKind.SLIDER, a, b, x, y, x, y)
@@ -115,7 +116,7 @@ class Joints internal constructor(private val particles: Particles, private val 
      * softly as [compliance]. Above [breakForce] it breaks: it's removed. [b] is a body, [WORLD] or a
      * [particle].
      */
-    fun weld(a: Int, b: Int, x: Float, y: Float, compliance: Float = 0f, breakForce: Float = Float.POSITIVE_INFINITY): Int {
+    public fun weld(a: Int, b: Int, x: Float, y: Float, compliance: Float = 0f, breakForce: Float = Float.POSITIVE_INFINITY): Int {
         require(breakForce > 0f) { "breakForce is $breakForce: it must be more than 0" }
         val j = add(JointKind.WELD, a, b, x, y, x, y)
         this.compliance[j] = requireCompliance(compliance)
@@ -127,7 +128,7 @@ class Joints internal constructor(private val particles: Particles, private val 
      * Holds the world point ([ax], [ay]) of body [a] and ([bx], [by]) of [b] as far apart as they are
      * now, as softly as [compliance]. [b] is a body, [WORLD] or a [particle].
      */
-    fun distance(a: Int, b: Int, ax: Float, ay: Float, bx: Float, by: Float, compliance: Float = 0f): Int {
+    public fun distance(a: Int, b: Int, ax: Float, ay: Float, bx: Float, by: Float, compliance: Float = 0f): Int {
         val j = add(JointKind.DISTANCE, a, b, ax, ay, bx, by)
         this.compliance[j] = requireCompliance(compliance)
         length[j] = sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay))
@@ -138,7 +139,7 @@ class Joints internal constructor(private val particles: Particles, private val 
      * Keeps hinge [j]'s angle (how far [b] has turned against [a] since it was made, in radians), or
      * slider [j]'s position (how far [b] has slid along the axis, in units), from [lower] to [upper].
      */
-    fun setLimits(j: Int, lower: Float, upper: Float) {
+    public fun setLimits(j: Int, lower: Float, upper: Float) {
         require(kind[j] == JointKind.HINGE || kind[j] == JointKind.SLIDER) { "only a hinge or a slider has limits" }
         require(lower <= upper) { "lower $lower is above upper $upper" }
         wakeEnds(j)
@@ -147,7 +148,8 @@ class Joints internal constructor(private val particles: Particles, private val 
         this.upper[j] = upper
     }
 
-    fun clearLimits(j: Int) {
+    /** Takes away joint [j]'s limits, so it turns or slides as far as it likes. */
+    public fun clearLimits(j: Int) {
         wakeEnds(j)
         limited[j] = false
     }
@@ -156,7 +158,7 @@ class Joints internal constructor(private val particles: Particles, private val 
      * Drives hinge [j] at [speed] radians a second, with at most [maxTorque], or slider [j] at [speed]
      * units a second, with at most [maxTorque] as a force. A [maxTorque] of 0 turns the motor off.
      */
-    fun setMotor(j: Int, speed: Float, maxTorque: Float) {
+    public fun setMotor(j: Int, speed: Float, maxTorque: Float) {
         require(kind[j] == JointKind.HINGE || kind[j] == JointKind.SLIDER) { "only a hinge or a slider has a motor" }
         require(maxTorque >= 0f) { "maxTorque is $maxTorque: it must not be negative" }
         wakeEnds(j)
@@ -165,7 +167,7 @@ class Joints internal constructor(private val particles: Particles, private val 
     }
 
     /** Removes joint [j]; its two bodies wake, as what held them is gone. */
-    fun remove(j: Int) {
+    public fun remove(j: Int) {
         if (!slots.isAlive(j)) return
         wakeEnds(j)
         slots.remove(j)
@@ -173,7 +175,8 @@ class Joints internal constructor(private val particles: Particles, private val 
         if (endB[j] >= 0) onBody[endB[j]]--
     }
 
-    fun isAlive(j: Int): Boolean = slots.isAlive(j)
+    /** Whether joint [j] is still there: not removed and not broken. */
+    public fun isAlive(j: Int): Boolean = slots.isAlive(j)
 
     private fun wakeEnds(j: Int) {
         bodies.wake(bodyA[j])
@@ -186,20 +189,23 @@ class Joints internal constructor(private val particles: Particles, private val 
      */
     internal fun keepsAwake(j: Int): Boolean = motorMax[j] > 0f || endB[j] < WORLD
 
-    fun kind(j: Int): JointKind = kind[j]!!
+    /** What kind of joint [j] is. */
+    public fun kind(j: Int): JointKind = kind[j]!!
 
     /** Joint [j]'s first end, a body, and its second: a body, [WORLD] or a [particle]. */
-    fun bodyA(j: Int): Int = bodyA[j]
+    public fun bodyA(j: Int): Int = bodyA[j]
 
-    fun endB(j: Int): Int = endB[j]
+    /** Joint [j]'s second end: a body, [WORLD], or a particle (see [bodyA]). */
+    public fun endB(j: Int): Int = endB[j]
 
     /** Where joint [j] holds its first end, in the world now. */
-    fun anchorAX(j: Int): Float = bodies.worldX(bodyA[j], anchorAX[j], anchorAY[j])
+    public fun anchorAX(j: Int): Float = bodies.worldX(bodyA[j], anchorAX[j], anchorAY[j])
 
-    fun anchorAY(j: Int): Float = bodies.worldY(bodyA[j], anchorAX[j], anchorAY[j])
+    /** Where joint [j] holds its first end, down: see [anchorAX]. */
+    public fun anchorAY(j: Int): Float = bodies.worldY(bodyA[j], anchorAX[j], anchorAY[j])
 
     /** Where joint [j] holds its second end, in the world now. */
-    fun anchorBX(j: Int): Float {
+    public fun anchorBX(j: Int): Float {
         val b = endB[j]
         return when {
             b >= 0 -> bodies.worldX(b, anchorBX[j], anchorBY[j])
@@ -208,7 +214,8 @@ class Joints internal constructor(private val particles: Particles, private val 
         }
     }
 
-    fun anchorBY(j: Int): Float {
+    /** Where joint [j] holds its second end, down: see [anchorBX]. */
+    public fun anchorBY(j: Int): Float {
         val b = endB[j]
         return when {
             b >= 0 -> bodies.worldY(b, anchorBX[j], anchorBY[j])
@@ -218,10 +225,10 @@ class Joints internal constructor(private val particles: Particles, private val 
     }
 
     /** How far hinge [j]'s second end has turned against its first since it was made, in radians. */
-    fun angle(j: Int): Float = angleOfB(endB[j]) - bodies.angle[bodyA[j]] - restAngle[j]
+    public fun angle(j: Int): Float = angleOfB(endB[j]) - bodies.angle[bodyA[j]] - restAngle[j]
 
     /** How far slider [j]'s second end has slid along its axis since it was made, in units. */
-    fun position(j: Int): Float {
+    public fun position(j: Int): Float {
         val a = bodyA[j]
         val ux = bodies.cos[a] * axisX[j] - bodies.sin[a] * axisY[j]
         val uy = bodies.sin[a] * axisX[j] + bodies.cos[a] * axisY[j]
@@ -229,27 +236,31 @@ class Joints internal constructor(private val particles: Particles, private val 
     }
 
     /** Whether hinge or slider [j] has limits, and what they are: see [setLimits]. */
-    fun hasLimits(j: Int): Boolean = limited[j]
+    public fun hasLimits(j: Int): Boolean = limited[j]
 
-    fun lowerLimit(j: Int): Float = lower[j]
+    /** Joint [j]'s lower limit: an angle in radians for a hinge, a distance for a slider. */
+    public fun lowerLimit(j: Int): Float = lower[j]
 
-    fun upperLimit(j: Int): Float = upper[j]
+    /** Joint [j]'s upper limit: an angle in radians for a hinge, a distance for a slider. */
+    public fun upperLimit(j: Int): Float = upper[j]
 
     /** Whether hinge or slider [j] has a motor on, and how fast it drives: see [setMotor]. */
-    fun hasMotor(j: Int): Boolean = motorMax[j] > 0f
+    public fun hasMotor(j: Int): Boolean = motorMax[j] > 0f
 
-    fun motorSpeed(j: Int): Float = motorSpeed[j]
+    /** How fast joint [j]'s motor drives it: radians a second for a hinge, units a second for a slider. */
+    public fun motorSpeed(j: Int): Float = motorSpeed[j]
 
     /** Slider [j]'s axis in the world now: it turns with its first end. */
-    fun axisX(j: Int): Float = bodies.cos[bodyA[j]] * axisX[j] - bodies.sin[bodyA[j]] * axisY[j]
+    public fun axisX(j: Int): Float = bodies.cos[bodyA[j]] * axisX[j] - bodies.sin[bodyA[j]] * axisY[j]
 
-    fun axisY(j: Int): Float = bodies.sin[bodyA[j]] * axisX[j] + bodies.cos[bodyA[j]] * axisY[j]
+    /** The direction joint [j] slides along, in the world now, down: see [axisX]. */
+    public fun axisY(j: Int): Float = bodies.sin[bodyA[j]] * axisX[j] + bodies.cos[bodyA[j]] * axisY[j]
 
     /** The angle hinge [j]'s two ends had when it was made: its second end's less its first's. */
-    fun restAngle(j: Int): Float = restAngle[j]
+    public fun restAngle(j: Int): Float = restAngle[j]
 
     /** The force joint [j] held its anchors together with over the last substep: 0 while its bodies sleep. */
-    fun force(j: Int): Float = force[j]
+    public fun force(j: Int): Float = force[j]
 
     private fun add(k: JointKind, a: Int, b: Int, ax: Float, ay: Float, bx: Float, by: Float): Int {
         require(bodies.isAlive(a)) { "body $a is not alive" }
@@ -638,12 +649,12 @@ class Joints internal constructor(private val particles: Particles, private val 
         force = force.copyOf(size)
     }
 
-    companion object {
+    public companion object {
         /** A joint's second end that is a fixed point in the world. */
-        const val WORLD = -1
+        public const val WORLD: Int = -1
 
         /** A joint's second end that is particle [p]. */
-        fun particle(p: Int): Int = -2 - p
+        public fun particle(p: Int): Int = -2 - p
 
         private fun particleOf(end: Int): Int = -2 - end
 

@@ -31,6 +31,10 @@ jobs:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts') }}
       - run: ./gradlew ${{ matrix.tasks }} --console=plain
+      # Explicit API mode makes every public declaration say so; this makes each one say what it is.
+      - name: Every public declaration has KDoc
+        if: runner.os == 'Linux'
+        run: python3 scripts/check-kdoc.py
       - name: Test report
         if: always()
         uses: actions/upload-artifact@v4

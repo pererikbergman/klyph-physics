@@ -12,7 +12,7 @@ private const val DIAGONAL = 0.70710678f
 private const val MIN_FLOOR_NORMAL_Y = -0.5f
 
 /** How a [Solid] fills its rectangle: all of it, or the half under a diagonal surface. */
-enum class SolidShape {
+public enum class SolidShape {
     /** The whole rectangle. */
     BOX,
 
@@ -28,28 +28,35 @@ enum class SolidShape {
  * [shape] says. A tile's solid knows its grid cell, so the grid can tell which faces are buried
  * against a neighbour; a [moving] one has none. Make a tile's solid with [SolidGrid.fill].
  */
-class Solid internal constructor(
-    val shape: SolidShape,
-    val left: Float,
-    var top: Float,
-    val right: Float,
-    var bottom: Float,
+public class Solid internal constructor(
+    /** Which part of its box is solid: all of it, or a slope. */
+    public val shape: SolidShape,
+    /** Its box: the left edge. */
+    public val left: Float,
+    /** Its box: the top edge. A moving solid's moves. */
+    public var top: Float,
+    /** Its box: the right edge. */
+    public val right: Float,
+    /** Its box: the bottom edge. A moving solid's moves. */
+    public var bottom: Float,
     /** Bit flags the game gives this solid, such as "bounce pad", reported by [Events] when a particle stands on it; 0 for none. */
-    val tag: Int = 0,
-    val col: Int = -1,
-    val row: Int = -1,
+    public val tag: Int = 0,
+    /** The tile's column in its grid, or -1 for a moving solid. */
+    public val col: Int = -1,
+    /** The tile's row in its grid, or -1 for a moving solid. */
+    public val row: Int = -1,
     /** How it grips and bounces what touches it. */
-    var material: Material = Material.DEFAULT,
+    public var material: Material = Material.DEFAULT,
 ) {
     /** Whether this solid moves, such as a crusher, rather than filling a grid cell. It has no neighbours to bury its faces against. */
-    val isMoving: Boolean get() = col < 0
+    public val isMoving: Boolean get() = col < 0
 
     /**
      * Whether the point ([x], [y]) is inside this solid by more than [margin] units, measured straight
      * out of the nearest face (the slope's own surface, for a slope). A point on the surface is outside.
      * This is the one place that decides what "inside" means: collision and [SolidGrid.isSolidAt] both ask it.
      */
-    fun contains(x: Float, y: Float, margin: Float = 0f): Boolean = when (shape) {
+    public fun contains(x: Float, y: Float, margin: Float = 0f): Boolean = when (shape) {
         SolidShape.BOX -> x > left + margin && x < right - margin && y > top + margin && y < bottom - margin
         SolidShape.RISING -> isWithinEdges(x, y) && ((x - left) - (bottom - y)) * DIAGONAL > margin
         SolidShape.FALLING -> isWithinEdges(x, y) && ((right - left) - (x - left) - (bottom - y)) * DIAGONAL > margin
@@ -72,9 +79,9 @@ class Solid internal constructor(
         }
     }
 
-    companion object {
+    public companion object {
         /** A solid that is not tied to a grid cell, filling the given edges; its [top] and [bottom] may change. */
-        fun moving(left: Float, top: Float, right: Float, bottom: Float, tag: Int = 0, material: Material = Material.DEFAULT): Solid =
+        public fun moving(left: Float, top: Float, right: Float, bottom: Float, tag: Int = 0, material: Material = Material.DEFAULT): Solid =
             Solid(SolidShape.BOX, left, top, right, bottom, tag, material = material)
     }
 }
@@ -85,27 +92,27 @@ class Solid internal constructor(
  * particle is pushed out of it: a point particle can only be inside the one tile it is in, so only that
  * tile and the dynamic solids are checked; a round one checks the tiles its radius reaches.
  */
-class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
+public class SolidGrid(public val cols: Int, public val rows: Int, public val tileSize: Float) {
     private val cells = arrayOfNulls<Solid>(cols * rows)
 
     /** Solids that are not tied to a cell, such as a crusher. Checked every time. */
-    val dynamic = ArrayList<Solid>()
+    public val dynamic: ArrayList<Solid> = ArrayList<Solid>()
 
     /** Counts every change to the cells, so what's built from them, such as the edges rigid bodies meet, knows to build again. */
     internal var version = 0
         private set
 
     /** The solid in cell ([col], [row]), or `null` for air and for cells outside the grid. */
-    fun at(col: Int, row: Int): Solid? = if (col in 0 until cols && row in 0 until rows) cells[row * cols + col] else null
+    public fun at(col: Int, row: Int): Solid? = if (col in 0 until cols && row in 0 until rows) cells[row * cols + col] else null
 
     /** Fills cell ([col], [row]) with a solid of [shape] carrying [tag], and returns it. */
-    fun fill(col: Int, row: Int, shape: SolidShape = SolidShape.BOX, tag: Int = 0, material: Material = Material.DEFAULT): Solid {
+    public fun fill(col: Int, row: Int, shape: SolidShape = SolidShape.BOX, tag: Int = 0, material: Material = Material.DEFAULT): Solid {
         val t = tileSize
         return put(Solid(shape, col * t, row * t, (col + 1) * t, (row + 1) * t, tag, col, row, material))
     }
 
     /** Fills only the top half of cell ([col], [row]), such as a stub hanging from a ceiling, and returns it. */
-    fun fillTopHalf(col: Int, row: Int, tag: Int = 0, material: Material = Material.DEFAULT): Solid {
+    public fun fillTopHalf(col: Int, row: Int, tag: Int = 0, material: Material = Material.DEFAULT): Solid {
         val t = tileSize
         return put(Solid(SolidShape.BOX, col * t, row * t, (col + 1) * t, row * t + t / 2f, tag, col, row, material))
     }
@@ -118,14 +125,14 @@ class SolidGrid(val cols: Int, val rows: Int, val tileSize: Float) {
     }
 
     /** Empties cell ([col], [row]). */
-    fun removeAt(col: Int, row: Int) {
+    public fun removeAt(col: Int, row: Int) {
         if (col !in 0 until cols || row !in 0 until rows || cells[row * cols + col] == null) return
         cells[row * cols + col] = null
         version++
     }
 
     /** Whether the point ([x], [y]) is inside any solid by more than [margin] units; see [Solid.contains]. */
-    fun isSolidAt(x: Float, y: Float, margin: Float = 0f): Boolean {
+    public fun isSolidAt(x: Float, y: Float, margin: Float = 0f): Boolean {
         val solid = at(floor(x / tileSize).toInt(), floor(y / tileSize).toInt())
         if (solid != null && solid.contains(x, y, margin)) return true
         for (d in dynamic) if (d.contains(x, y, margin)) return true

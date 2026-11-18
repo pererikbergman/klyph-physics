@@ -15,7 +15,7 @@ import kotlin.math.sqrt
  *
  * Its particles and constraints are ordinary ones: reach them with [particle] and [ringCount].
  */
-class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
+public class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     private val slots = Slots()
     internal var start = IntArray(8)
         private set
@@ -34,19 +34,20 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     private var linkUsed = 0
 
     /** How many bodies are alive. */
-    val count: Int get() = slots.count
+    public val count: Int get() = slots.count
 
     /** One past the highest body handle: loop `0 until end` and skip what isn't [isAlive]. */
-    val end: Int get() = slots.end
+    public val end: Int get() = slots.end
 
-    fun isAlive(body: Int): Boolean = slots.isAlive(body)
+    /** Whether soft body [body] is still there. */
+    public fun isAlive(body: Int): Boolean = slots.isAlive(body)
 
     /**
      * Adds a body of [shape] with its middle at [centerX] and its bottom on [baseY], at rest, and
      * returns its handle. Each ring particle weighs [particleMass]; the core is [SoftBodyShape.coreMass]
      * times that.
      */
-    fun add(
+    public fun add(
         shape: SoftBodyShape,
         centerX: Float,
         baseY: Float,
@@ -105,7 +106,7 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Removes [body], its particles and its constraints. Its handle is reused; the room it took in the pools is not. */
-    fun remove(body: Int) {
+    public fun remove(body: Int) {
         if (!isAlive(body)) return
         for (i in 0..ringCounts[body]) world.removeParticle(particle(body, i))
         slots.remove(body)
@@ -116,20 +117,21 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
      * a body that doesn't fold doesn't need it, and it costs a check of every ring particle against
      * every edge.
      */
-    fun hasSelfCollision(body: Int): Boolean = selfCollision[body]
+    public fun hasSelfCollision(body: Int): Boolean = selfCollision[body]
 
     /** Puts every particle of [body] in [category], colliding only with what's in [mask]: see [Filter]. */
-    fun setFilter(body: Int, category: Int, mask: Int) {
+    public fun setFilter(body: Int, category: Int, mask: Int) {
         for (i in 0..ringCount(body)) world.particles.setFilter(particle(body, i), category, mask)
     }
 
     /** [body]'s collision category: see [Filter]. */
-    fun category(body: Int): Int = world.particles.category[core(body)]
+    public fun category(body: Int): Int = world.particles.category[core(body)]
 
     /** The categories [body] collides with: see [Filter]. */
-    fun mask(body: Int): Int = world.particles.mask[core(body)]
+    public fun mask(body: Int): Int = world.particles.mask[core(body)]
 
-    fun setSelfCollision(body: Int, on: Boolean) {
+    /** Turns on or off whether [body]'s ring collides with itself, so it can't fold through. */
+    public fun setSelfCollision(body: Int, on: Boolean) {
         selfCollision[body] = on
     }
 
@@ -137,20 +139,22 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     internal fun selfThickness(body: Int): Float = thickness[body]
 
     /** How many ring particles [body] has. Particle `ringCount` is its core. */
-    fun ringCount(body: Int): Int = ringCounts[body]
+    public fun ringCount(body: Int): Int = ringCounts[body]
 
     /** The world particle of [body]'s ring point [i], or its core when [i] is [ringCount]. */
-    fun particle(body: Int, i: Int): Int = particlePool[start[body] + i]
+    public fun particle(body: Int, i: Int): Int = particlePool[start[body] + i]
 
-    fun core(body: Int): Int = particle(body, ringCounts[body])
+    /** [body]'s core: the particle in its middle. */
+    public fun core(body: Int): Int = particle(body, ringCounts[body])
 
-    fun tuning(body: Int): SoftBodyTuning = tunings[body]!!
+    /** How soft [body] was made. */
+    public fun tuning(body: Int): SoftBodyTuning = tunings[body]!!
 
     /** [body]'s outline, for [Outline] and for drawing. The same object every time. */
-    fun ring(body: Int): Ring = rings[body]!!
+    public fun ring(body: Int): Ring = rings[body]!!
 
     /** Moves [body], at rest, so its middle is at [centerX] and its bottom on [baseY]. */
-    fun placeAt(body: Int, centerX: Float, baseY: Float) {
+    public fun placeAt(body: Int, centerX: Float, baseY: Float) {
         val dx = centerX - (minX(body) + maxX(body)) / 2f
         val dy = baseY - maxY(body)
         val ps = world.particles
@@ -165,7 +169,7 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
      * Turns [body], at rest, [radians] about its middle: clockwise on screen, where y grows down. A
      * body is always made upright; this is how to set one down on a slope, or on its side.
      */
-    fun rotate(body: Int, radians: Float) {
+    public fun rotate(body: Int, radians: Float) {
         val cx = centerX(body)
         val cy = centerY(body)
         val c = cos(radians)
@@ -181,12 +185,12 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Makes every particle of [body] grip and bounce like [material]. */
-    fun setMaterial(body: Int, material: Material) {
+    public fun setMaterial(body: Int, material: Material) {
         for (i in 0..ringCounts[body]) world.particles.setMaterial(particle(body, i), material)
     }
 
     /** Adds ([vx], [vy]) units per second to every particle of [body]. */
-    fun addVelocity(body: Int, vx: Float, vy: Float) {
+    public fun addVelocity(body: Int, vx: Float, vy: Float) {
         for (i in 0..ringCounts[body]) {
             val p = particle(body, i)
             world.setVelocity(p, world.velocityX(p) + vx, world.velocityY(p) + vy)
@@ -194,35 +198,41 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Mean position of [body]'s ring particles. */
-    fun centerX(body: Int): Float = ringMean(body) { world.particles.x(it) }
+    public fun centerX(body: Int): Float = ringMean(body) { world.particles.x(it) }
 
-    fun centerY(body: Int): Float = ringMean(body) { world.particles.y(it) }
+    /** The middle of [body]'s ring, down: see [centerX]. */
+    public fun centerY(body: Int): Float = ringMean(body) { world.particles.y(it) }
 
     /** Mean velocity of [body]'s ring particles, in units per second. */
-    fun meanVelocityX(body: Int): Float = ringMean(body) { world.velocityX(it) }
+    public fun meanVelocityX(body: Int): Float = ringMean(body) { world.velocityX(it) }
 
-    fun meanVelocityY(body: Int): Float = ringMean(body) { world.velocityY(it) }
+    /** How fast [body]'s ring is moving down on average: see [meanVelocityX]. */
+    public fun meanVelocityY(body: Int): Float = ringMean(body) { world.velocityY(it) }
 
-    fun minX(body: Int): Float = ringExtreme(body, -1f) { world.particles.x(it) }
+    /** The left edge of [body]'s ring. */
+    public fun minX(body: Int): Float = ringExtreme(body, -1f) { world.particles.x(it) }
 
-    fun maxX(body: Int): Float = ringExtreme(body, 1f) { world.particles.x(it) }
+    /** The right edge of [body]'s ring. */
+    public fun maxX(body: Int): Float = ringExtreme(body, 1f) { world.particles.x(it) }
 
-    fun minY(body: Int): Float = ringExtreme(body, -1f) { world.particles.y(it) }
+    /** The top edge of [body]'s ring. */
+    public fun minY(body: Int): Float = ringExtreme(body, -1f) { world.particles.y(it) }
 
-    fun maxY(body: Int): Float = ringExtreme(body, 1f) { world.particles.y(it) }
+    /** The bottom edge of [body]'s ring. */
+    public fun maxY(body: Int): Float = ringExtreme(body, 1f) { world.particles.y(it) }
 
     /** The area inside [body]'s ring. */
-    fun area(body: Int): Float = world.constraints.currentArea(areaOf[body])
+    public fun area(body: Int): Float = world.constraints.currentArea(areaOf[body])
 
     /** The longest edge of [body]'s ring as a multiple of its rest length: 1 at rest, large when it's tearing. */
-    fun maxEdgeStretch(body: Int): Float {
+    public fun maxEdgeStretch(body: Int): Float {
         var worst = 0f
         for (i in 0 until ringCounts[body]) worst = max(worst, 1f + world.constraints.strain(linkPool[linkStart[body] + i]))
         return worst
     }
 
     /** Whether every coordinate of [body] is a real number. */
-    fun isFinite(body: Int): Boolean {
+    public fun isFinite(body: Int): Boolean {
         val ps = world.particles
         for (i in 0..ringCounts[body]) {
             val p = particle(body, i)
@@ -232,29 +242,29 @@ class SoftBodyStore internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Whether any particle of [body] stood on a floor during the last step. */
-    fun isOnFloor(body: Int): Boolean {
+    public fun isOnFloor(body: Int): Boolean {
         for (i in 0..ringCounts[body]) if (world.events.isOnFloor(particle(body, i))) return true
         return false
     }
 
     /** How many particles of [body] stood on a floor during the last step. */
-    fun floorContactCount(body: Int): Int {
+    public fun floorContactCount(body: Int): Int {
         var n = 0
         for (i in 0..ringCounts[body]) if (world.events.isOnFloor(particle(body, i))) n++
         return n
     }
 
     /** Whether [body] stood on a floor carrying any bit of [tag] during the last step. */
-    fun touched(body: Int, tag: Int): Boolean {
+    public fun touched(body: Int, tag: Int): Boolean {
         for (i in 0..ringCounts[body]) if (world.events.floorTags(particle(body, i)) and tag != 0) return true
         return false
     }
 
     /** The edge link from ring point [i] to the next. */
-    fun edge(body: Int, i: Int): Int = linkPool[linkStart[body] + i]
+    public fun edge(body: Int, i: Int): Int = linkPool[linkStart[body] + i]
 
     /** The spoke link from ring point [i] to the core. */
-    fun spoke(body: Int, i: Int): Int = linkPool[linkStart[body] + ringCounts[body] + i]
+    public fun spoke(body: Int, i: Int): Int = linkPool[linkStart[body] + ringCounts[body] + i]
 
     private inline fun ringMean(body: Int, value: (Int) -> Float): Float {
         var sum = 0f

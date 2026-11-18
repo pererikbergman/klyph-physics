@@ -3,7 +3,7 @@ package klyph.physics
 import kotlin.math.sqrt
 
 /** How a rigid body moves. */
-enum class BodyKind {
+public enum class BodyKind {
     /** Never moves: the ground, a wall. Nothing pushes it, and it has no velocity. */
     STATIC,
 
@@ -38,7 +38,7 @@ enum class BodyKind {
  *
  * The arrays grow by doubling when a body is added, never during a step.
  */
-class RigidBodies internal constructor(initialCapacity: Int = 16) {
+public class RigidBodies internal constructor(initialCapacity: Int = 16) {
     internal var x = FloatArray(initialCapacity)
     internal var y = FloatArray(initialCapacity)
     internal var angle = FloatArray(initialCapacity)
@@ -82,7 +82,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     internal var thickness = FloatArray(initialCapacity)
 
     /** How many bodies are asleep. */
-    var sleepingCount: Int = 0
+    public var sleepingCount: Int = 0
         private set
 
     /** What each body is made of, around its centre of mass; none for a body made with [add]. */
@@ -111,11 +111,11 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     private var freeCount = 0
 
     /** One past the highest handle ever handed out: loop `0 until end` and skip what isn't [isAlive]. */
-    var end: Int = 0
+    public var end: Int = 0
         private set
 
     /** How many bodies are alive. */
-    val count: Int get() = end - freeCount
+    public val count: Int get() = end - freeCount
 
     /**
      * Adds a body of [kind] at ([x], [y]), turned by [angle] radians, at rest, and returns its handle.
@@ -123,7 +123,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * matter to a [BodyKind.DYNAMIC] body. It has no shape, so nothing touches it: most bodies are
      * better made from shapes, which work both out from their size.
      */
-    fun add(x: Float, y: Float, angle: Float = 0f, mass: Float = 1f, inertia: Float = 1f, kind: BodyKind = BodyKind.DYNAMIC): Int {
+    public fun add(x: Float, y: Float, angle: Float = 0f, mass: Float = 1f, inertia: Float = 1f, kind: BodyKind = BodyKind.DYNAMIC): Int {
         require(x.isFinite() && y.isFinite() && angle.isFinite()) { "a body can't start at ($x, $y), turned $angle" }
         require(mass > 0f && mass.isFinite()) { "mass is $mass: it must be finite and more than 0" }
         require(inertia > 0f && inertia.isFinite()) { "inertia is $inertia: it must be finite and more than 0" }
@@ -167,7 +167,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * at its centre of mass, where it balances and turns about. Mass and inertia come from the shapes'
      * areas and the [density]. Its [material] says how it grips and bounces.
      */
-    fun add(
+    public fun add(
         shapes: List<Shape>,
         x: Float,
         y: Float,
@@ -201,17 +201,18 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * or another body. It costs a few shape tests a substep for each bullet; use it for the few
      * things that need it.
      */
-    fun setBullet(b: Int, isBullet: Boolean) {
+    public fun setBullet(b: Int, isBullet: Boolean) {
         bullet[b] = isBullet
     }
 
-    fun isBullet(b: Int): Boolean = bullet[b]
+    /** Whether body [b] is swept each step, so it never passes through a thin wall. */
+    public fun isBullet(b: Int): Boolean = bullet[b]
 
     /**
      * Puts body [b] in [category] and has it collide only with what's in [mask]: see [Filter]. It
      * wakes, as what it rested on may no longer hold it.
      */
-    fun setFilter(b: Int, category: Int, mask: Int) {
+    public fun setFilter(b: Int, category: Int, mask: Int) {
         Filter.checkCategory(category)
         this.category[b] = category
         this.mask[b] = mask
@@ -220,10 +221,10 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     /** Body [b]'s collision category: see [Filter]. */
-    fun category(b: Int): Int = category[b]
+    public fun category(b: Int): Int = category[b]
 
     /** The categories body [b] collides with: see [Filter]. */
-    fun mask(b: Int): Int = mask[b]
+    public fun mask(b: Int): Int = mask[b]
 
     /**
      * Makes body [b] a sensor, or not. A sensor never pushes or is pushed: it only notices what's in it,
@@ -232,45 +233,48 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * other sensors, and raycasts pass through it. It moves as its kind says, so a dynamic sensor
      * falls; most are static, or kinematic to carry them about.
      */
-    fun setSensor(b: Int, isSensor: Boolean) {
+    public fun setSensor(b: Int, isSensor: Boolean) {
         sensor[b] = isSensor
         if (alive[b]) wake(b)
     }
 
-    fun isSensor(b: Int): Boolean = sensor[b]
+    /** Whether body [b] is a sensor: it notices what overlaps it and never pushes. */
+    public fun isSensor(b: Int): Boolean = sensor[b]
 
     /** Whether bodies [p] and [q] are let collide by their filters: see [Filter]. */
     @Suppress("NOTHING_TO_INLINE")
     internal inline fun filtered(p: Int, q: Int): Boolean = anyFiltered && !Filter.collides(category[p], mask[p], category[q], mask[q])
 
     /** Makes body [b] grip and bounce like [material]. */
-    fun setMaterial(b: Int, material: Material) {
+    public fun setMaterial(b: Int, material: Material) {
         friction[b] = material.friction
         staticFriction[b] = material.staticFriction
         restitution[b] = material.restitution
     }
 
     /** How many shapes body [b] is made of. */
-    fun shapeCount(b: Int): Int = shapes[b]!!.size
+    public fun shapeCount(b: Int): Int = shapes[b]!!.size
 
     /**
      * Shape [i] of body [b], around the body's centre of mass: a point (sx, sy) of it is in the world
      * at [worldX], [worldY].
      */
-    fun shape(b: Int, i: Int): Shape = shapes[b]!![i]
+    public fun shape(b: Int, i: Int): Shape = shapes[b]!![i]
 
     /** Where the point ([localX], [localY]) of body [b], measured from its centre of mass, is in the world. */
-    fun worldX(b: Int, localX: Float, localY: Float): Float = x[b] + cos[b] * localX - sin[b] * localY
+    public fun worldX(b: Int, localX: Float, localY: Float): Float = x[b] + cos[b] * localX - sin[b] * localY
 
-    fun worldY(b: Int, localX: Float, localY: Float): Float = y[b] + sin[b] * localX + cos[b] * localY
+    /** Where the point ([localX], [localY]) of body [b] is in the world, down: see [worldX]. */
+    public fun worldY(b: Int, localX: Float, localY: Float): Float = y[b] + sin[b] * localX + cos[b] * localY
 
     /** Where the world point ([wx], [wy]) is on body [b], measured from its centre of mass. */
-    fun localX(b: Int, wx: Float, wy: Float): Float = cos[b] * (wx - x[b]) + sin[b] * (wy - y[b])
+    public fun localX(b: Int, wx: Float, wy: Float): Float = cos[b] * (wx - x[b]) + sin[b] * (wy - y[b])
 
-    fun localY(b: Int, wx: Float, wy: Float): Float = -sin[b] * (wx - x[b]) + cos[b] * (wy - y[b])
+    /** Where the world point ([wx], [wy]) is on body [b], down: see [localX]. */
+    public fun localY(b: Int, wx: Float, wy: Float): Float = -sin[b] * (wx - x[b]) + cos[b] * (wy - y[b])
 
     /** Whether the world point ([wx], [wy]) is inside one of body [b]'s shapes. */
-    fun contains(b: Int, wx: Float, wy: Float): Boolean {
+    public fun contains(b: Int, wx: Float, wy: Float): Boolean {
         val lx = localX(b, wx, wy)
         val ly = localY(b, wx, wy)
         for (shape in shapes[b]!!) if (shape.contains(lx, ly)) return true
@@ -278,7 +282,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     /** Removes body [b]; its handle may be handed out again. Removing a dead body does nothing. */
-    fun remove(b: Int) {
+    public fun remove(b: Int) {
         if (!isAlive(b)) return
         // what rested on it wakes and falls: a body that sleeps did so with everything it touched, and
         // a static or kinematic one may hold up any sleeping body
@@ -291,7 +295,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     /** Removes every body. Handles start from 0 again. */
-    fun clear() {
+    public fun clear() {
         alive.fill(false, 0, end)
         asleep.fill(false, 0, end)
         sleepingCount = 0
@@ -299,31 +303,35 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         freeCount = 0
     }
 
-    fun isAlive(b: Int): Boolean = b in 0 until end && alive[b]
+    /** Whether body [b] is still there. */
+    public fun isAlive(b: Int): Boolean = b in 0 until end && alive[b]
 
-    fun kind(b: Int): BodyKind = BodyKind.entries[kind[b]]
+    /** Whether body [b] is dynamic, kinematic or static. */
+    public fun kind(b: Int): BodyKind = BodyKind.entries[kind[b]]
 
     /** Where body [b]'s centre of mass is. */
-    fun x(b: Int): Float = x[b]
+    public fun x(b: Int): Float = x[b]
 
-    fun y(b: Int): Float = y[b]
+    /** Where body [b]'s centre of mass is, down. */
+    public fun y(b: Int): Float = y[b]
 
     /** How far body [b] is turned, in radians, clockwise on screen. It isn't wrapped: two turns is 4π. */
-    fun angle(b: Int): Float = angle[b]
+    public fun angle(b: Int): Float = angle[b]
 
     /** Body [b]'s velocity, in units per second. */
-    fun velocityX(b: Int): Float = vx[b]
+    public fun velocityX(b: Int): Float = vx[b]
 
-    fun velocityY(b: Int): Float = vy[b]
+    /** How fast body [b] is moving down, in units a second: see [velocityX]. */
+    public fun velocityY(b: Int): Float = vy[b]
 
     /** How fast body [b] turns, in radians per second, clockwise on screen. */
-    fun angularVelocity(b: Int): Float = omega[b]
+    public fun angularVelocity(b: Int): Float = omega[b]
 
     /**
      * Whether body [b] is asleep: it and everything it touched were still for
      * [PhysicsConfig.timeToSleep], so it isn't moved or solved until something wakes it. See [wake].
      */
-    fun isAsleep(b: Int): Boolean = asleep[b]
+    public fun isAsleep(b: Int): Boolean = asleep[b]
 
     /**
      * Wakes body [b] and every body that fell asleep with it: its island, everything it touched or was
@@ -331,14 +339,14 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * moved, or joined, and when what holds it up is removed; call this when you change the world some
      * other way, such as removing a particle it rests on. Waking an awake body does nothing.
      */
-    fun wake(b: Int) {
+    public fun wake(b: Int) {
         if (!isAlive(b) || !asleep[b]) return
         val group = island[b]
         for (other in 0 until end) if (asleep[other] && island[other] == group) wakeOne(other)
     }
 
     /** Wakes every sleeping body. */
-    fun wakeAll() {
+    public fun wakeAll() {
         if (sleepingCount == 0) return
         for (b in 0 until end) if (asleep[b]) wakeOne(b)
     }
@@ -399,12 +407,13 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     /** 0 for a body that nothing moves: a static or kinematic one. A sleeping body keeps its own. */
-    fun inverseMass(b: Int): Float = if (asleep[b]) sleepingInvMass[b] else invMass[b]
+    public fun inverseMass(b: Int): Float = if (asleep[b]) sleepingInvMass[b] else invMass[b]
 
-    fun inverseInertia(b: Int): Float = if (asleep[b]) sleepingInvInertia[b] else invInertia[b]
+    /** One over how hard body [b] is to turn: 0 for a body nothing turns. */
+    public fun inverseInertia(b: Int): Float = if (asleep[b]) sleepingInvInertia[b] else invInertia[b]
 
     /** Gives body [b] a velocity of ([vx], [vy]) units per second. A static body stays still. */
-    fun setVelocity(b: Int, vx: Float, vy: Float) {
+    public fun setVelocity(b: Int, vx: Float, vy: Float) {
         if (kind[b] == STATIC) return
         wake(b)
         this.vx[b] = vx
@@ -412,14 +421,14 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     /** Sets how fast body [b] turns, in radians per second. A static body stays still. */
-    fun setAngularVelocity(b: Int, omega: Float) {
+    public fun setAngularVelocity(b: Int, omega: Float) {
         if (kind[b] == STATIC) return
         wake(b)
         this.omega[b] = omega
     }
 
     /** Puts body [b] at ([x], [y]), turned by [angle], keeping its velocity: a teleport, not a move. */
-    fun moveTo(b: Int, x: Float, y: Float, angle: Float = this.angle[b]) {
+    public fun moveTo(b: Int, x: Float, y: Float, angle: Float = this.angle[b]) {
         // what rested on a moved static or kinematic body has nothing under it now
         if (kind[b] == DYNAMIC) wake(b) else wakeAll()
         this.x[b] = x
@@ -437,7 +446,7 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
      * gets there at a steady velocity, which it pushes things with, and keeps that velocity after
      * unless told again. Call it every step to have it follow a path exactly.
      */
-    fun moveKinematic(b: Int, x: Float, y: Float, angle: Float = this.angle[b]) {
+    public fun moveKinematic(b: Int, x: Float, y: Float, angle: Float = this.angle[b]) {
         require(kind[b] == KINEMATIC) { "body $b is ${kind(b)}: only a kinematic body moves where it's told" }
         targetX[b] = x
         targetY[b] = y
@@ -446,9 +455,10 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
     }
 
     /** Body [b]'s velocity at the point ([px], [py]) of it, along x: its own, plus what its turning adds there. */
-    fun pointVelocityX(b: Int, px: Float, py: Float): Float = vx[b] - omega[b] * (py - y[b])
+    public fun pointVelocityX(b: Int, px: Float, py: Float): Float = vx[b] - omega[b] * (py - y[b])
 
-    fun pointVelocityY(b: Int, px: Float, py: Float): Float = vy[b] + omega[b] * (px - x[b])
+    /** How fast the point ([px], [py]) of body [b] is moving down: see [pointVelocityX]. */
+    public fun pointVelocityY(b: Int, px: Float, py: Float): Float = vy[b] + omega[b] * (px - x[b])
 
     /**
      * Starts a step of [dt] seconds: every kinematic body told where to go is given the velocity that
@@ -615,12 +625,12 @@ class RigidBodies internal constructor(initialCapacity: Int = 16) {
         sin = sin.copyOf(size)
     }
 
-    companion object {
+    public companion object {
         /**
          * How heavy a body's shapes are per unit squared, unless told otherwise: a 32-unit crate weighs
          * about 50, as much as a blob.
          */
-        const val DENSITY = 0.05f
+        public const val DENSITY: Float = 0.05f
 
         private val NO_SHAPES = emptyArray<Shape>()
 

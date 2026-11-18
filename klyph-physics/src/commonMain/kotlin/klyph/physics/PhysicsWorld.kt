@@ -8,46 +8,47 @@ import kotlin.math.sqrt
  * particles and constraints are `Int` handles into them, so a step touches plain arrays and allocates
  * nothing. The same calls in the same order give the same results, to the bit.
  */
-class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
-    val particles = Particles()
+public class PhysicsWorld(public val config: PhysicsConfig = PhysicsConfig()) {
+    /** Every particle: loose ones, and those soft bodies, ropes and cloth are made of. */
+    public val particles: Particles = Particles()
 
     /** Distances, ropes, pins and areas between [particles]. */
-    val constraints = Constraints(particles)
+    public val constraints: Constraints = Constraints(particles)
 
     /** Bodies that keep their shape and turn: see [RigidBodies]. */
-    val rigidBodies = RigidBodies()
+    public val rigidBodies: RigidBodies = RigidBodies()
 
     /** Soft bodies: groups of [particles] held together by [constraints]. */
-    val softBodies = SoftBodyStore(this)
+    public val softBodies: SoftBodyStore = SoftBodyStore(this)
 
     /** What happened during the last step: which particles stood on a floor, and what it was tagged. */
-    val events = Events(particles, rigidBodies)
+    public val events: Events = Events(particles, rigidBodies)
 
     /**
      * The level's walls, floors, slopes and moving solids, or `null` for none. Every particle is pushed
      * out of them. Setting it wakes every sleeping body: what they rested on may be gone.
      */
-    var solids: SolidGrid? = null
+    public var solids: SolidGrid? = null
         set(value) {
             field = value
             rigidBodies.wakeAll()
         }
 
     /** The hand that drags particles about: see [grab]. */
-    val hand = Grab(this)
+    public val hand: Grab = Grab(this)
 
     private val collisions = Collisions(this)
 
     /** Hinges, sliders, welds and distance joints between rigid bodies: see [Joints]. */
-    val joints = Joints(particles, rigidBodies, events)
+    public val joints: Joints = Joints(particles, rigidBodies, events)
 
     /** Particles held to points on rigid bodies: see [attach] and [Attachments]. */
-    val attachments = Attachments(particles, rigidBodies)
+    public val attachments: Attachments = Attachments(particles, rigidBodies)
 
     private val coupling = Coupling(this)
 
     /** Where rigid bodies touched each other and the solids in the last substep, for drawing: see [RigidContacts]. */
-    val rigidContacts = RigidContacts(this)
+    public val rigidContacts: RigidContacts = RigidContacts(this)
 
     private val sleeping = Sleeping(this)
 
@@ -60,14 +61,14 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * colliding particle that isn't part of a body. A box's id is `2·particle` for a particle and
      * `2·body + 1` for a body. Read it; don't change it.
      */
-    val broadphase: Broadphase get() = collisions.broadphase
+    public val broadphase: Broadphase get() = collisions.broadphase
 
     /** The length of the last substep, in seconds: what velocities in units per second are measured against. */
-    var substepLength: Float = 1f / 60f / config.substeps
+    public var substepLength: Float = 1f / 60f / config.substeps
         private set
 
     /** How many times [step] has run. */
-    var stepCount: Long = 0
+    public var stepCount: Long = 0
         private set
 
     /**
@@ -81,7 +82,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * After the substeps, islands of rigid bodies that have been still long enough fall asleep: they
      * cost nothing until something wakes them. See [RigidBodies.isAsleep] and [RigidBodies.wake].
      */
-    fun step(dt: Float) {
+    public fun step(dt: Float) {
         require(dt > 0f && dt.isFinite()) { "dt is $dt: it must be a finite time more than 0" }
         val h = dt / config.substeps
         substepLength = h
@@ -134,7 +135,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * Removes particle [p] and every constraint on it. Use this rather than `particles.remove`
      * when [p] has constraints: its handle will be reused, and a new particle shouldn't inherit them.
      */
-    fun removeParticle(p: Int) {
+    public fun removeParticle(p: Int) {
         val c = constraints
         for (link in 0 until c.linkEnd) if (c.isLinkAlive(link) && (c.linkA(link) == p || c.linkB(link) == p)) c.removeLink(link)
         for (pin in 0 until c.pinEnd) if (c.isPinAlive(pin) && c.pinnedParticle(pin) == p) c.removePin(pin)
@@ -149,25 +150,29 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * Returns the particle, or -1 for a body (see [grabbedBody]) or nothing in reach. One thing at a
      * time: grabbing again lets go of the last. See [Grab].
      */
-    fun grab(x: Float, y: Float, reach: Float = Grab.REACH, compliance: Float = Grab.COMPLIANCE): Int = hand.grab(x, y, reach, compliance)
+    public fun grab(x: Float, y: Float, reach: Float = Grab.REACH, compliance: Float = Grab.COMPLIANCE): Int = hand.grab(x, y, reach, compliance)
 
     /** Moves the point the grabbed particle is pulled towards. However far it jumps, it pulls gently. */
-    fun moveGrab(x: Float, y: Float) = hand.moveTo(x, y)
+    public fun moveGrab(x: Float, y: Float) {
+        hand.moveTo(x, y)
+    }
 
     /** Lets go of the grabbed particle, if any. */
-    fun release() = hand.release()
+    public fun release() {
+        hand.release()
+    }
 
     /** The particle being grabbed, or -1. */
-    val grabbed: Int get() = hand.particle
+    public val grabbed: Int get() = hand.particle
 
     /** The rigid body being grabbed, or -1. */
-    val grabbedBody: Int get() = hand.body
+    public val grabbedBody: Int get() = hand.body
 
     /**
      * Adds a soft body of [shape] with its middle at [centerX] and its bottom on [baseY], and returns
      * its handle in [softBodies].
      */
-    fun softBody(
+    public fun softBody(
         shape: SoftBodyShape,
         centerX: Float,
         baseY: Float,
@@ -179,7 +184,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * Adds a rigid body made of [shape] with the shape's origin at ([x], [y]), turned by [angle], and
      * returns its handle in [rigidBodies]. Its mass and inertia come from the shape's size and [density].
      */
-    fun rigidBody(
+    public fun rigidBody(
         shape: Shape,
         x: Float,
         y: Float,
@@ -190,7 +195,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
     ): Int = rigidBodies.add(listOf(shape), x, y, angle, density, material, kind)
 
     /** Adds a rigid body made of several [shapes], such as a hammer of two boxes: see [RigidBodies.add]. */
-    fun rigidBody(
+    public fun rigidBody(
         shapes: List<Shape>,
         x: Float,
         y: Float,
@@ -210,7 +215,7 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * out doesn't hit that surface, so a reflected ray can start where the last one hit. Allocates
      * nothing.
      */
-    fun raycast(fromX: Float, fromY: Float, toX: Float, toY: Float, hit: RayHit, what: Int = Query.EVERYTHING): Boolean =
+    public fun raycast(fromX: Float, fromY: Float, toX: Float, toY: Float, hit: RayHit, what: Int = Query.EVERYTHING): Boolean =
         queries.raycast(fromX, fromY, toX, toY, hit, what)
 
     /**
@@ -218,29 +223,32 @@ class PhysicsWorld(val config: PhysicsConfig = PhysicsConfig()) {
      * [found] and returns how many. A point on a surface is outside it. Allocates nothing once [found]
      * is big enough.
      */
-    fun queryPoint(x: Float, y: Float, found: Overlaps, what: Int = Query.EVERYTHING): Int = queries.queryPoint(x, y, found, what)
+    public fun queryPoint(x: Float, y: Float, found: Overlaps, what: Int = Query.EVERYTHING): Int = queries.queryPoint(x, y, found, what)
 
     /**
      * Finds everything of [what] (see [Query]) that reaches into the box from ([left], [top]) to
      * ([right], [bottom]), writes it into [found] and returns how many. Touching the box's edge counts.
      * Allocates nothing once [found] is big enough.
      */
-    fun queryBox(left: Float, top: Float, right: Float, bottom: Float, found: Overlaps, what: Int = Query.EVERYTHING): Int =
+    public fun queryBox(left: Float, top: Float, right: Float, bottom: Float, found: Overlaps, what: Int = Query.EVERYTHING): Int =
         queries.queryBox(left, top, right, bottom, found, what)
 
     /**
      * Holds particle [p] to rigid body [body] at the point where [p] is now, as softly as [compliance],
      * so each drags the other: a rope tied to a crate. Returns the handle in [attachments].
      */
-    fun attach(p: Int, body: Int, compliance: Float = 0f): Int = attachments.attach(p, body, compliance)
+    public fun attach(p: Int, body: Int, compliance: Float = 0f): Int = attachments.attach(p, body, compliance)
 
     /** Velocity of particle [p] in units per second, over the last substep. */
-    fun velocityX(p: Int): Float = particles.movedX(p) / substepLength
+    public fun velocityX(p: Int): Float = particles.movedX(p) / substepLength
 
-    fun velocityY(p: Int): Float = particles.movedY(p) / substepLength
+    /** How fast particle [p] is moving down, in units a second: see [velocityX]. */
+    public fun velocityY(p: Int): Float = particles.movedY(p) / substepLength
 
     /** Gives particle [p] a velocity of ([vx], [vy]) units per second. */
-    fun setVelocity(p: Int, vx: Float, vy: Float) = particles.setVelocity(p, vx, vy, substepLength)
+    public fun setVelocity(p: Int, vx: Float, vy: Float) {
+        particles.setVelocity(p, vx, vy, substepLength)
+    }
 
     /**
      * Moves every particle that can move: it repeats its last move, a little weaker for [keep], plus
