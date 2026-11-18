@@ -1,5 +1,6 @@
 package klyph.physics.demo
 
+import klyph.physics.PhysicsWorld
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -17,8 +18,9 @@ class SandboxTest {
         val runs = ArrayList<Run>()
 
         class Run : SceneRun {
+            override val world = PhysicsWorld()
             var steps = 0
-            override fun step(dt: Float) {
+            override fun beforeStep(dt: Float) {
                 steps++
             }
         }

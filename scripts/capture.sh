@@ -3,6 +3,7 @@
 #
 #   scripts/capture.sh <scene> <name> [--from S] [--to S] [--details] [--view N] [--grid]
 #                      [--clean] [--slow] [--crop X,Y,W,H] [--width W] [--drag X,Y] [--release]
+#   scripts/capture.sh --example <name> [--from S] [--to S] [--crop X,Y,W,H] [--width W]
 #
 #   <scene>     the scene's number, as the 1-9 keys pick it
 #   <name>      the file name: docs/img/<name>.gif and docs/img/<name>.png
@@ -18,14 +19,18 @@
 #   --drag X,Y  a scripted mouse grabs what's nearest X,Y (world units) half a second in,
 #               lifts and swings it, and lets go at 3.5 s
 #   --release   the release build, for a scene that shows how long its steps take; slower to build
+#   --example   the README's example, not a sandbox scene: klyph sprites on addPhysics. It runs on
+#               klyph's clock, so its frames aren't quite the same from run to run
 #
 # The physics steps once per frame while recording, so the same command makes the same pictures.
 # Needs ffmpeg.
 set -euo pipefail
 
-usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 [[ $# -ge 2 ]] || usage
-scene=$1 name=$2; shift 2
+example=0
+if [[ $1 == --example ]]; then example=1 scene=0 name=$2; else scene=$1 name=$2; fi
+shift 2
 from=0 to=4 width=800 details=0 grid=0 clean=0 every=2 crop= drag= task=run
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -53,6 +58,9 @@ mkdir -p "$out"
 
 # 60 steps a second and a 30 fps GIF: a picture every 2nd step is real speed, every step half speed.
 steps=$(awk "BEGIN { print int($to * 60) }")
+# The example steps on the clock, as a game does, and stops itself after its steps: frames are a cap.
+cap=$steps
+[[ $example == 1 ]] && cap=$((steps * 50))
 first=$(awk "BEGIN { print int($from * 60 / $every) + 1 }")
 filter="scale=$width:-1:flags=lanczos"
 if [[ -n "$crop" ]]; then
@@ -64,9 +72,9 @@ fi
 # frames into that capture's long-gone folder.
 echo "📸 scene $scene, ${from}s to ${to}s -> docs/img/$name.{gif,png}"
 cd "$root"
-SANDBOX_SCENE=$scene SANDBOX_DETAILS=$details SANDBOX_GRID=$grid SANDBOX_CLEAN=$clean SANDBOX_RECORD="$every:$frames" SANDBOX_DRAG="$drag" \
-  KLYPH_FRAMES=$steps KLYPH_OFFSCREEN=1 \
-  ./gradlew -q --no-configuration-cache :demo:$task -Pklyph.frames="$steps" 2>&1 | grep -v "stdlib-per-file-cache\|^ld: warning\|^warning:" || true
+SANDBOX_EXAMPLE=$example SANDBOX_STEPS=$steps SANDBOX_SCENE=$scene SANDBOX_DETAILS=$details SANDBOX_GRID=$grid SANDBOX_CLEAN=$clean SANDBOX_RECORD="$every:$frames" SANDBOX_DRAG="$drag" \
+  KLYPH_FRAMES=$cap KLYPH_OFFSCREEN=1 \
+  ./gradlew -q --no-configuration-cache :demo:$task -Pklyph.frames="$cap" 2>&1 | grep -v "stdlib-per-file-cache\|^ld: warning\|^warning:" || true
 
 last=$(ls "$frames" | sort | tail -1)
 [[ -n "$last" ]] || { echo "📸 no frames were saved"; exit 1; }

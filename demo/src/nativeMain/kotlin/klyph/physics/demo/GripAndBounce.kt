@@ -98,7 +98,7 @@ object GripAndBounceScene : Scene {
             return box
         }
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             if (steps > 0 && steps % EVERY == 0) {
                 for (p in homeX.indices) {
                     ps.moveTo(p, homeX[p], homeY[p])
@@ -106,7 +106,6 @@ object GripAndBounceScene : Scene {
                 }
             }
             steps++
-            world.step(dt)
         }
 
         override fun spawn(x: Float, y: Float) {

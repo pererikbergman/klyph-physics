@@ -33,6 +33,7 @@ Want more? Every page has the details further down.
 | 🔦 | [Raycasts and queries](queries.md) | the first thing along a line, everything at a point or in a box |
 | 🚦 | [Filters, sensors and events](filters.md) | who collides with whom, zones that notice, and what touched |
 | 🏎️ | [Making it fast](performance.md) | 5 000 grains, 1 000 crates and 50 blobs in 19 ms, on one thread |
+| 🔌 | [Using it in a klyph game](klyph.md) | one line to run it, one component to follow a body |
 
 Read them in that order and each one builds on the last. 🧱 New parts of the engine bring their own page with them.
 

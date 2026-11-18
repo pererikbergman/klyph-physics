@@ -161,8 +161,6 @@ object JointsScene : Scene {
         private fun limited(a: Int, b: Int, x: Float, y: Float, lower: Float, upper: Float): Int =
             joints.hinge(a, b, x, y).also { joints.setLimits(it, lower, upper) }
 
-        override fun step(dt: Float) = world.step(dt)
-
         override fun spawn(x: Float, y: Float) {
             if (ragdolls.size >= MAX_RAGDOLLS || !Scenes.isOpen(world, x, y - 30f) || !Scenes.isOpen(world, x, y + 50f)) return
             ragdolls += ragdoll(x, y)

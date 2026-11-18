@@ -87,8 +87,6 @@ object DrumScene : Scene {
             )
         }
 
-        override fun step(dt: Float) = world.step(dt)
-
         override fun spawn(x: Float, y: Float) {
             if (crates.size >= CRATES + Scenes.MAX_SPAWNED || !inside(x, y, CRATE)) return
             crates += world.rigidBody(Shape.box(CRATE, CRATE), x, y)

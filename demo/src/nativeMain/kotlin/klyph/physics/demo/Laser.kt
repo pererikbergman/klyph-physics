@@ -140,10 +140,12 @@ object LaserScene : Scene {
         private val hit = RayHit()
         private var time = 0f
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             time += dt
             world.joints.setMotor(swingerHinge, cos(time * 1.4f) * SWING_SPEED, 1e7f)
-            world.step(dt)
+        }
+
+        override fun afterStep(dt: Float) {
             trace(AIM + sin(time * SWEEP_SPEED) * SWEEP)
             world.queryBox(BIN_LEFT, BIN_TOP, BIN_RIGHT, floor, inBin, Query.RIGID_BODIES or Query.SOFT_BODIES)
         }

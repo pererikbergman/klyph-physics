@@ -96,7 +96,7 @@ object TumbleScene : Scene {
             bodies.setAngularVelocity(b, TWIST * bodies.inverseInertia(b))
         }
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             // Each shape is caught where it was tossed from and tossed again, before it can land.
             for ((k, b) in all.withIndex()) {
                 if (world.grabbedBody != b && bodies.velocityY(b) > 0f && bodies.y(b) >= spotY[k]) toss(b, spotX[k], spotY[k])
@@ -104,7 +104,6 @@ object TumbleScene : Scene {
             time += dt
             val turn = 2f * PI.toFloat() * time / LAP
             bodies.moveKinematic(paddle, ORBIT_X + ORBIT_RADIUS * cos(turn), ORBIT_Y + ORBIT_RADIUS * sin(turn), angle = 2f * turn)
-            world.step(dt)
         }
 
         override fun spawn(x: Float, y: Float) {

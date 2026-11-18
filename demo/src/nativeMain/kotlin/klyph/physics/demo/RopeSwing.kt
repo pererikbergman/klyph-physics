@@ -83,8 +83,6 @@ object RopeSwingScene : Scene {
             blobs = intArrayOf(world.softBody(Scenes.dome(), (left + right) / 2f, (BRIDGE_ROW - 3) * t))
         }
 
-        override fun step(dt: Float) = world.step(dt)
-
         override fun spawn(x: Float, y: Float) {
             if (spawned.size >= Scenes.MAX_SPAWNED || !Scenes.isOpen(world, x, y)) return
             spawned += world.softBody(Scenes.dome(), x, y + Scenes.DOME_HALF_HEIGHT)

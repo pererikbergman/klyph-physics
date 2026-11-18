@@ -15,7 +15,7 @@
 - 🧮 all of it in **one XPBD solver**, so a blob can push a crate and a crate can squash a blob
 - 🧩 a **side module**: the engine itself depends on **nothing**, not even klyph
 - 🎮 a **sandbox** that shows every feature, one scene at a time
-- 🧪 **336 tests**, all green
+- 🧪 **342 tests**, all green
 
 ## ▶️ Run it
 
@@ -41,6 +41,30 @@ SDL3 3.4+ yourself.
 | 🖱️ left mouse | grab something and drag it 🖐️ |
 | 🖱️ right mouse | add the scene's own thing: a blob, a ball, a spring, a burst of grains, a shape |
 | `Esc` | quit |
+
+---
+
+## 🔌 Use it in a klyph game
+
+```kotlin
+fun main() = runApp(AppConfig(title = "crates", fixedRate = 60)) {
+    val physics = addPhysics(PhysicsWorld().apply { solids = level })    // 👈 steps every fixed step
+    repeat(36) { i ->
+        val box = physics.world.rigidBody(Shape.box(16f, 16f), 250f + i % 6 * 20f, 40f + i / 6 * 22f)
+        val crate = world.create()
+        world.add(crate, Transform, Transform())
+        world.add(crate, Sprite, Sprite(assets.whitePixel, width = 16f, height = 16f))
+        world.add(crate, PhysicsBody, PhysicsBody.rigid(box))    // 👈 the sprite follows the box
+        world.add(crate, Interpolated, Interpolated)             // 👈 and moves smoothly at any frame rate
+    }
+}
+```
+
+<img src="docs/img/add-physics.gif" alt="crates drawn as klyph sprites fall, slide down a plank and pile up on the floor" width="100%">
+
+That's all of it: `SANDBOX_EXAMPLE=1 ./gradlew :demo:run` runs it. Add your own fixed-step systems that
+push and steer before `addPhysics`, and the ones that read what happened after. 👉
+[🔌 Using it in a klyph game](docs/explained/klyph.md)
 
 ---
 
@@ -216,7 +240,7 @@ what breaks it. 👉 [**docs/explained**](docs/explained/README.md)
 | folder | what |
 |---|---|
 | `klyph-physics/` | 🧠 the engine. pure Kotlin, **zero dependencies** |
-| `klyph-physics-bridge/` | 🔌 the klyph glue: draw what the physics sees |
+| `klyph-physics-bridge/` | 🔌 the klyph glue: `addPhysics`, `PhysicsBody`, and drawing what the physics sees |
 | `demo/` | 🎮 the sandbox |
 | `scripts/capture.sh` | 📸 records a scene into the GIFs you see here |
 | `docs/` | 📚 [the design](docs/specs/2026-11-10-klyph-physics-design.md) and the explainers |

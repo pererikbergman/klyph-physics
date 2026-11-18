@@ -74,7 +74,7 @@ object PileScene : Scene {
 
         override val blobs: IntArray get() = IntArray(bodies.count) { it }
 
-        override fun step(dt: Float) {
+        override fun beforeStep(dt: Float) {
             if (steps % EVERY == 0 && dropped < COUNT) {
                 val i = dropped++
                 // poured into the funnel's mouth, from anywhere along it
@@ -83,7 +83,6 @@ object PileScene : Scene {
                 colors += COLORS[i % COLORS.size]
             }
             steps++
-            world.step(dt)
         }
 
         /** One more body, the next shape in turn, dropped from ([x], [y]). */

@@ -68,7 +68,7 @@ class MouseTest {
             sandbox.select(i)
             val name = sandbox.scene.name
             repeat(60) { sandbox.fixedStep(dt) }
-            val world = sandbox.run.world ?: fail("$name has no world to grab in")
+            val world = sandbox.run.world
             val ps = world.particles
             val p = movableNearTheMiddle(world)
             val b = bodyNearTheMiddle(world)
@@ -106,7 +106,7 @@ class MouseTest {
         for (i in 0 until sandbox.sceneCount) {
             sandbox.select(i)
             sandbox.fixedStep(dt)
-            val world = sandbox.run.world ?: fail("${sandbox.scene.name} has no world")
+            val world = sandbox.run.world
             val before = world.particles.count + world.rigidBodies.count
             sandbox.spawn(roomWidth / 2f, 60f)
             assertTrue(world.particles.count + world.rigidBodies.count > before, "${sandbox.scene.name}: nothing spawned")
@@ -119,7 +119,7 @@ class MouseTest {
     fun nothingIsSpawnedInsideAWallAndNoMoreThanTheLimit() {
         val sandbox = Sandbox(Scenes.all)
         sandbox.select(Scenes.all.indexOf(RopeSwingScene))
-        val world = sandbox.run.world!!
+        val world = sandbox.run.world
         val bodies = world.softBodies.count
         sandbox.spawn(8f, 100f)
         assertEquals(bodies, world.softBodies.count, "not inside the left wall")
@@ -142,12 +142,12 @@ class MouseTest {
         while (sandbox.stepCount < ScriptedHand.RELEASE_AT + 30) {
             hand.drive(sandbox)
             sandbox.fixedStep(dt)
-            val world = sandbox.run.world!!
+            val world = sandbox.run.world
             if (sandbox.stepCount == 100L) heldAt100 = world.grabbed
             if (world.grabbed >= 0) lowestY = minOf(lowestY, world.particles.y(world.grabbed))
         }
         assertTrue(heldAt100 >= 0, "it held something")
         assertTrue(lowestY < 216f - ScriptedHand.LIFT / 2f, "and lifted it: up to $lowestY")
-        assertEquals(-1, sandbox.run.world!!.grabbed, "and let go")
+        assertEquals(-1, sandbox.run.world.grabbed, "and let go")
     }
 }
