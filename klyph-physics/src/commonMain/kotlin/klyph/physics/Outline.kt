@@ -6,13 +6,15 @@ import kotlin.math.sqrt
  * A closed outline of points, in order: what [Outline] works on. A soft body's ring is one, and so is a body
  * in a [PhysicsWorld], through [SoftBodyStore.ring].
  */
-interface Ring {
+public interface Ring {
     /** How many points the outline has. The one after the last is the first. */
-    val ringCount: Int
+    public val ringCount: Int
 
-    fun ringX(i: Int): Float
+    /** Where outline point [i] is, across. */
+    public fun ringX(i: Int): Float
 
-    fun ringY(i: Int): Float
+    /** Where outline point [i] is, down. */
+    public fun ringY(i: Int): Float
 }
 
 /**
@@ -24,11 +26,11 @@ interface Ring {
  * Inside is decided by winding number, not even-odd: a point the outline winds around at all counts,
  * so a folded part of the body is solid rather than hollow.
  */
-object Outline {
+public object Outline {
     private fun next(ring: Ring, i: Int): Int = if (i + 1 == ring.ringCount) 0 else i + 1
 
     /** Whether the point ([px], [py]) is inside the outline of [body]. */
-    fun contains(body: Ring, px: Float, py: Float): Boolean {
+    public fun contains(body: Ring, px: Float, py: Float): Boolean {
         var winding = 0
         for (i in 0 until body.ringCount) {
             val j = next(body, i)
@@ -46,7 +48,7 @@ object Outline {
      * Finds the point on the outline of [body] nearest to ([px], [py]), writes its x and y to
      * `out[0]` and `out[1]`, and returns its squared distance from the point.
      */
-    fun nearestPoint(body: Ring, px: Float, py: Float, out: FloatArray): Float {
+    public fun nearestPoint(body: Ring, px: Float, py: Float, out: FloatArray): Float {
         var best = Float.MAX_VALUE
         for (e in 0 until body.ringCount) {
             val f = next(body, e)
@@ -71,7 +73,7 @@ object Outline {
      * right, and returns how many. [left] and [right] must hold at least as many entries as the body
      * has outline particles.
      */
-    fun spans(body: Ring, y: Float, left: FloatArray, right: FloatArray): Int {
+    public fun spans(body: Ring, y: Float, left: FloatArray, right: FloatArray): Int {
         var crossings = 0
         for (i in 0 until body.ringCount) {
             val j = next(body, i)

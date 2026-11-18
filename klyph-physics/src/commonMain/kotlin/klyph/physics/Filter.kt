@@ -16,18 +16,18 @@ package klyph.physics
  * world.rigidBodies.setFilter(ghost, category = GHOST, mask = Filter.ALL and PLAYER.inv())
  * ```
  */
-object Filter {
+public object Filter {
     /** The category everything is in until it's given another. */
-    const val DEFAULT = 1
+    public const val DEFAULT: Int = 1
 
     /** The level's category: everything with this bit in its mask is kept out of the solids. */
-    const val SOLIDS = 1 shl 30
+    public const val SOLIDS: Int = 1 shl 30
 
     /** Every category: the mask everything has until it's given another. */
-    const val ALL = -1
+    public const val ALL: Int = -1
 
     /** Whether something of [categoryA] and [maskA] collides with something of [categoryB] and [maskB]. */
-    fun collides(categoryA: Int, maskA: Int, categoryB: Int, maskB: Int): Boolean =
+    public fun collides(categoryA: Int, maskA: Int, categoryB: Int, maskB: Int): Boolean =
         categoryA and maskB != 0 && categoryB and maskA != 0
 
     internal fun checkCategory(category: Int) {
@@ -38,7 +38,7 @@ object Filter {
 }
 
 /** What one side of a touch is: see [Touches]. */
-enum class TouchKind {
+public enum class TouchKind {
     RIGID_BODY,
     SOFT_BODY,
 
@@ -53,27 +53,27 @@ enum class TouchKind {
  * A list of touches, each between two things: [kindA] [a] and [kindB] [b]. Filled in by [Events] each
  * step; read it, don't keep it, as the next step writes over it. Indexing allocates nothing.
  */
-class Touches internal constructor() {
+public class Touches internal constructor() {
     private var keys = LongArray(16)
 
     /** How many touches there are. */
-    var count: Int = 0
+    public var count: Int = 0
         private set
 
     /** What the first side of touch [i] is. For a sensor's touch, the sensor. */
-    fun kindA(i: Int): TouchKind = TouchKind.entries[TouchPairs.kindA(keys[i])]
+    public fun kindA(i: Int): TouchKind = TouchKind.entries[TouchPairs.kindA(keys[i])]
 
     /** The first side's handle: a rigid body, a soft body or a particle. */
-    fun a(i: Int): Int = TouchPairs.a(keys[i])
+    public fun a(i: Int): Int = TouchPairs.a(keys[i])
 
     /** What the second side of touch [i] is. */
-    fun kindB(i: Int): TouchKind = TouchKind.entries[TouchPairs.kindB(keys[i])]
+    public fun kindB(i: Int): TouchKind = TouchKind.entries[TouchPairs.kindB(keys[i])]
 
     /** The second side's handle, or -1 for [TouchKind.SOLIDS]. */
-    fun b(i: Int): Int = TouchPairs.b(keys[i])
+    public fun b(i: Int): Int = TouchPairs.b(keys[i])
 
     /** Whether any touch has [kind] [handle] on either side. */
-    fun involves(kind: TouchKind, handle: Int): Boolean {
+    public fun involves(kind: TouchKind, handle: Int): Boolean {
         for (i in 0 until count) {
             val k = keys[i]
             if (TouchPairs.kindA(k) == kind.ordinal && TouchPairs.a(k) == handle) return true
@@ -83,7 +83,7 @@ class Touches internal constructor() {
     }
 
     /** Whether there's a touch between [kindA] [a] and [kindB] [b], either way round. */
-    fun has(kindA: TouchKind, a: Int, kindB: TouchKind, b: Int): Boolean {
+    public fun has(kindA: TouchKind, a: Int, kindB: TouchKind, b: Int): Boolean {
         val one = TouchPairs.key(kindA.ordinal, a, kindB.ordinal, b)
         val other = TouchPairs.key(kindB.ordinal, b, kindA.ordinal, a)
         for (i in 0 until count) if (keys[i] == one || keys[i] == other) return true

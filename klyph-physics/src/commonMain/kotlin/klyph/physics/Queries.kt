@@ -7,55 +7,61 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 /** What a query looks at: [RIGID_BODIES], [SOFT_BODIES] and [SOLIDS], or'ed together, or [EVERYTHING]. */
-object Query {
-    const val RIGID_BODIES = 1
-    const val SOFT_BODIES = 2
-    const val SOLIDS = 4
-    const val EVERYTHING = RIGID_BODIES or SOFT_BODIES or SOLIDS
+public object Query {
+    /** Look for rigid bodies. */
+    public const val RIGID_BODIES: Int = 1
+    /** Look for soft bodies. */
+    public const val SOFT_BODIES: Int = 2
+    /** Look for the solids: tiles and moving solids. */
+    public const val SOLIDS: Int = 4
+    /** Look for everything. */
+    public const val EVERYTHING: Int = RIGID_BODIES or SOFT_BODIES or SOLIDS
 }
 
 /** What a ray hit: see [RayHit.what]. */
-enum class HitKind { NOTHING, RIGID_BODY, SOFT_BODY, SOLID }
+public enum class HitKind { NOTHING, RIGID_BODY, SOFT_BODY, SOLID }
 
 /**
  * Where a ray first hit something: filled in by [PhysicsWorld.raycast]. Make one and keep it, so a
  * raycast allocates nothing.
  */
-class RayHit {
+public class RayHit {
     /** What it hit, or [HitKind.NOTHING]. */
-    var what: HitKind = HitKind.NOTHING
+    public var what: HitKind = HitKind.NOTHING
         internal set
 
     /** The rigid body or soft body it hit, a handle in [PhysicsWorld.rigidBodies] or [PhysicsWorld.softBodies]; -1 for a solid or nothing. */
-    var body: Int = -1
+    public var body: Int = -1
         internal set
 
     /** Which of the rigid body's shapes it hit, an index for [RigidBodies.shape]; -1 for anything else. */
-    var shape: Int = -1
+    public var shape: Int = -1
         internal set
 
     /** The solid it hit, or `null`. */
-    var solid: Solid? = null
+    public var solid: Solid? = null
         internal set
 
     /** Where it hit. */
-    var x: Float = 0f
+    public var x: Float = 0f
         internal set
-    var y: Float = 0f
+    /** Where the ray hit, down: see [x]. */
+    public var y: Float = 0f
         internal set
 
     /** The surface's normal where it hit, a unit long, pointing back out towards where the ray came from. */
-    var normalX: Float = 0f
+    public var normalX: Float = 0f
         internal set
-    var normalY: Float = 0f
+    /** Which way the surface hit faces, down: see [normalX]. */
+    public var normalY: Float = 0f
         internal set
 
     /** How far along the ray it hit: 0 at its start, 1 at its end. */
-    var fraction: Float = 1f
+    public var fraction: Float = 1f
         internal set
 
     /** Whether it hit anything. */
-    val hit: Boolean get() = what != HitKind.NOTHING
+    public val hit: Boolean get() = what != HitKind.NOTHING
 
     internal fun clear() {
         what = HitKind.NOTHING
@@ -70,43 +76,43 @@ class RayHit {
  * What a point or box query found: filled in by [PhysicsWorld.queryPoint] and [PhysicsWorld.queryBox].
  * Make one and keep it: it only allocates when it has to grow, the first few times.
  */
-class Overlaps(initialCapacity: Int = 16) {
+public class Overlaps(initialCapacity: Int = 16) {
     private var rigid = IntArray(initialCapacity)
     private var soft = IntArray(initialCapacity)
     private var solidsFound = arrayOfNulls<Solid>(initialCapacity)
 
     /** How many rigid bodies it found. */
-    var rigidBodyCount: Int = 0
+    public var rigidBodyCount: Int = 0
         private set
 
     /** How many soft bodies it found. */
-    var softBodyCount: Int = 0
+    public var softBodyCount: Int = 0
         private set
 
     /** How many solids it found. */
-    var solidCount: Int = 0
+    public var solidCount: Int = 0
         private set
 
     /** How many things it found in all. */
-    val count: Int get() = rigidBodyCount + softBodyCount + solidCount
+    public val count: Int get() = rigidBodyCount + softBodyCount + solidCount
 
     /** The [i]th rigid body it found, a handle in [PhysicsWorld.rigidBodies]. */
-    fun rigidBody(i: Int): Int = rigid[i]
+    public fun rigidBody(i: Int): Int = rigid[i]
 
     /** The [i]th soft body it found, a handle in [PhysicsWorld.softBodies]. */
-    fun softBody(i: Int): Int = soft[i]
+    public fun softBody(i: Int): Int = soft[i]
 
     /** The [i]th solid it found. */
-    fun solid(i: Int): Solid = solidsFound[i]!!
+    public fun solid(i: Int): Solid = solidsFound[i]!!
 
     /** Whether it found rigid body [b]. */
-    fun hasRigidBody(b: Int): Boolean {
+    public fun hasRigidBody(b: Int): Boolean {
         for (i in 0 until rigidBodyCount) if (rigid[i] == b) return true
         return false
     }
 
     /** Whether it found soft body [b]. */
-    fun hasSoftBody(b: Int): Boolean {
+    public fun hasSoftBody(b: Int): Boolean {
         for (i in 0 until softBodyCount) if (soft[i] == b) return true
         return false
     }

@@ -42,18 +42,18 @@ import kotlin.math.sqrt
  * stretched, turned quads of [pixel] (`App.assets.whitePixel`). Labels need a [font], such as
  * `App.assets.defaultFont`; without one they are not drawn.
  */
-class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null) {
+public class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null) {
     /** How much to draw on top of the plain view. */
-    var view: DebugView = DebugView.OFF
+    public var view: DebugView = DebugView.OFF
 
     /** Whether particles and tile edges are drawn: any [view] but [DebugView.OFF]. */
-    val showDetails: Boolean get() = view.shows(DebugView.BODIES)
+    public val showDetails: Boolean get() = view.shows(DebugView.BODIES)
 
     /** Whether [overlay] also shades the broadphase's cells and outlines its boxes. */
-    var showBroadphase: Boolean = false
+    public var showBroadphase: Boolean = false
 
     /** The canvas layer the plain view is drawn in; details go in the layers just above it. */
-    var layer: Int = 0
+    public var layer: Int = 0
 
     private var spanLeft = FloatArray(32)
     private var spanRight = FloatArray(32)
@@ -62,7 +62,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * Draws every live particle in [particles] as a square as wide as the particle (at least [DOT]), in the
      * colour [colorOf] picks for its handle.
      */
-    inline fun particles(canvas: Canvas, particles: Particles, colorOf: (Int) -> Color) {
+    public inline fun particles(canvas: Canvas, particles: Particles, colorOf: (Int) -> Color) {
         for (p in 0 until particles.end) {
             if (!particles.isAlive(p)) continue
             val size = max(particles.radius(p) * 2f, DOT)
@@ -71,7 +71,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     }
 
     /** Draws every live distance and rope in [constraints] as a line between its particles: ropes in [ropeColor]. */
-    fun links(canvas: Canvas, constraints: Constraints, particles: Particles, color: Color = LINK, ropeColor: Color = ROPE) {
+    public fun links(canvas: Canvas, constraints: Constraints, particles: Particles, color: Color = LINK, ropeColor: Color = ROPE) {
         for (c in 0 until constraints.linkEnd) {
             if (!constraints.isLinkAlive(c)) continue
             val a = constraints.linkA(c)
@@ -86,7 +86,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * Fills a rectangle [width] by [height] centred on ([x], [y]) and turned by [angle] radians, in
      * [color], with a darker edge: how a rigid box looks.
      */
-    fun turnedRect(canvas: Canvas, x: Float, y: Float, width: Float, height: Float, angle: Float, color: Color) {
+    public fun turnedRect(canvas: Canvas, x: Float, y: Float, width: Float, height: Float, angle: Float, color: Color) {
         canvas.drawSprite(pixel, x = x, y = y, width = width, height = height, rotation = angle, color = color, layer = layer, space = DrawSpace.WORLD)
         val c = cos(angle)
         val s = sin(angle)
@@ -108,7 +108,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * round shape so its turning shows; with details, also marks its centre of mass. A sleeping body
      * is drawn faded, half way to the background.
      */
-    fun rigidBody(canvas: Canvas, world: PhysicsWorld, body: Int, color: Color) {
+    public fun rigidBody(canvas: Canvas, world: PhysicsWorld, body: Int, color: Color) {
         val bodies = world.rigidBodies
         val color = if (bodies.isAsleep(body)) color.faded() else color
         val edge = color.darker()
@@ -136,7 +136,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * Draws where two shapes touch, as [manifold] found it: each point as a dot on each shape's
      * surface, joined, and a line from the second shape's along the normal, in [color].
      */
-    fun manifold(canvas: Canvas, manifold: Manifold, color: Color = CONTACT) {
+    public fun manifold(canvas: Canvas, manifold: Manifold, color: Color = CONTACT) {
         val top = layer + 7
         for (i in 0 until manifold.count) {
             val ax = manifold.pointAX(i)
@@ -226,12 +226,12 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     }
 
     /** Draws a square [size] wide centred on ([x], [y]) in [color], in the plain view's layer. */
-    fun square(canvas: Canvas, x: Float, y: Float, size: Float, color: Color) {
+    public fun square(canvas: Canvas, x: Float, y: Float, size: Float, color: Color) {
         rect(canvas, x - size / 2f, y - size / 2f, size, size, color, layer)
     }
 
     /** Fills soft body [body] of [world] in [color] and outlines it; with details, also marks every particle. */
-    fun softBody(canvas: Canvas, world: PhysicsWorld, body: Int, color: Color) {
+    public fun softBody(canvas: Canvas, world: PhysicsWorld, body: Int, color: Color) {
         val bodies = world.softBodies
         ring(canvas, bodies.ring(body), bodies.minY(body), bodies.maxY(body), color)
         if (!showDetails) return
@@ -268,7 +268,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * Everything [view] and [showBroadphase] ask for that a scene doesn't draw itself: [constraints],
      * [contacts] and [broadphase]. Call it after the scene, every frame.
      */
-    fun overlay(canvas: Canvas, world: PhysicsWorld) {
+    public fun overlay(canvas: Canvas, world: PhysicsWorld) {
         constraints(canvas, world)
         contacts(canvas, world)
         if (showBroadphase) broadphase(canvas, world)
@@ -281,7 +281,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * on its anchor (a line to its other end for a distance joint), a bend as a dot on
      * its middle particle, an area as a dot in its middle.
      */
-    fun constraints(canvas: Canvas, world: PhysicsWorld) {
+    public fun constraints(canvas: Canvas, world: PhysicsWorld) {
         if (!view.shows(DebugView.CONSTRAINTS)) return
         val ps = world.particles
         val cs = world.constraints
@@ -349,7 +349,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * dot bigger. A hinge with limits shows them as a wedge fixed to its second end, and its first
      * end's direction as a needle inside it; a slider shows the stretch of its axis it may slide along.
      */
-    fun joints(canvas: Canvas, world: PhysicsWorld) {
+    public fun joints(canvas: Canvas, world: PhysicsWorld) {
         if (!view.shows(DebugView.CONSTRAINTS)) return
         val joints = world.joints
         val bodies = world.rigidBodies
@@ -416,7 +416,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * the first body: green where friction holds it, orange where it slides, dim where it was found
      * near but didn't push.
      */
-    fun contacts(canvas: Canvas, world: PhysicsWorld) {
+    public fun contacts(canvas: Canvas, world: PhysicsWorld) {
         if (!view.shows(DebugView.EVERYTHING)) return
         // how fast each rigid body is going: where it will be in a tenth of a second
         val bodies = world.rigidBodies
@@ -458,7 +458,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * and outlines each box: one per soft body and one per colliding particle, from the world's own
      * broadphase, and one per rigid body, from its contacts' broadphase.
      */
-    fun broadphase(canvas: Canvas, world: PhysicsWorld) {
+    public fun broadphase(canvas: Canvas, world: PhysicsWorld) {
         broadphaseBoxes(canvas, world.broadphase)
         broadphaseBoxes(canvas, world.rigidContacts.broadphase)
     }
@@ -486,7 +486,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * Draws the solids of [grid] that lie in [view], tiles and moving ones alike, in [color]. Tiles
      * outside [view] cost nothing; with details, each tile's edge is drawn too.
      */
-    fun solids(canvas: Canvas, grid: SolidGrid, view: Rect, color: Color = SOLID) {
+    public fun solids(canvas: Canvas, grid: SolidGrid, view: Rect, color: Color = SOLID) {
         val t = grid.tileSize
         val firstCol = max(0, floor(view.x / t).toInt())
         val lastCol = min(grid.cols - 1, floor((view.x + view.width) / t).toInt())
@@ -500,7 +500,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     }
 
     /** Fills one [solid] in [color]: a box whole, a slope one row at a time under its surface. */
-    fun solid(canvas: Canvas, solid: Solid, color: Color) {
+    public fun solid(canvas: Canvas, solid: Solid, color: Color) {
         val width = solid.right - solid.left
         when (solid.shape) {
             SolidShape.BOX -> rect(canvas, solid.left, solid.top, width, solid.bottom - solid.top, color, layer)
@@ -537,7 +537,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
      * busy cells glow brighter, and a line between the two [particles] of every candidate pair. The
      * boxes' ids must be particle handles.
      */
-    fun broadphase(canvas: Canvas, broadphase: Broadphase, particles: Particles, cellColor: Color = CELL, pairColor: Color = PAIR) {
+    public fun broadphase(canvas: Canvas, broadphase: Broadphase, particles: Particles, cellColor: Color = CELL, pairColor: Color = PAIR) {
         val size = broadphase.cellSize
         for (e in 0 until broadphase.count) {
             val col0 = floor(broadphase.left(e) / size).toInt()
@@ -554,13 +554,13 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
     }
 
     /** Writes [text] centred on [x] with its top at [y], in world units, above everything else drawn here. */
-    fun label(canvas: Canvas, text: CharSequence, x: Float, y: Float, color: Color = LABEL) {
+    public fun label(canvas: Canvas, text: CharSequence, x: Float, y: Float, color: Color = LABEL) {
         val font = font ?: return
         canvas.drawText(font, text, x, y, color, scale = 1f, align = TextAlign.CENTER, layer = layer + 5, space = DrawSpace.WORLD, shadow = LABEL_SHADOW)
     }
 
     /** A line of [thickness] world units from (x0, y0) to (x1, y1). */
-    fun line(canvas: Canvas, x0: Float, y0: Float, x1: Float, y1: Float, thickness: Float, color: Color, layer: Int) {
+    public fun line(canvas: Canvas, x0: Float, y0: Float, x1: Float, y1: Float, thickness: Float, color: Color, layer: Int) {
         val dx = x1 - x0
         val dy = y1 - y0
         canvas.drawSprite(
@@ -587,59 +587,59 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
         (red + ASLEEP.red) / 2f, (green + ASLEEP.green) / 2f, (blue + ASLEEP.blue) / 2f, alpha,
     )
 
-    companion object {
+    public companion object {
         /** How many straight edges make a circle's outline; a capsule's two ends share as many. */
-        const val ROUND_STEPS = 24
+        internal const val ROUND_STEPS = 24
         private const val MAX_OUTLINE = ROUND_STEPS + 2
 
         /** Height of one row of a filled shape, in world units. */
-        const val ROW = 1f
+        internal const val ROW = 1f
 
-        const val OUTLINE = 1f
-        const val EDGE = 0.5f
-        const val DOT = 2f
-        const val CORE_DOT = 3f
-        const val FOOT = 3f
+        internal const val OUTLINE = 1f
+        internal const val EDGE = 0.5f
+        @PublishedApi internal const val DOT: Float = 2f
+        internal const val CORE_DOT = 3f
+        internal const val FOOT = 3f
 
-        val SOLID = Color(0x3A4A66FFu)
+        internal val SOLID = Color(0x3A4A66FFu)
 
         /** What a sleeping body's colour fades half way to. */
-        val ASLEEP = Color(0x2A3248FFu)
-        val MOVING = Color(0x7A5A3AFFu)
-        val PARTICLE = Color(0xFFFFFFFFu)
-        val LINK = Color(0x9FB3D9FFu)
-        val ROPE = Color(0xC9A26BFFu)
-        val CORE = Color(0xFF4040FFu)
-        val FLOOR_CONTACT = Color(0xFFD36BFFu)
-        val LABEL = Color(0xE8ECF4FFu)
-        val CONTACT = Color(0x5BE0E0FFu)
-        val JOINT = Color(0xFFD36BFFu)
-        val MOTOR = Color(0xFF9A3DFFu)
-        val LIMIT = Color(0.6f, 0.65f, 0.75f, 0.7f)
-        val VELOCITY = Color(0.9f, 0.92f, 1f, 0.6f)
+        internal val ASLEEP = Color(0x2A3248FFu)
+        internal val MOVING = Color(0x7A5A3AFFu)
+        internal val PARTICLE = Color(0xFFFFFFFFu)
+        internal val LINK = Color(0x9FB3D9FFu)
+        internal val ROPE = Color(0xC9A26BFFu)
+        internal val CORE = Color(0xFF4040FFu)
+        internal val FLOOR_CONTACT = Color(0xFFD36BFFu)
+        internal val LABEL = Color(0xE8ECF4FFu)
+        internal val CONTACT = Color(0x5BE0E0FFu)
+        internal val JOINT = Color(0xFFD36BFFu)
+        internal val MOTOR = Color(0xFF9A3DFFu)
+        internal val LIMIT = Color(0.6f, 0.65f, 0.75f, 0.7f)
+        internal val VELOCITY = Color(0.9f, 0.92f, 1f, 0.6f)
 
         /** How far out a hinge's limits are drawn, and how much of an unlimited slider's axis. */
-        const val LIMIT_RADIUS = 10f
-        const val SLIDE_SPAN = 20f
+        internal const val LIMIT_RADIUS = 10f
+        internal const val SLIDE_SPAN = 20f
 
         /** How far ahead a body's velocity line reaches, in seconds. */
-        const val AHEAD = 0.1f
-        val HELD = Color(0x6BE07AFFu)
-        val SLIDING = Color(0xFF9A3DFFu)
-        val NEAR = Color(0.6f, 0.65f, 0.75f, 0.4f)
-        val SLACK = Color(0.55f, 0.6f, 0.7f, 0.35f)
-        val BOX = Color(0.36f, 0.55f, 0.94f, 0.6f)
+        internal const val AHEAD = 0.1f
+        internal val HELD = Color(0x6BE07AFFu)
+        internal val SLIDING = Color(0xFF9A3DFFu)
+        internal val NEAR = Color(0.6f, 0.65f, 0.75f, 0.4f)
+        internal val SLACK = Color(0.55f, 0.6f, 0.7f, 0.35f)
+        internal val BOX = Color(0.36f, 0.55f, 0.94f, 0.6f)
 
         /** How far along a contact's normal its line reaches, in world units. */
-        const val NORMAL = 6f
+        internal const val NORMAL = 6f
 
         /** What counts as full stress, drawn fully blue or red: a link 10% off its length... */
-        const val FULL_STRAIN = 0.1f
+        internal const val FULL_STRAIN = 0.1f
 
         /** ...a pinned particle 8 units from its point, a bend half a radian off, an area 20% off. */
-        const val FULL_PIN = 8f
-        const val FULL_BEND = 0.5f
-        const val FULL_AREA = 0.2f
+        internal const val FULL_PIN = 8f
+        internal const val FULL_BEND = 0.5f
+        internal const val FULL_AREA = 0.2f
 
         private val SQUEEZED = Color(0x4D7CFFFFu)
         private val RESTING = Color(0xB8C2D6FFu)
@@ -650,7 +650,7 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
          * The colour of a stress of [amount]: -1 or less is fully squeezed (blue), 0 at rest (grey),
          * 1 or more fully stretched (red).
          */
-        fun stressColor(amount: Float): Color {
+        public fun stressColor(amount: Float): Color {
             val k = if (amount.isNaN()) 0f else amount.coerceIn(-1f, 1f)
             val to = if (k < 0f) SQUEEZED else STRETCHED
             val t = abs(k)
@@ -661,8 +661,8 @@ class DebugDraw(private val pixel: TextureRegion, private val font: Font? = null
                 1f,
             )
         }
-        val CELL = Color(0.36f, 0.55f, 0.94f, 0.12f)
-        val PAIR = Color(0xFF6BB5FFu)
+        internal val CELL = Color(0.36f, 0.55f, 0.94f, 0.12f)
+        internal val PAIR = Color(0xFF6BB5FFu)
 
         /** Half a world unit: at the sandbox's zoom, one screen point. */
         private val LABEL_SHADOW = TextShadow(offsetX = 0.5f, offsetY = 0.5f)

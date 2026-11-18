@@ -20,27 +20,27 @@ package klyph.physics
  * ground. A floor is any solid that pushed the particle up: a surface flatter than 60 degrees. Walls
  * and ceilings push too, but aren't floors and report no tags.
  */
-class Events internal constructor(private val particles: Particles, private val bodies: RigidBodies = RigidBodies()) {
+public class Events internal constructor(private val particles: Particles, private val bodies: RigidBodies = RigidBodies()) {
     /** Things that started touching in the last step. */
-    val contactsBegun = Touches()
+    public val contactsBegun: Touches = Touches()
 
     /** Things that stopped touching in the last step. */
-    val contactsEnded = Touches()
+    public val contactsEnded: Touches = Touches()
 
     /** Things that came into a sensor in the last step: the sensor is each one's [Touches.a]. */
-    val sensorsEntered = Touches()
+    public val sensorsEntered: Touches = Touches()
 
     /** Things that left a sensor, or were removed while in it, in the last step. */
-    val sensorsExited = Touches()
+    public val sensorsExited: Touches = Touches()
 
     private var broken = IntArray(4)
 
     /** How many joints broke in the last step. */
-    var jointsBroken: Int = 0
+    public var jointsBroken: Int = 0
         private set
 
     /** The [i]th joint that broke in the last step. It's been removed: its handle may be handed out again. */
-    fun brokenJoint(i: Int): Int = broken[i]
+    public fun brokenJoint(i: Int): Int = broken[i]
 
     /**
      * Whether particles' touches are written down now: only in a substep's last pass, as once a
@@ -55,30 +55,31 @@ class Events internal constructor(private val particles: Particles, private val 
     private var sensedBefore = TouchPairs()
 
     /** Whether particle [p] stood on a floor at any time during the last step. */
-    fun isOnFloor(p: Int): Boolean = particles.contact[p] and NOW != 0
+    public fun isOnFloor(p: Int): Boolean = particles.contact[p] and NOW != 0
 
     /** Whether particle [p] stood on a floor during the step before the last. */
-    fun wasOnFloor(p: Int): Boolean = particles.contact[p] and BEFORE != 0
+    public fun wasOnFloor(p: Int): Boolean = particles.contact[p] and BEFORE != 0
 
     /** The tags of every floor particle [p] stood on during the last step, or-ed together; 0 for none. */
-    fun floorTags(p: Int): Int = particles.floorTag[p]
+    public fun floorTags(p: Int): Int = particles.floorTag[p]
 
     /**
      * Whether particle [p] was pushed out of anything during the last step: a solid, a body or another
      * particle, floor or not.
      */
-    fun isTouching(p: Int): Boolean = particles.contact[p] and TOUCHING != 0
+    public fun isTouching(p: Int): Boolean = particles.contact[p] and TOUCHING != 0
 
     /**
      * The unit normal of particle [p]'s last contact, pointing away from what it touched: (0, -1) on a
      * flat floor. Only meaningful while [isTouching].
      */
-    fun contactNormalX(p: Int): Float = particles.contactNx[p]
+    public fun contactNormalX(p: Int): Float = particles.contactNx[p]
 
-    fun contactNormalY(p: Int): Float = particles.contactNy[p]
+    /** Which way particle [p] was last pushed, down: see [contactNormalX]. */
+    public fun contactNormalY(p: Int): Float = particles.contactNy[p]
 
     /** What particle [p] last touched: another particle, an edge's first particle, or -1 for a solid. */
-    fun touchedParticle(p: Int): Int = particles.contactA[p]
+    public fun touchedParticle(p: Int): Int = particles.contactA[p]
 
     /** Starts a step: this step's touches become the last step's, and nothing has been touched yet. */
     internal fun beginStep() {

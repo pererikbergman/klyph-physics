@@ -12,13 +12,13 @@ import kotlin.math.sqrt
  * every step its target is put back within [maxPull] of what it holds. So a mouse flung across the
  * screen in one frame drags a body along quickly, but never yanks one particle out of it.
  */
-class Grab internal constructor(private val world: PhysicsWorld) {
+public class Grab internal constructor(private val world: PhysicsWorld) {
     /** The particle held, or -1 when none is. */
-    var particle: Int = -1
+    public var particle: Int = -1
         private set
 
     /** The rigid body held, or -1 when none is. */
-    var body: Int = -1
+    public var body: Int = -1
         private set
 
     // Where on [body] it's held, from its centre of mass in its own frame, and how soft the hold is.
@@ -32,13 +32,14 @@ class Grab internal constructor(private val world: PhysicsWorld) {
     private var pullY = 0f
 
     /** Where the hand is: the point the particle is pulled towards. */
-    var targetX: Float = 0f
+    public var targetX: Float = 0f
         private set
-    var targetY: Float = 0f
+    /** Where the hand is, down: see [targetX]. */
+    public var targetY: Float = 0f
         private set
 
     /** The furthest from the particle that the pin pulls from, in world units. */
-    var maxPull: Float = MAX_PULL
+    public var maxPull: Float = MAX_PULL
         set(value) {
             require(value > 0f) { "maxPull is $value: it must be more than 0" }
             field = value
@@ -46,12 +47,14 @@ class Grab internal constructor(private val world: PhysicsWorld) {
 
     private var pin = -1
 
-    val isHolding: Boolean get() = particle >= 0 || body >= 0
+    /** Whether the hand holds something: a particle or a body. */
+    public val isHolding: Boolean get() = particle >= 0 || body >= 0
 
     /** Where the point held is in the world: the particle, or the grabbed point of the body. */
-    val heldX: Float get() = if (body >= 0) world.rigidBodies.worldX(body, localX, localY) else world.particles.x(particle)
+    public val heldX: Float get() = if (body >= 0) world.rigidBodies.worldX(body, localX, localY) else world.particles.x(particle)
 
-    val heldY: Float get() = if (body >= 0) world.rigidBodies.worldY(body, localX, localY) else world.particles.y(particle)
+    /** Where the point held is in the world, down: see [heldX]. */
+    public val heldY: Float get() = if (body >= 0) world.rigidBodies.worldY(body, localX, localY) else world.particles.y(particle)
 
     /**
      * Takes hold of what is at ([x], [y]), letting go of whatever it held first: a dynamic rigid body
@@ -60,7 +63,7 @@ class Grab internal constructor(private val world: PhysicsWorld) {
      * soft per unit of its mass, so a heavy crate follows as well as a light one. Returns the particle,
      * or -1 when it took a body (see [body]) or nothing.
      */
-    fun grab(x: Float, y: Float, reach: Float = REACH, compliance: Float = COMPLIANCE): Int {
+    public fun grab(x: Float, y: Float, reach: Float = REACH, compliance: Float = COMPLIANCE): Int {
         release()
         val bodies = world.rigidBodies
         for (b in bodies.end - 1 downTo 0) {
@@ -98,13 +101,13 @@ class Grab internal constructor(private val world: PhysicsWorld) {
     }
 
     /** Moves the hand to ([x], [y]); the held particle follows from the next step. */
-    fun moveTo(x: Float, y: Float) {
+    public fun moveTo(x: Float, y: Float) {
         targetX = x
         targetY = y
     }
 
     /** Lets go. Does nothing when nothing is held. */
-    fun release() {
+    public fun release() {
         if (pin >= 0 && stillHeld()) world.constraints.removePin(pin)
         particle = -1
         pin = -1
@@ -181,18 +184,18 @@ class Grab internal constructor(private val world: PhysicsWorld) {
         return world.particles.isAlive(particle) && cs.isPinAlive(pin) && cs.pinnedParticle(pin) == particle
     }
 
-    companion object {
+    public companion object {
         /** How far from the point a particle can be and still be taken hold of. */
-        const val REACH = 24f
+        public const val REACH: Float = 24f
 
         /** How soft the hand's pin is: firm enough to lift a blob, soft enough to give a little. */
-        const val COMPLIANCE = 0.00005f
+        public const val COMPLIANCE: Float = 0.00005f
 
         /**
          * The furthest the pin pulls from, by default: less than a 16-unit tile. Pulled from much
          * further, a particle can be dragged more than halfway into a floor in one step, and pushed out
          * of its far side, tearing its body in two.
          */
-        const val MAX_PULL = 12f
+        public const val MAX_PULL: Float = 12f
     }
 }

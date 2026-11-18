@@ -16,29 +16,29 @@ import kotlin.math.atan2
  * Give the entity [klyph.entity.Interpolated] too and klyph draws it between the last two steps, so it
  * moves smoothly at any frame rate.
  */
-class Physics(world: PhysicsWorld) {
+public class Physics(world: PhysicsWorld) {
     /**
      * The world that's stepped. Swap it to change levels: entities still linked to bodies of the old
      * world follow whatever has the same handle in the new one, so remove or relink them.
      */
-    var world: PhysicsWorld = world
+    public var world: PhysicsWorld = world
 
     /** While paused, the world isn't stepped and entities don't move. [step] still works, one at a time. */
-    var isPaused: Boolean = false
+    public var isPaused: Boolean = false
 
     /** Steps taken since this was made. */
-    var stepCount: Long = 0L
+    public var stepCount: Long = 0L
         private set
 
     /** Steps [world] by [dt] seconds, then moves every linked entity of [entities] to its body. */
-    fun step(entities: World, dt: Float) {
+    public fun step(entities: World, dt: Float) {
         world.step(dt)
         stepCount++
         follow(entities)
     }
 
     /** Moves every entity of [entities] with a [PhysicsBody] and a [Transform] to where its body is now. */
-    fun follow(entities: World) {
+    public fun follow(entities: World) {
         val world = world
         entities.forEach(PhysicsBody, Transform) { _, body, transform -> body.moveTo(world, transform) }
     }
@@ -53,11 +53,11 @@ class Physics(world: PhysicsWorld) {
  * point goes round the middle, from where that was when the link was first followed. A particle
  * doesn't turn. A body that has been removed leaves its entity where it was.
  */
-class PhysicsBody private constructor(
+public class PhysicsBody private constructor(
     /** What [handle] is: one of [RIGID], [SOFT] and [PARTICLE]. */
-    val kind: Int,
+    public val kind: Int,
     /** The handle the world gave the body when it was made. */
-    val handle: Int,
+    public val handle: Int,
 ) {
     /** For a soft body: the angle its first ring point was at, seen from its middle, when first followed. */
     private var startAngle = Float.NaN
@@ -94,21 +94,24 @@ class PhysicsBody private constructor(
 
     override fun toString(): String = "PhysicsBody(${NAMES[kind]} $handle)"
 
-    companion object : ComponentType<PhysicsBody>("PhysicsBody") {
-        const val RIGID = 0
-        const val SOFT = 1
-        const val PARTICLE = 2
+    public companion object : ComponentType<PhysicsBody>("PhysicsBody") {
+        /** A [PhysicsBody] that follows a rigid body. */
+        public const val RIGID: Int = 0
+        /** A [PhysicsBody] that follows a soft body. */
+        public const val SOFT: Int = 1
+        /** A [PhysicsBody] that follows a particle. */
+        public const val PARTICLE: Int = 2
 
         private val NAMES = arrayOf("rigid", "soft", "particle")
 
         /** Follows the rigid body [handle]: its centre of mass and its angle. */
-        fun rigid(handle: Int) = PhysicsBody(RIGID, handle)
+        public fun rigid(handle: Int): PhysicsBody = PhysicsBody(RIGID, handle)
 
         /** Follows the soft body [handle]: the middle of its ring, and how far it has turned. */
-        fun soft(handle: Int) = PhysicsBody(SOFT, handle)
+        public fun soft(handle: Int): PhysicsBody = PhysicsBody(SOFT, handle)
 
         /** Follows the particle [handle]: its place. */
-        fun particle(handle: Int) = PhysicsBody(PARTICLE, handle)
+        public fun particle(handle: Int): PhysicsBody = PhysicsBody(PARTICLE, handle)
 
         private const val TWO_PI = (2.0 * PI).toFloat()
 
@@ -130,7 +133,7 @@ class PhysicsBody private constructor(
  * Systems run in the order they're added. Add the fixed-step systems that push, steer or spawn things
  * before calling this, and those that read what happened, such as contacts, after.
  */
-fun App.addPhysics(world: PhysicsWorld = PhysicsWorld()): Physics {
+public fun App.addPhysics(world: PhysicsWorld = PhysicsWorld()): Physics {
     require(!resources.has<Physics>()) { "This app already runs physics: change its world with physics.world" }
     val physics = Physics(world)
     resources.insert(physics)
@@ -141,4 +144,4 @@ fun App.addPhysics(world: PhysicsWorld = PhysicsWorld()): Physics {
 }
 
 /** The [Physics] that [addPhysics] added to this app. */
-val App.physics: Physics get() = resources.get()
+public val App.physics: Physics get() = resources.get()

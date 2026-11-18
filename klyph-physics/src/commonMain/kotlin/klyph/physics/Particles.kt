@@ -13,7 +13,7 @@ import kotlin.math.sqrt
  *
  * The arrays grow by doubling when a particle is added, never during a step.
  */
-class Particles internal constructor(initialCapacity: Int = 64) {
+public class Particles internal constructor(initialCapacity: Int = 64) {
     internal var x = FloatArray(initialCapacity)
     internal var y = FloatArray(initialCapacity)
     internal var prevX = FloatArray(initialCapacity)
@@ -62,11 +62,11 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     private var freeCount = 0
 
     /** One past the highest handle ever handed out: loop `0 until end` and skip what isn't [isAlive]. */
-    var end: Int = 0
+    public var end: Int = 0
         private set
 
     /** How many particles are alive. */
-    val count: Int get() = end - freeCount
+    public val count: Int get() = end - freeCount
 
     /**
      * Adds a particle at ([x], [y]) at rest and returns its handle. [mass] may be [STATIC] for one that
@@ -74,7 +74,7 @@ class Particles internal constructor(initialCapacity: Int = 64) {
      * is kept out of soft bodies and out of every other particle that collides, by their radii, like a
      * grain of sand; one that doesn't only meets the solids. Its [material] says how it grips and bounces.
      */
-    fun add(x: Float, y: Float, mass: Float = 1f, radius: Float = 0f, collides: Boolean = false, material: Material = Material.DEFAULT): Int {
+    public fun add(x: Float, y: Float, mass: Float = 1f, radius: Float = 0f, collides: Boolean = false, material: Material = Material.DEFAULT): Int {
         require(mass > 0f) { "mass is $mass: it must be more than 0, or STATIC" }
         require(radius >= 0f) { "radius is $radius: it must not be negative" }
         val p = if (freeCount > 0) free[--freeCount] else {
@@ -99,7 +99,7 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     }
 
     /** Removes particle [p]; its handle may be handed out again. Removing a dead particle does nothing. */
-    fun remove(p: Int) {
+    public fun remove(p: Int) {
         if (!isAlive(p)) return
         flags[p] = 0
         invMass[p] = 0f
@@ -108,16 +108,17 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     }
 
     /** Removes every particle. Handles start from 0 again. */
-    fun clear() {
+    public fun clear() {
         flags.fill(0, 0, end)
         end = 0
         freeCount = 0
     }
 
-    fun isAlive(p: Int): Boolean = p in 0 until end && flags[p] and ALIVE != 0
+    /** Whether particle [p] is still there. */
+    public fun isAlive(p: Int): Boolean = p in 0 until end && flags[p] and ALIVE != 0
 
     /** Makes particle [p] grip and bounce like [material]. */
-    fun setMaterial(p: Int, material: Material) {
+    public fun setMaterial(p: Int, material: Material) {
         friction[p] = material.friction
         staticFriction[p] = material.staticFriction
         restitution[p] = material.restitution
@@ -128,17 +129,18 @@ class Particles internal constructor(initialCapacity: Int = 64) {
      * it goes as fast as it's thrown, and every substep it's swept from where it was to where it went,
      * and stopped where it first meets a solid. So it can't pass through a thin one.
      */
-    fun setBullet(p: Int, isBullet: Boolean) {
+    public fun setBullet(p: Int, isBullet: Boolean) {
         flags[p] = if (isBullet) flags[p] or BULLET else flags[p] and BULLET.inv()
     }
 
-    fun isBullet(p: Int): Boolean = flags[p] and BULLET != 0
+    /** Whether particle [p] is swept against the solids each step, so it never passes through a thin wall. */
+    public fun isBullet(p: Int): Boolean = flags[p] and BULLET != 0
 
     /**
      * Puts particle [p] in [category] and has it collide only with what's in [mask]: see [Filter]. For
      * a soft body's particles, set the whole body's with [SoftBodyStore.setFilter].
      */
-    fun setFilter(p: Int, category: Int, mask: Int) {
+    public fun setFilter(p: Int, category: Int, mask: Int) {
         Filter.checkCategory(category)
         this.category[p] = category
         this.mask[p] = mask
@@ -146,30 +148,34 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     }
 
     /** Particle [p]'s collision category: see [Filter]. */
-    fun category(p: Int): Int = category[p]
+    public fun category(p: Int): Int = category[p]
 
     /** The categories particle [p] collides with: see [Filter]. */
-    fun mask(p: Int): Int = mask[p]
+    public fun mask(p: Int): Int = mask[p]
 
     /** Whether particle [p] is kept out of bodies and other particles that collide. See [add]. */
-    fun collides(p: Int): Boolean = flags[p] and COLLIDES != 0
+    public fun collides(p: Int): Boolean = flags[p] and COLLIDES != 0
 
-    fun x(p: Int): Float = x[p]
+    /** Where particle [p] is, across. */
+    public fun x(p: Int): Float = x[p]
 
-    fun y(p: Int): Float = y[p]
+    /** Where particle [p] is, down. */
+    public fun y(p: Int): Float = y[p]
 
     /** How far particle [p] moved in the last substep, in units: its velocity per substep. */
-    fun movedX(p: Int): Float = x[p] - prevX[p]
+    public fun movedX(p: Int): Float = x[p] - prevX[p]
 
-    fun movedY(p: Int): Float = y[p] - prevY[p]
+    /** How far particle [p] moved down in the last substep: see [movedX]. */
+    public fun movedY(p: Int): Float = y[p] - prevY[p]
 
     /** 0 for a [STATIC] particle. */
-    fun inverseMass(p: Int): Float = invMass[p]
+    public fun inverseMass(p: Int): Float = invMass[p]
 
-    fun radius(p: Int): Float = radius[p]
+    /** How big particle [p] is, for colliding: 0 for a point. */
+    public fun radius(p: Int): Float = radius[p]
 
     /** Moves particle [p] to ([x], [y]), keeping its velocity. */
-    fun moveTo(p: Int, x: Float, y: Float) {
+    public fun moveTo(p: Int, x: Float, y: Float) {
         prevX[p] += x - this.x[p]
         prevY[p] += y - this.y[p]
         this.x[p] = x
@@ -177,7 +183,7 @@ class Particles internal constructor(initialCapacity: Int = 64) {
     }
 
     /** Gives particle [p] a velocity of ([vx], [vy]) units per second, for substeps of [h] seconds. */
-    fun setVelocity(p: Int, vx: Float, vy: Float, h: Float) {
+    public fun setVelocity(p: Int, vx: Float, vy: Float, h: Float) {
         prevX[p] = x[p] - vx * h
         prevY[p] = y[p] - vy * h
     }
@@ -383,9 +389,9 @@ class Particles internal constructor(initialCapacity: Int = 64) {
         contactLocalY = contactLocalY.copyOf(size)
     }
 
-    companion object {
+    public companion object {
         /** A mass for a particle nothing can move, such as the top of a hanging rope. */
-        const val STATIC = Float.POSITIVE_INFINITY
+        public const val STATIC: Float = Float.POSITIVE_INFINITY
 
         internal const val ALIVE = 1
         internal const val COLLIDES = 2

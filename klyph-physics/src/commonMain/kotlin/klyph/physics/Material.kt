@@ -8,7 +8,7 @@ import kotlin.math.sqrt
  * each have one, and a contact mixes the two: grip by the geometric mean, so ice on anything slides,
  * and bounce by the larger, so a rubber ball bounces on a stone floor.
  */
-data class Material(
+public data class Material(
     /**
      * Grip while sliding, the Coulomb coefficient: a sliding thing loses this times the push holding
      * it on the surface. 0 is ice.
@@ -28,15 +28,15 @@ data class Material(
         require(restitution in 0f..1f) { "restitution is $restitution: it must be from 0 to 1" }
     }
 
-    companion object {
+    public companion object {
         /** What everything is made of unless told otherwise: some grip, no bounce. */
-        val DEFAULT = Material()
+        public val DEFAULT: Material = Material()
 
         /** No grip at all, no bounce. */
-        val ICE = Material(friction = 0f, staticFriction = 0f)
+        public val ICE: Material = Material(friction = 0f, staticFriction = 0f)
 
         /** A lot of grip. */
-        val RUBBER = Material(friction = 0.9f, staticFriction = 1.2f)
+        public val RUBBER: Material = Material(friction = 0.9f, staticFriction = 1.2f)
 
         @Suppress("NOTHING_TO_INLINE")
         internal inline fun mixFriction(a: Float, b: Float): Float = if (a == b) a else sqrt(a * b)

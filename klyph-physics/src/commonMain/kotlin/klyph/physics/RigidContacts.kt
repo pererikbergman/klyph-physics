@@ -23,17 +23,17 @@ import kotlin.math.sqrt
  * Read it to draw the contacts of the last substep: [count] of them, each with a point, a normal and
  * how hard it pushed.
  */
-class RigidContacts internal constructor(private val world: PhysicsWorld) {
+public class RigidContacts internal constructor(private val world: PhysicsWorld) {
     private val bodies = world.rigidBodies
     private val narrow = Narrowphase().apply { margin = MARGIN }
     private val manifold = Manifold()
     internal val edges = SolidEdges()
 
     /** Every rigid body of this step, by its box grown by its move: a box's id is the body. */
-    val broadphase = Broadphase(world.config.cellSize)
+    public val broadphase: Broadphase = Broadphase(world.config.cellSize)
 
     /** How many contacts the last substep found. */
-    var count = 0
+    public var count: Int = 0
         private set
 
     // Each contact: body A and body B (-1 for a solid's edge), each point in its own body's frame (a
@@ -136,31 +136,34 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
 
 
     /** Where contact [c]'s point on its first body is in the world now. */
-    fun pointX(c: Int): Float = bodies.worldX(a[c], r1x[c], r1y[c])
+    public fun pointX(c: Int): Float = bodies.worldX(a[c], r1x[c], r1y[c])
 
-    fun pointY(c: Int): Float = bodies.worldY(a[c], r1x[c], r1y[c])
+    /** Where contact [c] is, down: see [pointX]. */
+    public fun pointY(c: Int): Float = bodies.worldY(a[c], r1x[c], r1y[c])
 
     /** Contact [c]'s normal: the way its first body would be pushed into the second, so it's pushed back the other way. */
-    fun normalX(c: Int): Float = nx[c]
+    public fun normalX(c: Int): Float = nx[c]
 
-    fun normalY(c: Int): Float = ny[c]
+    /** Which way contact [c] pushes, down: see [normalX]. */
+    public fun normalY(c: Int): Float = ny[c]
 
     /**
      * How hard contact [c] pushed in the last substep, as mass times distance: 0 for one that was found
      * near, but never touched.
      */
-    fun push(c: Int): Float = lambdaN[c]
+    public fun push(c: Int): Float = lambdaN[c]
 
     /**
      * Whether contact [c] slid in the last substep: friction couldn't hold it, so it slips along its
      * surface. A two-point contact slides or holds as one.
      */
-    fun isSliding(c: Int): Boolean = slipped[c] || (twin[c] >= 0 && slipped[twin[c]])
+    public fun isSliding(c: Int): Boolean = slipped[c] || (twin[c] >= 0 && slipped[twin[c]])
 
     /** The two bodies of contact [c]: [bodyB] is -1 where the first meets the solids. */
-    fun bodyA(c: Int): Int = a[c]
+    public fun bodyA(c: Int): Int = a[c]
 
-    fun bodyB(c: Int): Int = b[c]
+    /** Contact [c]'s second body: see [bodyA]. */
+    public fun bodyB(c: Int): Int = b[c]
 
     /** Files every body with a shape in the [broadphase], each grown by how far it will move in [dt] seconds. */
     internal fun beginStep(dt: Float) {
@@ -1386,23 +1389,23 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         oldSlipped = oldSlipped.copyOf(size)
     }
 
-    companion object {
+    internal companion object {
         /** Shapes nearer than this make a contact already, so one that closes in during the substep is caught. */
-        const val MARGIN = 0.5f
+        const val MARGIN: Float = 0.5f
 
         /**
          * Two bodies that have moved less than this against each other, in units across and down and in
          * radians turned, since their contacts were last found keep them: found again, they'd be the
          * same, within a fiftieth of the [MARGIN] they're found at.
          */
-        const val KEEP_MOVE = MARGIN / 50f
-        const val KEEP_TURN = 0.002f
+        const val KEEP_MOVE: Float = MARGIN / 50f
+        const val KEEP_TURN: Float = 0.002f
 
         /** Turned more than this in a substep, in radians, a body's contacts are found where it is, not speculatively. */
-        const val MAX_SPECULATIVE_TURN = 0.2f
+        const val MAX_SPECULATIVE_TURN: Float = 0.2f
 
         /** A point further behind an edge than this is through the solid, not touching it: the far side's business. */
-        const val MAX_DEPTH = 8f
+        const val MAX_DEPTH: Float = 8f
 
         /** What a contact's feature id says it touched besides another body: an edge of the solids, a corner of them, or a moving solid. */
         private const val KIND = 3 shl 29
@@ -1411,9 +1414,9 @@ class RigidContacts internal constructor(private val world: PhysicsWorld) {
         private const val ON_SOLID = 3 shl 29
 
         /** Two points closer to being one than this, by how alike their pushes are, are solved one at a time. */
-        const val PAIR_CONDITION = 1e-3f
+        const val PAIR_CONDITION: Float = 1e-3f
 
         /** How far outside a corner's span a push may lean and still count, for corners met edge on. */
-        const val CORNER_SLACK = 0.02f
+        const val CORNER_SLACK: Float = 0.02f
     }
 }

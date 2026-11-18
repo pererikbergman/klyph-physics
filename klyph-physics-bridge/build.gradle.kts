@@ -3,6 +3,8 @@
 plugins { kotlin("multiplatform") }
 
 kotlin {
+    // Every public declaration says it's public, and says what it returns: nothing is public by accident.
+    explicitApi()
     macosArm64()
     linuxX64()
     linuxArm64()

@@ -14,15 +14,16 @@ import kotlin.math.sqrt
  * Each point also has a feature [id] naming the two edges or corners that made it, so the same
  * contact can be told apart from a new one from one substep to the next.
  */
-class Manifold {
+public class Manifold {
     /** How many points: 0 when the shapes don't touch, else 1 or 2. */
-    var count: Int = 0
+    public var count: Int = 0
         internal set
 
     /** The unit normal, from the first shape to the second. */
-    var normalX: Float = 0f
+    public var normalX: Float = 0f
         internal set
-    var normalY: Float = 0f
+    /** Which way the contact pushes B away from A, down: see [normalX]. */
+    public var normalY: Float = 0f
         internal set
 
     internal val ax = FloatArray(2)
@@ -33,20 +34,22 @@ class Manifold {
     internal val ids = IntArray(2)
 
     /** Point [i] on the first shape's surface. */
-    fun pointAX(i: Int): Float = ax[i]
+    public fun pointAX(i: Int): Float = ax[i]
 
-    fun pointAY(i: Int): Float = ay[i]
+    /** Where contact point [i] is on A, down: see [pointAX]. */
+    public fun pointAY(i: Int): Float = ay[i]
 
     /** Point [i] on the second shape's surface. */
-    fun pointBX(i: Int): Float = bx[i]
+    public fun pointBX(i: Int): Float = bx[i]
 
-    fun pointBY(i: Int): Float = by[i]
+    /** Where contact point [i] is on B, down: see [pointBX]. */
+    public fun pointBY(i: Int): Float = by[i]
 
     /** How far apart point [i]'s two surface points are along the normal: negative when they overlap, by that much. */
-    fun separation(i: Int): Float = sep[i]
+    public fun separation(i: Int): Float = sep[i]
 
     /** Which edges or corners made point [i]: the same for the same contact from one substep to the next. */
-    fun id(i: Int): Int = ids[i]
+    public fun id(i: Int): Int = ids[i]
 
     internal fun add(pax: Float, pay: Float, pbx: Float, pby: Float, separation: Float, id: Int) {
         val i = count++
@@ -88,12 +91,12 @@ class Manifold {
  *
  * One instance keeps its scratch arrays between calls, so it allocates nothing.
  */
-class Narrowphase {
+public class Narrowphase {
     /**
      * Shapes this far apart, or nearer, already count as touching, with a positive separation: a
      * solver uses that to catch a contact that closes during its substep. 0 by default.
      */
-    var margin: Float = 0f
+    public var margin: Float = 0f
         set(value) {
             require(value >= 0f) { "margin is $value: it must not be negative" }
             field = value
@@ -123,7 +126,7 @@ class Narrowphase {
      * Finds where shape [a], at ([ax], [ay]) turned by [aAngle], touches shape [b] at ([bx], [by])
      * turned by [bAngle], into [out]. Returns whether they touch.
      */
-    fun collide(a: Shape, ax: Float, ay: Float, aAngle: Float, b: Shape, bx: Float, by: Float, bAngle: Float, out: Manifold): Boolean =
+    public fun collide(a: Shape, ax: Float, ay: Float, aAngle: Float, b: Shape, bx: Float, by: Float, bAngle: Float, out: Manifold): Boolean =
         collide(a, ax, ay, cos(aAngle), sin(aAngle), b, bx, by, cos(bAngle), sin(bAngle), out)
 
     /** [collide], with each angle given by its cosine and sine. */

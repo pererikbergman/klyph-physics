@@ -8,19 +8,21 @@ import kotlin.math.sqrt
  * (empty when it has none). They're ordinary world particles and constraints; this just remembers
  * which ones.
  */
-class Strand internal constructor(
+public class Strand internal constructor(
     /** The particles, from the start to the end. */
-    val particles: IntArray,
+    public val particles: IntArray,
     /** The link from `particles[i]` to `particles[i + 1]` is `links[i]`. */
-    val links: IntArray,
+    public val links: IntArray,
     /** The bend at `particles[i + 1]` is `bends[i]`. */
-    val bends: IntArray,
+    public val bends: IntArray,
 ) {
-    val first: Int get() = particles[0]
-    val last: Int get() = particles[particles.size - 1]
+    /** The particle at the start. */
+    public val first: Int get() = particles[0]
+    /** The particle at the end. */
+    public val last: Int get() = particles[particles.size - 1]
 
     /** How long it is now, along its particles. */
-    fun length(world: PhysicsWorld): Float {
+    public fun length(world: PhysicsWorld): Float {
         val ps = world.particles
         var sum = 0f
         for (i in 1 until particles.size) {
@@ -32,7 +34,7 @@ class Strand internal constructor(
     }
 
     /** How long it is at rest: the sum of its links' rest lengths. */
-    fun restLength(world: PhysicsWorld): Float {
+    public fun restLength(world: PhysicsWorld): Float {
         var sum = 0f
         for (link in links) sum += world.constraints.restLength(link)
         return sum
@@ -43,16 +45,20 @@ class Strand internal constructor(
  * A sheet made by [PhysicsWorld.cloth]: a grid of [cols] by [rows] particles, held by structural links
  * along its rows and columns, shear links across each square, and bends along its rows and columns.
  */
-class Cloth internal constructor(
-    val cols: Int,
-    val rows: Int,
+public class Cloth internal constructor(
+    /** How many particles across. */
+    public val cols: Int,
+    /** How many particles down. */
+    public val rows: Int,
     /** Row by row from the top-left: the particle at ([col], [row]) is `particles[row * cols + col]`. */
-    val particles: IntArray,
+    public val particles: IntArray,
     /** Every link: structural ones first, then shear. */
-    val links: IntArray,
-    val bends: IntArray,
+    public val links: IntArray,
+    /** Every bend: along the rows, then along the columns. */
+    public val bends: IntArray,
 ) {
-    fun particle(col: Int, row: Int): Int = particles[row * cols + col]
+    /** The particle at column [col], row [row], from the top-left. */
+    public fun particle(col: Int, row: Int): Int = particles[row * cols + col]
 }
 
 /**
@@ -63,7 +69,7 @@ class Cloth internal constructor(
  * [tearAt] times its rest length breaks (0, the default, never). Its particles are as round as
  * [radius], and [collides] with bodies and grains when asked.
  */
-fun PhysicsWorld.rope(
+public fun PhysicsWorld.rope(
     fromX: Float,
     fromY: Float,
     toX: Float,
@@ -84,7 +90,7 @@ fun PhysicsWorld.rope(
  * Like [rope], but its links are rigid rods that push as well as pull, its particles are heavier and
  * round, and it bends a little: a chain hangs in a smoother curve and doesn't bunch up.
  */
-fun PhysicsWorld.chain(
+public fun PhysicsWorld.chain(
     fromX: Float,
     fromY: Float,
     toX: Float,
@@ -148,7 +154,7 @@ private fun PhysicsWorld.strand(
  * static, by default the whole top row, so it hangs like a curtain. Links stretched past [tearAt]
  * times their rest length break, and a bend across a broken link goes with it, so it tears cleanly.
  */
-fun PhysicsWorld.cloth(
+public fun PhysicsWorld.cloth(
     left: Float,
     top: Float,
     cols: Int,

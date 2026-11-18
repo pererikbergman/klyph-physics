@@ -4,7 +4,7 @@ package klyph.physics
  * How a [PhysicsWorld] moves time. Every value is in world units and seconds, so a world behaves the
  * same however finely it is stepped, except where a value says otherwise.
  */
-data class PhysicsConfig(
+public data class PhysicsConfig(
     /** Acceleration on every particle, in units per second squared. y grows down, so down is positive. */
     val gravity: Vec = Vec(0f, 1500f),
     /** How many substeps each [PhysicsWorld.step] is cut into. More is stiffer and steadier, and costs more. */

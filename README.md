@@ -250,6 +250,7 @@ what breaks it. 👉 [**docs/explained**](docs/explained/README.md)
 ./gradlew :demo:macosArm64Test                      # the sandbox's tests (a 10-minute garden run included)
 scripts/capture.sh 1 blob-garden --from 1 --to 7    # re-record the GIF above
 scripts/bench.sh                                    # time every scene's step, and the stress world
+scripts/check-kdoc.py                               # every public declaration documented
 ```
 
 ## 🚧 Status
